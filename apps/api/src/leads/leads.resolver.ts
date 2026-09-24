@@ -1,6 +1,6 @@
 import { Args, Context, ID, Int, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
 import { Public, Role, Roles } from '../auth/index.js';
-import { validate } from '../common/index.js';
+import { RateLimits, ThrottlePerMinute, validate } from '../common/index.js';
 import { LeadPage, LeadSort } from './dto/lead-page.js';
 import { Lead } from './lead.model.js';
 import { leadIdSchema, leadsArgsSchema, MAX_LEADS_LIMIT, registerSchema } from './leads.schemas.js';
@@ -12,11 +12,12 @@ export class LeadsResolver {
   constructor(private readonly leadsService: LeadsService) {}
 
   @Public()
+  @ThrottlePerMinute(RateLimits.register)
   @Mutation(() => Lead, {
     description: [
       'Register interest in Brighte Eats. `services` takes service type codes (see `serviceTypes`); duplicates are ignored. The email is stored lowercase and the mobile as `04xxxxxxxx`.',
       '**Auth:** Public.',
-      '**Errors:** `BAD_USER_INPUT` (a field is invalid, or a service code is unknown or retired; `extensions.fields` maps each field to a message), `CONFLICT` (email already registered; nothing is changed).',
+      '**Errors:** `BAD_USER_INPUT` (a field is invalid, or a service code is unknown or retired; `extensions.fields` maps each field to a message), `CONFLICT` (email already registered; nothing is changed), `TOO_MANY_REQUESTS` (more than 5 registrations a minute from one IP by default).',
     ].join('\n\n'),
   })
   register(

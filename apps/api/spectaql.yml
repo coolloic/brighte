@@ -69,6 +69,7 @@ info:
         | `FORBIDDEN` | 200 | Signed in, but your role is not allowed |
         | `BAD_USER_INPUT` | 200 | Input rejected, e.g. an invalid email. `extensions.fields` maps each invalid argument to a message |
         | `CONFLICT` | 200 | The request clashes with existing data, e.g. `createUser` or `register` with an email that is already registered |
+        | `TOO_MANY_REQUESTS` | 200 | Rate limit hit (per client IP and operation). Wait `extensions.retryAfter` seconds (also the `Retry-After` header) |
         | `INTERNAL_SERVER_ERROR` | 200 | Unexpected failure. The message is always `Internal server error`; details are logged on the server |
         | `GRAPHQL_VALIDATION_FAILED` | 400 | Unknown field, wrong argument or variable type |
         | `GRAPHQL_PARSE_FAILED` | 400 | The query is not valid GraphQL syntax |

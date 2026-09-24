@@ -1,20 +1,23 @@
 import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { SequelizeModule } from '@nestjs/sequelize';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
-import { formatError, GraphqlExceptionFilter } from './common/index.js';
+import { formatError, GqlThrottlerGuard, GraphqlExceptionFilter, RATE_LIMIT_WINDOW_MS, RateLimits } from './common/index.js';
 import { LeadsModule } from './leads/leads.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Per client IP and per operation; stricter limits on login and register (see RateLimits).
+    ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: RATE_LIMIT_WINDOW_MS, limit: RateLimits.default }] }),
     SequelizeModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -30,8 +33,11 @@ import { UsersModule } from './users/users.module.js';
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
-      // Expose the HTTP request so the auth guard can read the Authorization header.
-      context: ({ req }: { req: unknown }) => ({ req }),
+      // Expose the HTTP request and response: the auth guard reads the Authorization header,
+      // the rate limiter sets Retry-After and X-RateLimit-* headers.
+      context: ({ req, res }: { req: unknown; res: unknown }) => ({ req, res }),
+      // Cap document size before parsing: a huge query costs CPU even if it is invalid.
+      parseOptions: { maxTokens: 1000 },
       formatError,
     }),
     UsersModule,
@@ -39,6 +45,10 @@ import { UsersModule } from './users/users.module.js';
     LeadsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_FILTER, useClass: GraphqlExceptionFilter }],
+  providers: [
+    AppService,
+    { provide: APP_FILTER, useClass: GraphqlExceptionFilter },
+    { provide: APP_GUARD, useClass: GqlThrottlerGuard },
+  ],
 })
 export class AppModule {}

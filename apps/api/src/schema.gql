@@ -71,7 +71,7 @@ type Mutation {
   
   **Auth:** Public.
   
-  **Errors:** `UNAUTHENTICATED` (wrong email or password; the same message for both).
+  **Errors:** `UNAUTHENTICATED` (wrong email or password; the same message for both), `TOO_MANY_REQUESTS` (more than 10 attempts a minute from one IP by default).
   """
   login(email: String!, password: String!): AuthPayload!
 
@@ -80,7 +80,7 @@ type Mutation {
   
   **Auth:** Public.
   
-  **Errors:** `BAD_USER_INPUT` (a field is invalid, or a service code is unknown or retired; `extensions.fields` maps each field to a message), `CONFLICT` (email already registered; nothing is changed).
+  **Errors:** `BAD_USER_INPUT` (a field is invalid, or a service code is unknown or retired; `extensions.fields` maps each field to a message), `CONFLICT` (email already registered; nothing is changed), `TOO_MANY_REQUESTS` (more than 5 registrations a minute from one IP by default).
   """
   register(
     email: String!
