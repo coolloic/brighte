@@ -16,12 +16,23 @@ pnpm install
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 pnpm db:up        # Postgres in Docker (override host port with POSTGRES_PORT)
+pnpm db:migrate   # apply pending migrations
 pnpm dev          # web + api in parallel
 ```
 
 - GraphQL playground: http://localhost:4001/graphql
 - Schema is generated to `apps/api/src/schema.gql` on API start.
-- Sequelize `synchronize` is on outside production — add migrations before shipping.
+- Postgres: `postgres://brighte:brighte@localhost:5435/brighte`.
+
+## Database migrations
+
+The schema is owned by [Umzug](https://github.com/sequelize/umzug) migrations in `apps/api/src/database/migrations/`. Sequelize `synchronize` is off, so changing a model does not change the database.
+
+- Add a migration: create `apps/api/src/database/migrations/<YYYY.MM.DDTHH.mm.ss>.<description>.ts` exporting `up` and `down` (see the existing one). Files run in name order.
+- `pnpm db:migrate`: apply pending migrations.
+- `pnpm --filter @brighte/api db:migrate:status`: list pending migrations.
+- `pnpm --filter @brighte/api db:migrate:undo`: revert the last migration.
+- Production: run `node dist/database/migrate.js up` from `apps/api` after `nest build`, before starting the app.
 
 ## Scripts
 

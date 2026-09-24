@@ -17,8 +17,8 @@ import { UsersModule } from './users/users.module.js';
         dialect: 'postgres',
         uri: config.getOrThrow<string>('DATABASE_URL'),
         autoLoadModels: true,
-        // Dev convenience only; use migrations in production.
-        synchronize: config.get('NODE_ENV') !== 'production',
+        // Schema is owned by migrations (src/database/migrations), never synced from models.
+        synchronize: false,
         logging: false,
       }),
     }),
