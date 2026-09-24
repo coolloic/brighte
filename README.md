@@ -123,6 +123,10 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 
 Every request has a test, so the collection also runs from the command line: `cd apps/api/bruno && pnpm dlx @usebruno/cli run --env local -r` (add `--env-var baseUrl=http://localhost:<port>` for another port). Runs create a lead and a user with `bruno-…@example.com` emails in your dev database.
 
+## Storybook (web components)
+
+`pnpm --filter @brighte/web storybook` opens the component library at http://localhost:6006; `pnpm --filter @brighte/web build-storybook` builds it to `apps/web/storybook-static/`. Every story is also a test: `pnpm --filter @brighte/web test` (part of `pnpm test`) renders each one in headless Chromium, runs its `play` function and fails on any WCAG 2.1 AA violation. Conventions are in the **Introduction** page and `apps/web/CLAUDE.md`.
+
 ## Scripts
 
 **API smoke test:** `pnpm --filter @brighte/api test:smoke` builds the API, starts real servers (dev, dev with the real rate limits, production) on ports 4801-4804 (`SMOKE_PORT` to move them), and checks every operation, edge case and error code over HTTP, the way the web app calls it. It needs Postgres migrated and seeded (`pnpm db:up && pnpm db:migrate && pnpm db:seed`), cleans up its data, and exits non-zero on any failure.

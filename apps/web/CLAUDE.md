@@ -65,6 +65,14 @@ A feature is not done until all of these pass. Show the output when reporting.
 3. **Lighthouse**: start the API and web (`pnpm --filter @brighte/api start:prod`, `pnpm build && pnpm start`), add the new route to `lighthouserc.json` → `ci.collect.url`, run `pnpm lighthouse`. Thresholds: Performance ≥ 90, Accessibility ≥ 95, Best Practices ≥ 90, SEO ≥ 90.
 4. If any score is below its threshold, read the report in `.lighthouseci/`, fix the top issues, and re-run. Repeat until everything passes. Report the final scores.
 
+## 7. Storybook — required for every component
+
+- Every component in `src/components/` has a `<Name>.stories.tsx` next to it, with one story per state (default, focus, error, disabled, loading, empty…). Organisms get stories for each data state, using mock props.
+- Put behaviour checks (typing, validation messages, keyboard use) in `play` functions.
+- Every story is a test: `pnpm --filter @brighte/web test` renders it in Chromium and fails on a thrown error, a failing `play` function, or any WCAG 2.1 AA violation. Don't turn the a11y check off for a story; fix the component.
+- Run it locally with `pnpm --filter @brighte/web storybook` (http://localhost:6006).
+- Until pages exist (PR 10 of the frontend plan), story tests replace the Playwright/Lighthouse steps of the definition of done for component-only changes.
+
 ## Styling
 
 - Tailwind first; SCSS modules (`*.module.scss`) only for what Tailwind cannot express. Never create `.css` files.

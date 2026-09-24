@@ -1,0 +1,29 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Introduction" />
+
+# Brighte Eats components
+
+The building blocks of the Brighte Eats registration form and leads dashboard, organised by
+[atomic design](https://atomicdesign.bradfrost.com/chapter-2/). Source: `apps/web/src/components/`.
+
+| Layer | What it is | May import |
+|---|---|---|
+| **Atoms** | Smallest pieces: Button, Input, Label | nothing from other layers |
+| **Molecules** | Small groups of atoms: FormField, Alert | atoms |
+| **Organisms** | Page sections: RegistrationForm, LeadsTable | atoms, molecules |
+| **Templates** | Page layouts with slots | any layer below |
+
+ESLint rejects imports that point up the layers.
+
+## Conventions
+
+- **Presentational.** Components take props and render markup. They never fetch data: pages in
+  `src/app/` do that and pass it in. So every state (loading, error, success) can be shown here
+  without a backend.
+- **One story per state.** Default, focus, error, disabled, loading. Reviewers see them all here.
+- **Every story is a test.** `pnpm --filter @brighte/web test` renders each story in Chromium,
+  runs its `play` function, and fails on any WCAG 2.1 AA violation (the same rules as the
+  Playwright axe scans). The **Accessibility** panel shows the same results while you work.
+- **Mobile first.** Check stories at 375px first using the viewport toolbar, then wider.
+- **Colours come from tokens** in `src/app/globals.scss`, never hardcoded.
