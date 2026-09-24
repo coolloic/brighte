@@ -22,6 +22,40 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+"""An expression of interest in Brighte Eats."""
+type Lead {
+  createdAt: DateTime!
+
+  """Lowercase."""
+  email: String!
+  id: ID!
+
+  """Australian mobile, normalised to `04xxxxxxxx`."""
+  mobile: String!
+  name: String!
+  postcode: String!
+
+  """Service types this lead is interested in."""
+  services: [ServiceType!]!
+}
+
+"""One page of leads (limit/offset pagination)."""
+type LeadPage {
+  items: [Lead!]!
+  limit: Int!
+  offset: Int!
+
+  """Leads matching the filter, across all pages."""
+  total: Int!
+}
+
+"""Order of `leads`. Ties are broken by id, so pages are stable."""
+enum LeadSort {
+  NAME_ASC
+  NEWEST_FIRST
+  OLDEST_FIRST
+}
+
 type Mutation {
   """
   Create a user. `role` defaults to `USER`; the email is stored lowercase.
@@ -40,9 +74,55 @@ type Mutation {
   **Errors:** `UNAUTHENTICATED` (wrong email or password; the same message for both).
   """
   login(email: String!, password: String!): AuthPayload!
+
+  """
+  Register interest in Brighte Eats. `services` takes service type codes (see `serviceTypes`); duplicates are ignored. The email is stored lowercase and the mobile as `04xxxxxxxx`.
+  
+  **Auth:** Public.
+  
+  **Errors:** `BAD_USER_INPUT` (a field is invalid, or a service code is unknown or retired; `extensions.fields` maps each field to a message), `CONFLICT` (email already registered; nothing is changed).
+  """
+  register(
+    email: String!
+
+    """Australian mobile, e.g. `0412 345 678` or `+61412345678`."""
+    mobile: String!
+    name: String!
+
+    """4 digits."""
+    postcode: String!
+
+    """At least one service type code."""
+    services: [String!]!
+  ): Lead!
 }
 
 type Query {
+  """
+  One lead with its service interests, or null if no lead has this id.
+  
+  **Auth:** `ADMIN`.
+  
+  **Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`), `BAD_USER_INPUT` (`id` is not a UUID).
+  """
+  lead(id: ID!): Lead
+
+  """
+  Leads, one page at a time. An unknown `serviceType` returns an empty page.
+  
+  **Auth:** `ADMIN`.
+  
+  **Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`), `BAD_USER_INPUT` (`limit` outside 1–100, or negative `offset`).
+  """
+  leads(
+    limit: Int! = 20
+    offset: Int! = 0
+
+    """Only leads interested in this service type code."""
+    serviceType: String
+    sort: LeadSort! = NEWEST_FIRST
+  ): LeadPage!
+
   """
   The signed-in user.
   
@@ -51,6 +131,15 @@ type Query {
   **Errors:** `UNAUTHENTICATED` (missing, invalid or expired token, or the account no longer exists).
   """
   me: User!
+
+  """
+  Service types a lead can choose, in display order. Retired types are left out.
+  
+  **Auth:** Public.
+  
+  **Errors:** none expected; `INTERNAL_SERVER_ERROR` on an unexpected failure.
+  """
+  serviceTypes: [ServiceType!]!
 
   """
   All users, ordered by id.
@@ -66,6 +155,22 @@ type Query {
 enum Role {
   ADMIN
   USER
+}
+
+"""A service a lead can be interested in, e.g. `delivery`."""
+type ServiceType {
+  """
+  False once retired: existing leads keep it, but `register` no longer accepts it.
+  """
+  active: Boolean!
+
+  """
+  Stable key, e.g. `pick-up`. Pass it to `register` and the `leads` filter.
+  """
+  code: String!
+
+  """Display name, e.g. `Pick-up`."""
+  label: String!
 }
 
 type User {

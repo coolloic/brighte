@@ -37,6 +37,8 @@ pnpm dev          # web + api in parallel
 | `me` | ADMIN, USER |
 | `users` | ADMIN |
 | `createUser` (optional `role`, default `USER`) | ADMIN |
+| `register`, `serviceTypes` | public |
+| `leads`, `lead` | ADMIN |
 | `GET /` | public |
 
 - `pnpm db:seed` (dev only) creates or updates `admin@brighte.dev` (ADMIN) and `user@brighte.dev` (USER) with passwords from `SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD` in `apps/api/.env`.
@@ -71,6 +73,27 @@ Brighte Eats leads can be interested in several services, and the service types 
 **What the join table costs.** Writes touch two tables, so `register` must insert the lead and its services in one transaction. Reads need a join or a batched lookup; the API will use a DataLoader to avoid N+1 when listing leads with their services. Both costs are small at this scale.
 
 **Indexes.** `leads(createdAt, id)` serves the default newest-first sort with a stable tie-breaker for offset pagination. `lead_service_types(serviceTypeId)` serves the filter by service type; the composite primary key already covers lookups by lead. The unique `leads.email` is what the API's duplicate-lead (idempotency) handling will rely on.
+
+## Leads API
+
+| Operation | What it does |
+|---|---|
+| `register(name, email, mobile, postcode, services)` | Records a lead and its service interests in one transaction. Returns the lead. |
+| `leads(limit = 20, offset = 0, serviceType, sort = NEWEST_FIRST)` | One page of leads plus `total`. `limit` is 1–100. `sort`: `NEWEST_FIRST`, `OLDEST_FIRST`, `NAME_ASC`, each with `id` as tie-breaker so pages are stable. |
+| `lead(id)` | One lead with its services, or `null`. |
+| `serviceTypes` | Active service types, so the form is not hardcoded. |
+
+- **Services are codes, not a GraphQL enum.** `register` checks each code against active `service_types` rows, so a new service works as soon as its row exists, with no schema change or deploy.
+- **No N+1.** `Lead.services` goes through a per-request DataLoader: a page of leads costs one services query, whatever its size (an e2e test counts the queries).
+- **Offset pagination** is what the spec asks for and suits a dashboard with page numbers. At scale, deep offsets get slow and rows shift between pages as leads arrive; keyset pagination on the existing `(createdAt, id)` index is the fix.
+
+### Validation strategy: client vs server
+
+The server is the source of truth: every input is parsed with a Zod schema (`apps/api/src/leads/leads.schemas.ts`) before any database work, and it also normalises (lowercase email, mobile as `04xxxxxxxx`, trimmed text, de-duplicated services). A failure returns `BAD_USER_INPUT` with `extensions.fields`, a map from each invalid field to a message the form can show beside it. The form should repeat the same rules for instant feedback, but never instead of the server. Whether a service code exists is only known to the database, so that check lives only on the server.
+
+### Idempotency approach
+
+`leads.email` is unique, and `register` relies on that constraint rather than a prior lookup, so two concurrent registrations with one email cannot both succeed. The loser gets `CONFLICT` ("Email is already registered") and nothing is changed. `register` is public, so it deliberately does not merge into or return the existing lead: that would hand anyone who knows an email that person's stored name and mobile. The trade-off is that a retried request that already succeeded sees `CONFLICT`, which the form can present as "you're already registered".
 
 ## Scripts
 
