@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { JwtModule, type JwtModuleOptions, type JwtSignOptions } from '@nestjs/jwt';
 import { UsersModule } from '../users/users.module.js';
+import { AuthGuard } from './auth.guard.js';
 import { AuthResolver } from './auth.resolver.js';
 import { AuthService } from './auth.service.js';
 
@@ -27,6 +29,6 @@ const MIN_SECRET_LENGTH = 32;
       },
     }),
   ],
-  providers: [AuthService, AuthResolver],
+  providers: [AuthService, AuthResolver, { provide: APP_GUARD, useClass: AuthGuard }],
 })
 export class AuthModule {}

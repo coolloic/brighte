@@ -26,8 +26,12 @@ describe('Auth (e2e)', () => {
   let secret: string;
   const verifier = new JwtService({});
 
-  const gql = async <T>(query: string, variables?: Record<string, unknown>) => {
-    const res = await request(app.getHttpServer()).post('/graphql').send({ query, variables });
+  let adminToken: string;
+
+  const gql = async <T>(query: string, variables?: Record<string, unknown>, token?: string) => {
+    const req = request(app.getHttpServer()).post('/graphql');
+    if (token) req.set('Authorization', `Bearer ${token}`);
+    const res = await req.send({ query, variables });
     return res.body as GqlResponse<T>;
   };
 
@@ -43,6 +47,7 @@ describe('Auth (e2e)', () => {
     gql<{ createUser: { id: string; email: string; role: Role } }>(
       `mutation($input: CreateUserInput!) { createUser(input: $input) { id email role } }`,
       { input },
+      adminToken,
     );
 
   beforeAll(async () => {
@@ -58,6 +63,7 @@ describe('Auth (e2e)', () => {
       role: Role.ADMIN,
       passwordHash: await hashPassword('admin-password'),
     });
+    adminToken = (await login(email('admin'), 'admin-password')).data!.login.accessToken;
   });
 
   afterAll(async () => {
@@ -115,7 +121,7 @@ describe('Auth (e2e)', () => {
   });
 
   describe('createUser', () => {
-    it('stores a password hash, lowercases the email, and always creates a USER', async () => {
+    it('stores a password hash, lowercases the email, and defaults to USER', async () => {
       const { data, errors } = await createUser({
         email: email('New').toUpperCase(),
         name: 'New User',
@@ -132,15 +138,18 @@ describe('Auth (e2e)', () => {
       expect(loggedIn.data!.login.user.role).toBe(Role.USER);
     });
 
-    it('does not accept a role', async () => {
-      const { errors } = await createUser({
-        email: email('sneaky'),
-        name: 'Sneaky',
-        password: 'sneaky-password',
+    it('lets an admin create another admin, who can then log in', async () => {
+      const { data, errors } = await createUser({
+        email: email('admin2'),
+        name: 'Second Admin',
+        password: 'admin2-password',
         role: 'ADMIN',
       });
-      expect(errors?.[0].message).toMatch(/"role" is not defined/);
-      expect(await users.count({ where: { email: email('sneaky') } })).toBe(0);
+      expect(errors).toBeUndefined();
+      expect(data!.createUser.role).toBe(Role.ADMIN);
+
+      const loggedIn = await login(email('admin2'), 'admin2-password');
+      expect(loggedIn.data!.login.user.role).toBe(Role.ADMIN);
     });
 
     it('rejects a password shorter than 8 characters', async () => {
@@ -151,10 +160,10 @@ describe('Auth (e2e)', () => {
   });
 
   it('never exposes passwordHash through GraphQL', async () => {
-    const { errors } = await gql(`{ users { passwordHash } }`);
+    const { errors } = await gql(`{ users { passwordHash } }`, undefined, adminToken);
     expect(errors?.[0].message).toMatch(/Cannot query field "passwordHash"/);
 
-    const { data } = await gql<{ users: Record<string, unknown>[] }>(`{ users { id email role } }`);
+    const { data } = await gql<{ users: Record<string, unknown>[] }>(`{ users { id email role } }`, undefined, adminToken);
     expect(data!.users.length).toBeGreaterThan(0);
   });
 });

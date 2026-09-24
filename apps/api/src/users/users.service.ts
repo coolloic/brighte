@@ -1,7 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { hashPassword } from '../auth/password.js';
-import { Role } from '../auth/role.enum.js';
 import { User } from './user.model.js';
 import { CreateUserInput } from './create-user.input.js';
 
@@ -13,6 +12,13 @@ export class UsersService {
 
   findAll(): Promise<User[]> {
     return this.userModel.findAll({ order: [['id', 'ASC']] });
+  }
+
+  /** For the authenticated caller: a token for a deleted user is no longer valid. */
+  async findCaller(id: number): Promise<User> {
+    const user = await this.userModel.findByPk(id);
+    if (!user) throw new UnauthorizedException('User no longer exists');
+    return user;
   }
 
   /** Includes passwordHash: for credential checks only, never return it to a client. */
@@ -27,7 +33,7 @@ export class UsersService {
     const user = await this.userModel.create({
       email: input.email.toLowerCase(),
       name: input.name,
-      role: Role.USER,
+      role: input.role,
       passwordHash: await hashPassword(input.password),
     });
     // Reload through the default scope so the hash is not carried on the returned instance.
