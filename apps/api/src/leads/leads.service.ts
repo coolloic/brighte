@@ -3,7 +3,7 @@ import { InjectConnection, InjectModel } from '@nestjs/sequelize';
 import DataLoader from 'dataloader';
 import { UniqueConstraintError, type Includeable, type Order } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
-import { BadUserInputError, ConflictError } from '../common/errors.js';
+import { BadUserInputError, ConflictError } from '../common/index.js';
 import { LeadSort, type LeadPage } from './dto/lead-page.js';
 import { Lead } from './lead.model.js';
 import { LeadServiceType } from './lead-service-type.model.js';

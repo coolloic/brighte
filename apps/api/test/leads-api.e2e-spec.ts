@@ -6,11 +6,9 @@ import type { Sequelize } from 'sequelize-typescript';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
-import { hashPassword } from './../src/auth/password.js';
-import { Role } from './../src/auth/role.enum.js';
-import { Lead } from './../src/leads/lead.model.js';
-import { ServiceType } from './../src/leads/service-type.model.js';
-import { User } from './../src/users/user.model.js';
+import { hashPassword, Role } from './../src/auth/index.js';
+import { Lead, ServiceType } from './../src/leads/index.js';
+import { User } from './../src/users/index.js';
 
 const PREFIX = `e2e-lapi-${Date.now()}`;
 const email = (name: string) => `${PREFIX}-${name}@test.dev`;

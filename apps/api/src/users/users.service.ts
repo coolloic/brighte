@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { UniqueConstraintError } from 'sequelize';
-import { hashPassword } from '../auth/password.js';
-import { BadUserInputError, ConflictError, UnauthenticatedError } from '../common/errors.js';
+import { hashPassword } from '../auth/index.js';
+import { BadUserInputError, ConflictError, UnauthenticatedError } from '../common/index.js';
 import { User } from './user.model.js';
 import { CreateUserInput } from './create-user.input.js';
 

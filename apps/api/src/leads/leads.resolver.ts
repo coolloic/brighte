@@ -1,7 +1,6 @@
 import { Args, Context, ID, Int, Mutation, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
-import { Public, Roles } from '../auth/decorators.js';
-import { Role } from '../auth/role.enum.js';
-import { validate } from '../common/validate.js';
+import { Public, Role, Roles } from '../auth/index.js';
+import { validate } from '../common/index.js';
 import { LeadPage, LeadSort } from './dto/lead-page.js';
 import { Lead } from './lead.model.js';
 import { leadIdSchema, leadsArgsSchema, MAX_LEADS_LIMIT, registerSchema } from './leads.schemas.js';

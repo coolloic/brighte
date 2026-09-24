@@ -1,6 +1,6 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { Column, DataType, DefaultScope, Model, Scopes, Table } from 'sequelize-typescript';
-import { Role } from '../auth/role.enum.js';
+import { Role } from '../auth/index.js';
 
 @ObjectType()
 // The password hash is only loaded when asked for via the `withPassword` scope.
