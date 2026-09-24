@@ -13,16 +13,24 @@ pnpm + Turborepo monorepo.
 
 ```bash
 pnpm install
-cp apps/api/.env.example apps/api/.env
+cp apps/api/.env.example apps/api/.env   # then set JWT_SECRET (command in the file)
 cp apps/web/.env.example apps/web/.env.local
 pnpm db:up        # Postgres in Docker (override host port with POSTGRES_PORT)
 pnpm db:migrate   # apply pending migrations
+pnpm db:seed      # dev accounts: admin@brighte.dev / user@brighte.dev
 pnpm dev          # web + api in parallel
 ```
 
 - GraphQL playground: http://localhost:4001/graphql
 - Schema is generated to `apps/api/src/schema.gql` on API start.
 - Postgres: `postgres://brighte:brighte@localhost:5435/brighte`.
+
+## Authentication
+
+- `login(email, password)` returns `{ accessToken, user }`. The token is an HS256 JWT (`sub` = user id, `role`) that expires after `JWT_EXPIRES_IN` (default `15m`); send it as `Authorization: Bearer <token>`.
+- Roles: `ADMIN`, `USER`. Access control is not enforced yet; see `docs/superpowers/specs/2026-09-24-user-roles-auth-design.md`.
+- `pnpm db:seed` (dev only) creates or updates `admin@brighte.dev` (ADMIN) and `user@brighte.dev` (USER) with passwords from `SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD` in `apps/api/.env`.
+- The API refuses to start if `JWT_SECRET` is missing or shorter than 32 characters.
 
 ## Database migrations
 

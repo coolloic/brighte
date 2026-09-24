@@ -2,9 +2,18 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type AuthPayload {
+  """JWT to send as `Authorization: Bearer <token>`."""
+  accessToken: String!
+  user: User!
+}
+
 input CreateUserInput {
   email: String!
   name: String!
+
+  """At least 8 characters."""
+  password: String!
 }
 
 """
@@ -14,10 +23,19 @@ scalar DateTime
 
 type Mutation {
   createUser(input: CreateUserInput!): User!
+
+  """Exchange email and password for an access token."""
+  login(email: String!, password: String!): AuthPayload!
 }
 
 type Query {
   users: [User!]!
+}
+
+"""Access level of a user."""
+enum Role {
+  ADMIN
+  USER
 }
 
 type User {
@@ -25,4 +43,5 @@ type User {
   email: String!
   id: ID!
   name: String!
+  role: Role!
 }

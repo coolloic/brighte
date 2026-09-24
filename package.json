@@ -8,6 +8,7 @@
     "test": "turbo run test",
     "db:up": "docker compose up -d postgres",
     "db:migrate": "pnpm --filter @brighte/api db:migrate",
+    "db:seed": "pnpm --filter @brighte/api db:seed",
     "lint:style": "turbo run lint:style",
     "typecheck": "turbo run typecheck",
     "test:e2e": "turbo run test:e2e",
