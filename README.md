@@ -2,24 +2,27 @@
 
 pnpm + Turborepo monorepo.
 
-| Path          | Stack                                                    | Port |
-| ------------- | -------------------------------------------------------- | ---- |
-| `apps/web`    | Next.js 16 (App Router), React 19, Tailwind 4 + SCSS      | 3001 |
-| `apps/api`    | NestJS 12, GraphQL (Apollo, code-first), Sequelize        | 4001 |
+| Path          | Stack                                                    | Port (root `.env`) |
+| ------------- | -------------------------------------------------------- | ------------------ |
+| `apps/web`    | Next.js 16 (App Router), React 19, Tailwind 4 + SCSS      | 3001 (`WEB_PORT`) |
+| `apps/api`    | NestJS 12, GraphQL (Apollo, code-first), Sequelize        | 4001 (`API_PORT`) |
+| Storybook     | `apps/web` component library                             | 6006 (`STORYBOOK_PORT`) |
 | `packages/*`  | Shared packages (empty)                                   |      |
-| Postgres 17   | `docker-compose.yml`                                      | 5435 |
+| Postgres 17   | `docker-compose.yml`                                      | 5435 (`POSTGRES_PORT`) |
 
 ## Getting started
 
 ```bash
 pnpm install
+cp .env.example .env                     # optional: only to change the ports above
 cp apps/api/.env.example apps/api/.env   # then set JWT_SECRET (command in the file)
-cp apps/web/.env.example apps/web/.env.local
-pnpm db:up        # Postgres in Docker (override host port with POSTGRES_PORT)
+pnpm db:up        # Postgres in Docker
 pnpm db:migrate   # apply pending migrations
 pnpm db:seed      # dev accounts: admin@brighte.dev / user@brighte.dev
 pnpm dev          # web + api in parallel
 ```
+
+**Ports** live in one place, the root `.env` (see `.env.example`). Every script and tool reads it and falls back to the defaults above when a value (or the file) is missing: `pnpm dev`, `start`, `storybook`, Playwright, Lighthouse, Docker Compose, and the API's default CORS origin and the web app's API URL. A variable set in your shell still wins, e.g. `WEB_PORT=3002 pnpm dev`. Two exceptions: `DATABASE_URL` in `apps/api/.env` carries its own port, so change it together with `POSTGRES_PORT`; and an explicit `PORT` (set by hosting platforms and the smoke test) wins over `API_PORT`.
 
 - GraphQL playground (GraphiQL, interactive): http://localhost:4001/graphql
 - API reference (static HTML): `pnpm --filter @brighte/api docs:build`, then open `apps/api/docs/index.html`. Every query and mutation must document its `**Auth:**` and `**Errors:**` in its schema description, and every error code it lists must appear in the error table in `apps/api/spectaql.yml`; `pnpm test` enforces both.

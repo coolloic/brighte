@@ -6,6 +6,7 @@ import { configureApp } from './app.setup.js';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   configureApp(app);
-  await app.listen(process.env.PORT ?? 4001);
+  // PORT (set by hosting platforms and the smoke test) wins over API_PORT from the root .env.
+  await app.listen(process.env.PORT ?? process.env.API_PORT ?? 4001);
 }
 await bootstrap();

@@ -1,4 +1,4 @@
-const API_URL = process.env.API_URL ?? "http://localhost:4001/graphql";
+const API_URL = process.env.API_URL ?? `http://localhost:${process.env.API_PORT ?? 4001}/graphql`;
 
 export async function gql<T>(
   query: string,
