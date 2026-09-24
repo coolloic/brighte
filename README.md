@@ -113,6 +113,16 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 
 **What this does not cover.** App-level rate limiting slows abuse; it does not stop a real DDoS, which has to be absorbed before it reaches Node (a CDN or WAF, e.g. Cloudflare or AWS WAF, plus load balancer limits). Counters are in memory, so each instance counts separately; with several instances, move them to Redis (`@nest-lab/throttler-storage-redis`). A distributed password-guessing attack spreads across IPs, so per-account lockout or a CAPTCHA on repeated failures would be the next step, and a CAPTCHA (e.g. Turnstile) on `register` if bots get past the per-IP limit. Oversized bodies (413) are still logged at ERROR with a stack, which is noisy under attack.
 
+## API collection (Bruno)
+
+`apps/api/bruno/` is a [Bruno](https://www.usebruno.com) collection with every operation. It's plain-text files, so it is versioned and reviewed with the API.
+
+1. Open the folder in Bruno (*Open Collection*), and `cp apps/api/bruno/.env.example apps/api/bruno/.env`. The passwords must match `SEED_*_PASSWORD` in `apps/api/.env`; the `.env` is gitignored.
+2. Select the **local** environment and run **1 Auth / Login as admin**. It saves the access token, and every other request sends it as `Authorization: Bearer`. Tokens expire after 15 minutes: run it again when you get `UNAUTHENTICATED`.
+3. **Register** saves the new lead's id, which **Get lead** uses. **4 Access checks** shows `FORBIDDEN`, `UNAUTHENTICATED` and `BAD_USER_INPUT`; it switches to the USER token, so log in as admin again afterwards.
+
+Every request has a test, so the collection also runs from the command line: `cd apps/api/bruno && pnpm dlx @usebruno/cli run --env local -r` (add `--env-var baseUrl=http://localhost:<port>` for another port). Runs create a lead and a user with `bruno-…@example.com` emails in your dev database.
+
 ## Scripts
 
 **API smoke test:** `pnpm --filter @brighte/api test:smoke` builds the API, starts real servers (dev, dev with the real rate limits, production) on ports 4801-4804 (`SMOKE_PORT` to move them), and checks every operation, edge case and error code over HTTP, the way the web app calls it. It needs Postgres migrated and seeded (`pnpm db:up && pnpm db:migrate && pnpm db:seed`), cleans up its data, and exits non-zero on any failure.

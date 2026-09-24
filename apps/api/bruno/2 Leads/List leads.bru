@@ -1,0 +1,55 @@
+meta {
+  name: List leads
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  query Leads($limit: Int, $offset: Int, $serviceType: String, $sort: LeadSort) {
+    leads(limit: $limit, offset: $offset, serviceType: $serviceType, sort: $sort) {
+      total
+      limit
+      offset
+      items {
+        id
+        name
+        email
+        mobile
+        postcode
+        createdAt
+        services {
+          code
+        }
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "limit": 20,
+    "offset": 0,
+    "serviceType": "delivery",
+    "sort": "NEWEST_FIRST"
+  }
+}
+
+docs {
+  `sort`: `NEWEST_FIRST` (default), `OLDEST_FIRST`, `NAME_ASC`. `limit` 1–100.
+  `serviceType` is a code from **Service types**; omit it for all leads.
+}
+
+tests {
+  test("returns a page of leads interested in delivery", function () {
+    expect(res.body.errors).to.be.undefined;
+    const page = res.body.data.leads;
+    expect(page.total).to.be.at.least(1);
+    expect(page.items.every((l) => l.services.some((s) => s.code === "delivery"))).to.equal(true);
+  });
+}

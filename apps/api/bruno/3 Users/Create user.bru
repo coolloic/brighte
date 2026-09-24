@@ -1,0 +1,44 @@
+meta {
+  name: Create user
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  mutation CreateUser($input: CreateUserInput!) {
+    createUser(input: $input) {
+      id
+      email
+      name
+      role
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "input": {
+      "email": "{{newUserEmail}}",
+      "name": "New User",
+      "password": "change-me-please",
+      "role": "USER"
+    }
+  }
+}
+
+script:pre-request {
+  bru.setVar("newUserEmail", `bruno-user-${Date.now()}@example.com`);
+}
+
+tests {
+  test("creates a USER", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.createUser.role).to.equal("USER");
+  });
+}

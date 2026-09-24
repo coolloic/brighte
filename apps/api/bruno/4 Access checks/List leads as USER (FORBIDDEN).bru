@@ -1,0 +1,26 @@
+meta {
+  name: List leads as USER (FORBIDDEN)
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  query Leads {
+    leads {
+      total
+    }
+  }
+}
+
+tests {
+  test("a USER token is refused", function () {
+    expect(res.body.errors[0].extensions.code).to.equal("FORBIDDEN");
+    expect(res.body.data).to.equal(null);
+  });
+}

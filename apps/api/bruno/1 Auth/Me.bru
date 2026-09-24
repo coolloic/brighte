@@ -1,0 +1,30 @@
+meta {
+  name: Me
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  query Me {
+    me {
+      id
+      email
+      name
+      role
+      createdAt
+    }
+  }
+}
+
+tests {
+  test("returns the signed-in user", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.me.email).to.equal(bru.getEnvVar("adminEmail"));
+  });
+}

@@ -1,0 +1,25 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  # Brighte API
+
+  1. `cp .env.example .env` in this folder (passwords of the seed accounts, gitignored).
+  2. Select the **local** environment.
+  3. Run **1 Auth / Login as admin**. It stores the access token in `{{token}}`, which every
+     request inherits as `Authorization: Bearer`. Tokens last 15 minutes: run it again when
+     requests start returning `UNAUTHENTICATED`.
+
+  Public operations (`login`, `register`, `serviceTypes`) send no token.
+  **4 Access checks** logs in as the USER account, so run **Login as admin** again afterwards.
+
+  Check `errors[0].extensions.code`, not the HTTP status. Codes: see the API reference
+  (`pnpm --filter @brighte/api docs:build`).
+
+  Command line: `pnpm dlx @usebruno/cli run --env local -r` from this folder.
+}

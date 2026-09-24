@@ -1,0 +1,42 @@
+meta {
+  name: Register invalid input (BAD_USER_INPUT)
+  type: graphql
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation Register($name: String!, $email: String!, $mobile: String!, $postcode: String!, $services: [String!]!) {
+    register(name: $name, email: $email, mobile: $mobile, postcode: $postcode, services: $services) {
+      id
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "name": " ",
+    "email": "not-an-email",
+    "mobile": "123",
+    "postcode": "20",
+    "services": ["teleport"]
+  }
+}
+
+docs {
+  Shows the error shape the register form handles: `extensions.fields` maps each invalid
+  field to a message.
+}
+
+tests {
+  test("reports each invalid field", function () {
+    const error = res.body.errors[0];
+    expect(error.extensions.code).to.equal("BAD_USER_INPUT");
+    expect(Object.keys(error.extensions.fields)).to.have.members(["name", "email", "mobile", "postcode"]);
+  });
+}
