@@ -23,15 +23,42 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 scalar DateTime
 
 type Mutation {
+  """
+  Create a user. `role` defaults to `USER`; the email is stored lowercase.
+  
+  **Auth:** `ADMIN`.
+  
+  **Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`), `BAD_REQUEST` (password shorter than 8 characters), `INTERNAL_SERVER_ERROR` (email already registered; known gap, see the error table).
+  """
   createUser(input: CreateUserInput!): User!
 
-  """Exchange email and password for an access token."""
+  """
+  Exchange email and password for an access token. Email is case-insensitive.
+  
+  **Auth:** Public.
+  
+  **Errors:** `UNAUTHENTICATED` (wrong email or password; the same message for both).
+  """
   login(email: String!, password: String!): AuthPayload!
 }
 
 type Query {
-  """The signed-in user."""
+  """
+  The signed-in user.
+  
+  **Auth:** `ADMIN` or `USER`.
+  
+  **Errors:** `UNAUTHENTICATED` (missing, invalid or expired token, or the account no longer exists).
+  """
   me: User!
+
+  """
+  All users, ordered by id.
+  
+  **Auth:** `ADMIN`.
+  
+  **Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`).
+  """
   users: [User!]!
 }
 

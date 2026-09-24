@@ -21,7 +21,8 @@ pnpm db:seed      # dev accounts: admin@brighte.dev / user@brighte.dev
 pnpm dev          # web + api in parallel
 ```
 
-- GraphQL playground: http://localhost:4001/graphql
+- GraphQL playground (GraphiQL, interactive): http://localhost:4001/graphql
+- API reference (static HTML): `pnpm --filter @brighte/api docs:build`, then open `apps/api/docs/index.html`. Every query and mutation must document its `**Auth:**` and `**Errors:**` in its schema description, and every error code it lists must appear in the error table in `apps/api/spectaql.yml`; `pnpm test` enforces both.
 - Schema is generated to `apps/api/src/schema.gql` on API start.
 - Postgres: `postgres://brighte:brighte@localhost:5435/brighte`.
 

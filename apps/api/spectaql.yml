@@ -1,0 +1,82 @@
+# GraphQL API reference. Generate with `pnpm --filter @brighte/api docs:build` → docs/index.html
+# The error table below is checked against the schema descriptions by src/docs.spec.ts.
+spectaql:
+  targetDir: ./docs
+  oneFile: true
+  themeDir: ./docs-theme
+
+introspection:
+  schemaFile: ./src/schema.gql
+  removeTrailingPeriodFromDescriptions: false
+  queryNameStrategy: capitalizeFirst
+  fieldExpansionDepth: 2
+
+extensions:
+  graphqlScalarExamples: true
+
+info:
+  title: Brighte GraphQL API
+  description: |
+    Single GraphQL endpoint for the Brighte platform. Every operation below lists its
+    **Auth** requirement and the **Errors** it can return.
+  x-introItems:
+    - title: Authentication
+      description: |
+        Access is **denied by default**. Only operations marked *Public* work without a token.
+        Get a token from `login` and send it on every other request:
+
+        ```
+        Authorization: Bearer <accessToken>
+        ```
+
+        Tokens are HS256 JWTs carrying the user id (`sub`) and `role`, and expire after
+        **15 minutes**. Call `login` again for a new one. A role change applies from the
+        user's next login.
+    - title: Roles
+      description: |
+        Each user has one role. An operation's **Auth** line lists the roles allowed to call it.
+
+        | Role | Can call |
+        |---|---|
+        | `ADMIN` | `me`, `users`, `createUser` |
+        | `USER` | `me` |
+
+        There is no self sign-up: accounts are created by an `ADMIN` (or the dev seed).
+    - title: Errors
+      description: |
+        Failures come back in the standard GraphQL `errors` array. Check
+        `errors[].extensions.code`, **not the HTTP status**: errors raised while running an
+        operation (auth, role, input checks) are returned with HTTP **200**. Only requests
+        rejected before execution (malformed query, unknown field, wrong variable type) get
+        HTTP **400**.
+
+        ```json
+        {
+          "errors": [{
+            "message": "Insufficient role",
+            "path": ["users"],
+            "extensions": { "code": "FORBIDDEN" }
+          }],
+          "data": null
+        }
+        ```
+
+        | Code | HTTP | Meaning |
+        |---|---|---|
+        | `UNAUTHENTICATED` | 200 | Missing, invalid or expired token; account no longer exists; or wrong email/password on `login` |
+        | `FORBIDDEN` | 200 | Signed in, but your role is not allowed |
+        | `BAD_REQUEST` | 200 | Input rejected, e.g. password shorter than 8 characters |
+        | `INTERNAL_SERVER_ERROR` | 200 | Unexpected failure. Known case: `createUser` with an email that is already registered |
+        | `GRAPHQL_VALIDATION_FAILED` | 400 | Unknown field, wrong argument or variable type |
+        | `GRAPHQL_PARSE_FAILED` | 400 | The query is not valid GraphQL syntax |
+
+        In development, errors also include `extensions.stacktrace`.
+
+servers:
+  - url: http://localhost:4001/graphql
+    description: Local development
+    production: true
+    headers:
+      - name: Authorization
+        example: Bearer <accessToken>
+        comment: Omit for Public operations
