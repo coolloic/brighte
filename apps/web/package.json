@@ -39,6 +39,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-storybook": "^10.6.0",
     "playwright": "^1.63.0",
+    "remark-gfm": "^4.0.1",
     "sass": "^1.105.0",
     "storybook": "^10.6.0",
     "stylelint": "^17.15.0",
