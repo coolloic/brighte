@@ -2,9 +2,13 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-input CreateUserInput {
-  email: String!
-  name: String!
+"""Result of a successful sign-in or registration."""
+type AuthPayload {
+  """JWT to send as `Authorization: Bearer <token>`."""
+  accessToken: String!
+
+  """The signed-in user."""
+  user: User!
 }
 
 """
@@ -12,17 +16,61 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+"""Credentials for signing in."""
+input LoginInput {
+  """Account email address."""
+  email: String!
+
+  """Account password."""
+  password: String!
+}
+
 type Mutation {
-  createUser(input: CreateUserInput!): User!
+  """Sign in with email and password."""
+  login(input: LoginInput!): AuthPayload!
+
+  """Create an account (role USER) and sign in."""
+  register(input: RegisterInput!): AuthPayload!
 }
 
 type Query {
+  """The signed-in user."""
+  me: User!
+
+  """All users. Requires ADMIN."""
   users: [User!]!
 }
 
+"""Details for creating a new account."""
+input RegisterInput {
+  """Email address, used to sign in. Case-insensitive."""
+  email: String!
+
+  """Display name, 1–100 characters."""
+  name: String!
+
+  """Password, 12–128 characters."""
+  password: String!
+}
+
+"""Access level of a user."""
+enum Role {
+  ADMIN
+  USER
+}
+
+"""A registered user."""
 type User {
+  """When the account was created."""
   createdAt: DateTime!
+
+  """Email address, unique and lowercase."""
   email: String!
   id: ID!
+
+  """Display name."""
   name: String!
+
+  """Access level."""
+  role: Role!
 }

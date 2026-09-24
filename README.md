@@ -13,13 +13,14 @@ pnpm + Turborepo monorepo.
 
 ```bash
 pnpm install
-cp apps/api/.env.example apps/api/.env
+cp apps/api/.env.example apps/api/.env   # then set JWT_SECRET (openssl rand -hex 32)
 cp apps/web/.env.example apps/web/.env.local
 pnpm db:up        # Postgres in Docker (override host port with POSTGRES_PORT)
 pnpm dev          # web + api in parallel
 ```
 
-- GraphQL playground: http://localhost:4001/graphql
+- Apollo Sandbox (API docs, dev only): http://localhost:4001/graphql
+- Health check: http://localhost:4001/health
 - Schema is generated to `apps/api/src/schema.gql` on API start.
 - Sequelize `synchronize` is on outside production — add migrations before shipping.
 

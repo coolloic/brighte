@@ -1,12 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service.js';
+import { Public } from './auth/decorators.js';
 
 @Controller()
 export class AppController {
-  constructor(private readonly appService: AppService) {}
-
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  @Public() // Liveness probe for load balancers and e2e startup; exposes no data.
+  @Get('health')
+  health(): { status: 'ok' } {
+    return { status: 'ok' };
   }
 }

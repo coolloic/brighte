@@ -3,7 +3,7 @@
 pnpm workspaces + Turborepo. See `README.md` for setup and ports.
 
 - `apps/web`: Next.js + React front-end. **Read `apps/web/CLAUDE.md` before any UI work.**
-- `apps/api`: NestJS + GraphQL (Apollo, code-first) + Sequelize (Postgres).
+- `apps/api`: NestJS + GraphQL (Apollo, code-first) + Sequelize (Postgres). **Read `apps/api/CLAUDE.md` before any API work.** API design comes first and needs approval before implementation.
 
 ## Quality gates
 
@@ -13,7 +13,7 @@ pnpm workspaces + Turborepo. See `README.md` for setup and ports.
 | `pnpm lint:style` | Stylelint on web SCSS (standard-scss, mobile-first `min-width` only) |
 | `pnpm typecheck` | `tsc --noEmit` for both apps |
 | `pnpm test` | Unit tests (api, Vitest) |
-| `pnpm test:e2e` | Playwright + axe (web; starts api and web automatically, needs `pnpm db:up`) |
+| `pnpm test:e2e` | API: auth, authorization, validation and error-code e2e (Vitest + supertest). Web: Playwright + axe (starts api and web automatically). Both need `pnpm db:up` |
 | `pnpm --filter @brighte/web lighthouse` | Lighthouse CI against a running app on :3001 |
 
 **Pre-commit hook** (husky + lint-staged): ESLint and Stylelint on staged files, then `pnpm typecheck`. Never bypass it with `--no-verify`. Fix the cause instead.
@@ -22,4 +22,4 @@ pnpm workspaces + Turborepo. See `README.md` for setup and ports.
 
 - Use pnpm only, never npm or yarn.
 - Every change must pass `pnpm lint && pnpm lint:style && pnpm typecheck` before you report it as done.
-- API: invoke `nestjs-expert` / `graphql-architect` for back-end design. Use explicit field mapping when writing Sequelize models (no spreading class instances). Use `.js` extensions on relative imports (ESM, `nodenext`).
+- **Git workflow**: never commit or push to `main`. Do every piece of work on a feature branch (`feat/…`, `fix/…`, `chore/…`) and merge it only through a reviewed PR. Claude does not commit unless the user explicitly asks in that session.

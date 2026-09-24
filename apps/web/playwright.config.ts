@@ -19,7 +19,7 @@ export default defineConfig({
     {
       // Call binaries directly (not via pnpm) and `exec` so Playwright can stop the servers on teardown.
       command: "cd ../api && node_modules/.bin/nest build && exec node --env-file-if-exists=.env dist/main.js",
-      url: "http://localhost:4001",
+      url: "http://localhost:4001/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },

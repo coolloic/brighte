@@ -16,11 +16,18 @@ describe('AppController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('/health (GET) is public', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/health')
       .expect(200)
-      .expect('Hello World!');
+      .expect({ status: 'ok' });
+  });
+
+  it('unknown REST route returns a friendly 404', () => {
+    return request(app.getHttpServer())
+      .get('/nope')
+      .expect(404)
+      .expect({ error: { code: 'NOT_FOUND', message: 'The requested resource was not found.' } });
   });
 
   afterEach(async () => {
