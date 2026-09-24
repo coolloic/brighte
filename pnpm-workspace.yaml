@@ -7,3 +7,4 @@ allowBuilds:
   unrs-resolver: false
   "@apollo/protobufjs": false
   "@parcel/watcher": false
+  esbuild: false

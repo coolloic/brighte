@@ -12,7 +12,7 @@ pnpm workspaces + Turborepo. See `README.md` for setup and ports.
 | `pnpm lint` | ESLint: web (Next + jsx-a11y strict + atomic import rules), api (typescript-eslint type-checked) |
 | `pnpm lint:style` | Stylelint on web SCSS (standard-scss, mobile-first `min-width` only) |
 | `pnpm typecheck` | `tsc --noEmit` for both apps |
-| `pnpm test` | Unit tests (api, Vitest) |
+| `pnpm test` | Unit tests (api, Vitest) and component story tests (web: every Storybook story rendered in Chromium, with its `play` function and a WCAG 2.1 AA axe check) |
 | `pnpm test:e2e` | Playwright + axe (web; starts api and web automatically, needs `pnpm db:up`) |
 | `pnpm --filter @brighte/api test:smoke` | Black-box API smoke test: builds, starts real servers (dev, real rate limits, production) on ports 4801-4804 and checks every operation and error code over HTTP. Needs `pnpm db:up`, `db:migrate`, `db:seed` |
 | `pnpm --filter @brighte/web lighthouse` | Lighthouse CI against a running app on :3001 |
