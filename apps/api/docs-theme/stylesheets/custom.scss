@@ -1,0 +1,8 @@
+// Overlaid on SpectaQL's default theme (see spectaql.yml → themeDir).
+
+// Intro code blocks get the light base background, but highlight.js colours assume a
+// dark one, leaving punctuation and placeholders unreadable. Match the example panels.
+#spectaql #introduction pre code {
+  background: #222;
+  color: #fff;
+}

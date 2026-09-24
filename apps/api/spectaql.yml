@@ -1,0 +1,79 @@
+# GraphQL API reference. Generate with `pnpm --filter @brighte/api docs:build` → docs/index.html
+spectaql:
+  targetDir: ./docs
+  oneFile: true
+  themeDir: ./docs-theme
+
+introspection:
+  schemaFile: ./src/schema.gql
+  removeTrailingPeriodFromDescriptions: false
+  queryNameStrategy: capitalizeFirst
+  fieldExpansionDepth: 2
+
+extensions:
+  graphqlScalarExamples: true
+
+info:
+  title: Brighte GraphQL API
+  description: |
+    Single GraphQL endpoint for the Brighte platform. Every operation below lists its
+    **Auth** level and the **Errors** it can return.
+  x-introItems:
+    - title: Authentication
+      description: |
+        Access is **denied by default**. Operations marked *Public* need no token; every other
+        operation requires a JWT from `login` or `register`, sent as:
+
+        ```
+        Authorization: Bearer <accessToken>
+        ```
+
+        Tokens expire after **15 minutes**; call `login` again for a new one.
+    - title: Authorization
+      description: |
+        Least privilege: an operation needs a valid token (**any signed-in user**) unless its
+        **Auth** line names a role, e.g. `ADMIN`. Operations only ever return the caller's own
+        data unless a role grants broader access.
+    - title: Errors
+      description: |
+        Failures come back in the standard GraphQL `errors` array with a stable machine-readable
+        `extensions.code`, a user-friendly `message`, and a matching **HTTP status**. Validation
+        errors add `extensions.details` with messages per field.
+
+        ```json
+        {
+          "errors": [{
+            "message": "Some of the information provided is invalid.",
+            "extensions": {
+              "code": "VALIDATION_FAILED",
+              "details": { "email": ["Enter a valid email address."] }
+            }
+          }],
+          "data": null
+        }
+        ```
+
+        | Code | HTTP | Meaning |
+        |---|---|---|
+        | `BAD_REQUEST` | 400 | Malformed query, unknown field or wrong variable type |
+        | `VALIDATION_FAILED` | 400 | Input failed validation; see `details` |
+        | `UNAUTHENTICATED` | 401 | Missing, invalid or expired token |
+        | `INVALID_CREDENTIALS` | 401 | Wrong email or password |
+        | `FORBIDDEN` | 403 | Signed in, but your role is not allowed |
+        | `NOT_FOUND` | 404 | Resource does not exist or is not yours |
+        | `CONFLICT` | 409 | Conflicts with an existing record |
+        | `EMAIL_TAKEN` | 409 | An account with this email already exists |
+        | `NOT_IMPLEMENTED` | 501 | Operation is designed but not built yet |
+        | `INTERNAL_ERROR` | 500 | Unexpected failure; any operation can return this |
+
+        Send an `x-request-id` header to correlate a failure with server logs; the API echoes it
+        (or a generated one) in the response headers.
+
+servers:
+  - url: http://localhost:4001/graphql
+    description: Local development
+    production: true
+    headers:
+      - name: Authorization
+        example: Bearer <accessToken>
+        comment: Omit for Public operations

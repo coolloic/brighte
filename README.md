@@ -19,7 +19,8 @@ pnpm db:up        # Postgres in Docker (override host port with POSTGRES_PORT)
 pnpm dev          # web + api in parallel
 ```
 
-- Apollo Sandbox (API docs, dev only): http://localhost:4001/graphql
+- API reference (static HTML): `pnpm --filter @brighte/api docs:build`, then open `apps/api/docs/index.html`
+- Apollo Sandbox (interactive, dev only): http://localhost:4001/graphql
 - Health check: http://localhost:4001/health
 - Schema is generated to `apps/api/src/schema.gql` on API start.
 - Sequelize `synchronize` is on outside production — add migrations before shipping.

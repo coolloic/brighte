@@ -26,18 +26,42 @@ input LoginInput {
 }
 
 type Mutation {
-  """Sign in with email and password."""
+  """
+  Sign in with email and password. The returned token expires after 15 minutes.
+  
+  **Auth:** Public.
+  
+  **Errors:** `VALIDATION_FAILED` (400), `INVALID_CREDENTIALS` (401).
+  """
   login(input: LoginInput!): AuthPayload!
 
-  """Create an account (role USER) and sign in."""
+  """
+  Create an account (role `USER`) and sign in.
+  
+  **Auth:** Public.
+  
+  **Errors:** `VALIDATION_FAILED` (400), `EMAIL_TAKEN` (409).
+  """
   register(input: RegisterInput!): AuthPayload!
 }
 
 type Query {
-  """The signed-in user."""
+  """
+  The signed-in user.
+  
+  **Auth:** Any signed-in user (returns only the caller).
+  
+  **Errors:** `UNAUTHENTICATED` (401), `NOT_FOUND` (404).
+  """
   me: User!
 
-  """All users. Requires ADMIN."""
+  """
+  All users, ordered by id.
+  
+  **Auth:** `ADMIN` role.
+  
+  **Errors:** `UNAUTHENTICATED` (401), `FORBIDDEN` (403).
+  """
   users: [User!]!
 }
 
@@ -66,6 +90,8 @@ type User {
 
   """Email address, unique and lowercase."""
   email: String!
+
+  """Unique user id."""
   id: ID!
 
   """Display name."""

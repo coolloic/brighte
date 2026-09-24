@@ -15,6 +15,7 @@ pnpm workspaces + Turborepo. See `README.md` for setup and ports.
 | `pnpm test` | Unit tests (api, Vitest) |
 | `pnpm test:e2e` | API: auth, authorization, validation and error-code e2e (Vitest + supertest). Web: Playwright + axe (starts api and web automatically). Both need `pnpm db:up` |
 | `pnpm --filter @brighte/web lighthouse` | Lighthouse CI against a running app on :3001 |
+| `pnpm --filter @brighte/api docs:build` | Static GraphQL API reference (SpectaQL) → `apps/api/docs/index.html` |
 
 **Pre-commit hook** (husky + lint-staged): ESLint and Stylelint on staged files, then `pnpm typecheck`. Never bypass it with `--no-verify`. Fix the cause instead.
 

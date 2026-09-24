@@ -8,7 +8,7 @@ import { Role } from '../auth/role.enum.js';
 @Scopes(() => ({ withPassword: { attributes: { include: ['passwordHash'] } } }))
 @Table({ tableName: 'users', underscored: true })
 export class User extends Model {
-  @Field(() => ID)
+  @Field(() => ID, { description: 'Unique user id.' })
   declare id: number;
 
   @Field({ description: 'Email address, unique and lowercase.' })

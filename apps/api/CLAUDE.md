@@ -18,9 +18,13 @@ These rules are mandatory for every API change. They adapt `~/.claude/guidelines
 
 1. **Write the contract as code**, with no business logic:
    - `@ObjectType` / `@InputType` / `@ArgsType` classes with a `description` on **every** type, field and argument (these become the API docs).
+   - Every query and mutation description ends with a `**Auth:**` line (Public / Any signed-in user / role) and an `**Errors:**` line listing each code with its HTTP status, e.g. `` **Errors:** `UNAUTHENTICATED` (401), `FORBIDDEN` (403). `` A unit test (`src/docs.spec.ts`) fails if either is missing.
+   - A new error code is added to `src/common/errors/error-codes.ts` **and** to the error table in `spectaql.yml` (the same test checks this).
    - class-validator rules on every input field (see §5).
    - Resolver methods carrying their auth decorators (`@Public()` / `@Roles()`), with bodies that only `throw new AppError('NOT_IMPLEMENTED')` (HTTP 501).
-2. **Build the docs**: start the API (`pnpm --filter @brighte/api dev`). `src/schema.gql` regenerates; open Apollo Sandbox at http://localhost:4001/graphql and check the operations show up with their docs.
+2. **Build the docs**: start the API (`pnpm --filter @brighte/api dev`) so `src/schema.gql` regenerates. Then:
+   - run `pnpm --filter @brighte/api docs:build` → `apps/api/docs/index.html`, the static API reference (SpectaQL), and check the new operations, Auth and Errors read correctly
+   - open Apollo Sandbox at http://localhost:4001/graphql to try the stubs (they return `NOT_IMPLEMENTED`)
 3. **Present the contract to the user and wait for explicit approval.** Include for each operation:
    - name and type (query or mutation)
    - auth level (Public / authenticated / roles) and why that is the least privilege needed
@@ -80,7 +84,7 @@ These rules are mandatory for every API change. They adapt `~/.claude/guidelines
 1. Contract approved (§2) and `src/schema.gql` diff reviewed.
 2. `pnpm lint && pnpm typecheck && pnpm test`
 3. `pnpm test:e2e` (needs `pnpm db:up`): happy path + every documented error code, asserting status and code.
-4. Checked in Sandbox that the docs (descriptions) are complete.
+4. `pnpm --filter @brighte/api docs:build` regenerated, and the API reference reviewed for the changed operations.
 
 ## Conventions
 
