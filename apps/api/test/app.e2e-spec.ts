@@ -23,6 +23,13 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 
+  it('keeps Nest\'s default error response for REST', () => {
+    return request(app.getHttpServer())
+      .get('/missing')
+      .expect(404)
+      .expect((res) => expect(res.body).toMatchObject({ statusCode: 404, error: 'Not Found' }));
+  });
+
   afterEach(async () => {
     await app.close();
   });

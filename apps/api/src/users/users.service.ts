@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
+import { UniqueConstraintError } from 'sequelize';
 import { hashPassword } from '../auth/password.js';
+import { BadUserInputError, ConflictError, UnauthenticatedError } from '../common/errors.js';
 import { User } from './user.model.js';
 import { CreateUserInput } from './create-user.input.js';
 
@@ -17,7 +19,7 @@ export class UsersService {
   /** For the authenticated caller: a token for a deleted user is no longer valid. */
   async findCaller(id: number): Promise<User> {
     const user = await this.userModel.findByPk(id);
-    if (!user) throw new UnauthorizedException('User no longer exists');
+    if (!user) throw new UnauthenticatedError('User no longer exists');
     return user;
   }
 
@@ -28,14 +30,19 @@ export class UsersService {
 
   async create(input: CreateUserInput): Promise<User> {
     if (input.password.length < MIN_PASSWORD_LENGTH) {
-      throw new BadRequestException(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+      throw new BadUserInputError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
     }
-    const user = await this.userModel.create({
-      email: input.email.toLowerCase(),
-      name: input.name,
-      role: input.role,
-      passwordHash: await hashPassword(input.password),
-    });
+    const user = await this.userModel
+      .create({
+        email: input.email.toLowerCase(),
+        name: input.name,
+        role: input.role,
+        passwordHash: await hashPassword(input.password),
+      })
+      .catch((err: unknown) => {
+        if (err instanceof UniqueConstraintError) throw new ConflictError('Email is already registered');
+        throw err;
+      });
     // Reload through the default scope so the hash is not carried on the returned instance.
     return this.userModel.findByPk(user.id, { rejectOnEmpty: true });
   }

@@ -9,6 +9,8 @@ import type { Role } from './role.enum.js';
  * Global guard, deny by default:
  * 1. Every handler needs a valid bearer token unless marked @Public().
  * 2. Handlers marked @Roles(...) also need the token's role to be listed.
+ * Throws Nest HTTP exceptions, not GraphQL errors, because it also guards REST routes;
+ * the Apollo driver maps them to UNAUTHENTICATED / FORBIDDEN.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {

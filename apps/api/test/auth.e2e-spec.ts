@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import type { INestApplication } from '@nestjs/common';
+import { Logger, type INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { getModelToken } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
@@ -16,7 +16,7 @@ process.env.JWT_EXPIRES_IN = '15m';
 const PREFIX = `e2e-auth-${Date.now()}`;
 const email = (name: string) => `${PREFIX}-${name}@test.dev`;
 
-type GqlResponse<T> = { data?: T; errors?: { message: string }[] };
+type GqlResponse<T> = { data?: T; errors?: { message: string; extensions?: { code?: string } }[] };
 type LoginResult = { login: { accessToken: string; user: { id: string; email: string; role: Role } } };
 type TokenPayload = { sub: number; role: Role; iat: number; exp: number };
 
@@ -155,8 +155,28 @@ describe('Auth (e2e)', () => {
     it('rejects a password shorter than 8 characters', async () => {
       const { errors } = await createUser({ email: email('short'), name: 'Short', password: '1234567' });
       expect(errors?.[0].message).toBe('Password must be at least 8 characters');
+      expect(errors?.[0].extensions?.code).toBe('BAD_USER_INPUT');
       expect(await users.count({ where: { email: email('short') } })).toBe(0);
     });
+
+    it('rejects an email that is already registered, whatever its case', async () => {
+      const { errors } = await createUser({ email: email('admin').toUpperCase(), name: 'Dup', password: 'dup-password' });
+      expect(errors?.[0].message).toBe('Email is already registered');
+      expect(errors?.[0].extensions?.code).toBe('CONFLICT');
+    });
+  });
+
+  it('masks unexpected errors', async () => {
+    const findAll = vi.spyOn(users, 'findAll').mockRejectedValueOnce(new Error('connection to db-host:5432 refused'));
+    const log = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    const { errors } = await gql(`{ users { id } }`, undefined, adminToken);
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toMatchObject({ message: 'Internal server error', path: ['users'] });
+    // Exact match: no stacktrace or other internals leak through extensions.
+    expect(errors![0].extensions).toEqual({ code: 'INTERNAL_SERVER_ERROR' });
+    expect(log).toHaveBeenCalledWith('connection to db-host:5432 refused', expect.stringContaining('Error: connection'));
+    findAll.mockRestore();
+    log.mockRestore();
   });
 
   it('never exposes passwordHash through GraphQL', async () => {

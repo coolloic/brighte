@@ -1,12 +1,15 @@
 import { join } from 'node:path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_FILTER } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
+import { formatError } from './common/format-error.js';
+import { GraphqlExceptionFilter } from './common/graphql-exception.filter.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -29,11 +32,12 @@ import { UsersModule } from './users/users.module.js';
       sortSchema: true,
       // Expose the HTTP request so the auth guard can read the Authorization header.
       context: ({ req }: { req: unknown }) => ({ req }),
+      formatError,
     }),
     UsersModule,
     AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_FILTER, useClass: GraphqlExceptionFilter }],
 })
 export class AppModule {}

@@ -39,7 +39,7 @@ export class UsersResolver {
     description: [
       'Create a user. `role` defaults to `USER`; the email is stored lowercase.',
       '**Auth:** `ADMIN`.',
-      '**Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`), `BAD_REQUEST` (password shorter than 8 characters), `INTERNAL_SERVER_ERROR` (email already registered; known gap, see the error table).',
+      '**Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`), `BAD_USER_INPUT` (password shorter than 8 characters), `CONFLICT` (email already registered).',
     ].join('\n\n'),
   })
   createUser(@Args('input') input: CreateUserInput): Promise<User> {
