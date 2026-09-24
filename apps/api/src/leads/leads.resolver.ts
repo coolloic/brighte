@@ -42,7 +42,7 @@ export class LeadsResolver {
   listLeads(
     @Args('limit', { type: () => Int, defaultValue: 20 }) limit: number,
     @Args('offset', { type: () => Int, defaultValue: 0 }) offset: number,
-    @Args('serviceType', { type: () => String, nullable: true, description: 'Only leads interested in this service type code.' })
+    @Args('serviceType', { type: () => String, nullable: true, description: 'Only leads interested in this service type code. Blank or omitted: no filter.' })
     serviceType: string | undefined,
     @Args('sort', { type: () => LeadSort, defaultValue: LeadSort.NEWEST_FIRST }) sort: LeadSort,
   ): Promise<LeadPage> {

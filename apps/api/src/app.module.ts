@@ -38,6 +38,9 @@ import { UsersModule } from './users/users.module.js';
       context: ({ req, res }: { req: unknown; res: unknown }) => ({ req, res }),
       // Cap document size before parsing: a huge query costs CPU even if it is invalid.
       parseOptions: { maxTokens: 1000 },
+      // Introspection is off in production; without this, "Did you mean ...?" hints on typos
+      // would still reveal field names one guess at a time.
+      hideSchemaDetailsFromClientErrors: process.env.NODE_ENV === 'production',
       formatError,
     }),
     UsersModule,

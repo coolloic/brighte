@@ -118,7 +118,9 @@ type Query {
     limit: Int! = 20
     offset: Int! = 0
 
-    """Only leads interested in this service type code."""
+    """
+    Only leads interested in this service type code. Blank or omitted: no filter.
+    """
     serviceType: String
     sort: LeadSort! = NEWEST_FIRST
   ): LeadPage!

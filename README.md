@@ -115,4 +115,7 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 
 ## Scripts
 
+**API smoke test:** `pnpm --filter @brighte/api test:smoke` builds the API, starts real servers (dev, dev with the real rate limits, production) on ports 4801-4804 (`SMOKE_PORT` to move them), and checks every operation, edge case and error code over HTTP, the way the web app calls it. It needs Postgres migrated and seeded (`pnpm db:up && pnpm db:migrate && pnpm db:seed`), cleans up its data, and exits non-zero on any failure.
+
+
 `pnpm dev | build | lint | lint:style | typecheck | test | test:e2e` run across all apps via Turbo. A pre-commit hook runs ESLint + Stylelint on staged files and a full typecheck. Quality rules for Claude Code are in `CLAUDE.md` and `apps/web/CLAUDE.md`.
