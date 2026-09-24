@@ -65,12 +65,13 @@ info:
         |---|---|---|
         | `UNAUTHENTICATED` | 200 | Missing, invalid or expired token; account no longer exists; or wrong email/password on `login` |
         | `FORBIDDEN` | 200 | Signed in, but your role is not allowed |
-        | `BAD_REQUEST` | 200 | Input rejected, e.g. password shorter than 8 characters |
-        | `INTERNAL_SERVER_ERROR` | 200 | Unexpected failure. Known case: `createUser` with an email that is already registered |
+        | `BAD_USER_INPUT` | 200 | Input rejected, e.g. password shorter than 8 characters |
+        | `CONFLICT` | 200 | The request clashes with existing data, e.g. `createUser` with an email that is already registered |
+        | `INTERNAL_SERVER_ERROR` | 200 | Unexpected failure. The message is always `Internal server error`; details are logged on the server |
         | `GRAPHQL_VALIDATION_FAILED` | 400 | Unknown field, wrong argument or variable type |
         | `GRAPHQL_PARSE_FAILED` | 400 | The query is not valid GraphQL syntax |
 
-        In development, errors also include `extensions.stacktrace`.
+        In development, errors other than `INTERNAL_SERVER_ERROR` also include `extensions.stacktrace`.
 
 servers:
   - url: http://localhost:4001/graphql
