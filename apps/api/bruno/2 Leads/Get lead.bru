@@ -1,0 +1,45 @@
+meta {
+  name: Get lead
+  type: graphql
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  query Lead($id: ID!) {
+    lead(id: $id) {
+      id
+      name
+      email
+      mobile
+      postcode
+      createdAt
+      services {
+        code
+        label
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "id": "{{leadId}}"
+  }
+}
+
+docs {
+  Uses `{{leadId}}`, set by **Register**. Returns `null` for an unknown id.
+}
+
+tests {
+  test("returns the lead created by Register", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.lead.id).to.equal(bru.getVar("leadId"));
+  });
+}

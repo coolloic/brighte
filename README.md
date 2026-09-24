@@ -95,6 +95,16 @@ The server is the source of truth: every input is parsed with a Zod schema (`app
 
 `leads.email` is unique, and `register` relies on that constraint rather than a prior lookup, so two concurrent registrations with one email cannot both succeed. The loser gets `CONFLICT` ("Email is already registered") and nothing is changed. `register` is public, so it deliberately does not merge into or return the existing lead: that would hand anyone who knows an email that person's stored name and mobile. The trade-off is that a retried request that already succeeded sees `CONFLICT`, which the form can present as "you're already registered".
 
+## API collection (Bruno)
+
+`apps/api/bruno/` is a [Bruno](https://www.usebruno.com) collection with every operation. It's plain-text files, so it is versioned and reviewed with the API.
+
+1. Open the folder in Bruno (*Open Collection*), and `cp apps/api/bruno/.env.example apps/api/bruno/.env`. The passwords must match `SEED_*_PASSWORD` in `apps/api/.env`; the `.env` is gitignored.
+2. Select the **local** environment and run **1 Auth / Login as admin**. It saves the access token, and every other request sends it as `Authorization: Bearer`. Tokens expire after 15 minutes: run it again when you get `UNAUTHENTICATED`.
+3. **Register** saves the new lead's id, which **Get lead** uses. **4 Access checks** shows `FORBIDDEN`, `UNAUTHENTICATED` and `BAD_USER_INPUT`; it switches to the USER token, so log in as admin again afterwards.
+
+Every request has a test, so the collection also runs from the command line: `cd apps/api/bruno && pnpm dlx @usebruno/cli run --env local -r` (add `--env-var baseUrl=http://localhost:<port>` for another port). Runs create a lead and a user with `bruno-…@example.com` emails in your dev database.
+
 ## Scripts
 
 `pnpm dev | build | lint | lint:style | typecheck | test | test:e2e` run across all apps via Turbo. A pre-commit hook runs ESLint + Stylelint on staged files and a full typecheck. Quality rules for Claude Code are in `CLAUDE.md` and `apps/web/CLAUDE.md`.

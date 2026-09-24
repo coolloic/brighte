@@ -1,0 +1,30 @@
+meta {
+  name: List users
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  query Users {
+    users {
+      id
+      email
+      name
+      role
+      createdAt
+    }
+  }
+}
+
+tests {
+  test("lists users", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.users.length).to.be.at.least(2);
+  });
+}

@@ -1,0 +1,28 @@
+meta {
+  name: Service types
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query ServiceTypes {
+    serviceTypes {
+      code
+      label
+      active
+    }
+  }
+}
+
+tests {
+  test("lists the active service types", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.serviceTypes.map((t) => t.code)).to.include.members(["delivery", "pick-up", "payment"]);
+  });
+}

@@ -1,0 +1,56 @@
+meta {
+  name: Register
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation Register($name: String!, $email: String!, $mobile: String!, $postcode: String!, $services: [String!]!) {
+    register(name: $name, email: $email, mobile: $mobile, postcode: $postcode, services: $services) {
+      id
+      name
+      email
+      mobile
+      postcode
+      createdAt
+      services {
+        code
+        label
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "name": "Ada Lovelace",
+    "email": "{{registerEmail}}",
+    "mobile": "0412 345 678",
+    "postcode": "2000",
+    "services": ["delivery", "payment"]
+  }
+}
+
+script:pre-request {
+  // A fresh email each run: registering the same email again returns CONFLICT.
+  bru.setVar("registerEmail", `bruno-${Date.now()}@example.com`);
+}
+
+script:post-response {
+  const id = res.body?.data?.register?.id;
+  if (id) bru.setVar("leadId", id);
+}
+
+tests {
+  test("creates a lead and stores its id in {{leadId}}", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.register.mobile).to.equal("0412345678");
+    expect(bru.getVar("leadId")).to.equal(res.body.data.register.id);
+  });
+}

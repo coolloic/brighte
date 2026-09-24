@@ -1,0 +1,45 @@
+meta {
+  name: Login as user
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation Login($email: String!, $password: String!) {
+    login(email: $email, password: $password) {
+      accessToken
+      user {
+        email
+        role
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "email": "{{userEmail}}",
+    "password": "{{userPassword}}"
+  }
+}
+
+script:post-response {
+  const token = res.body?.data?.login?.accessToken;
+  if (token) bru.setVar("token", token);
+}
+
+docs {
+  Replaces `{{token}}` with the USER account's token. Run **1 Auth / Login as admin** to switch back.
+}
+
+tests {
+  test("returns a USER token", function () {
+    expect(res.body.data.login.user.role).to.equal("USER");
+  });
+}
