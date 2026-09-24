@@ -1,7 +1,7 @@
 {
   "name": "@brighte/api",
   "version": "0.0.1",
-  "description": "Bright eats",
+  "description": "Brighte eats APIs",
   "author": "loic.wong@hotmail.com",
   "private": true,
   "license": "UNLICENSED",
