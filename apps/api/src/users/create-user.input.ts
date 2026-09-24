@@ -1,6 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
+import { Role } from '../auth/role.enum.js';
 
-// No `role`: until access control lands, anyone can call createUser, so it always creates a USER.
 @InputType()
 export class CreateUserInput {
   @Field()
@@ -11,4 +11,7 @@ export class CreateUserInput {
 
   @Field({ description: 'At least 8 characters.' })
   password: string;
+
+  @Field(() => Role, { defaultValue: Role.USER })
+  role: Role;
 }

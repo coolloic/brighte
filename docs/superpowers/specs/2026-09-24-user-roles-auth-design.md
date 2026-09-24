@@ -1,7 +1,7 @@
 # User roles and authentication (MVP)
 
 Date: 2026-09-24
-Status: approved; PR 1 implemented
+Status: implemented (PR 1 and PR 2)
 
 ## Goal
 

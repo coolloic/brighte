@@ -27,6 +27,8 @@ import { UsersModule } from './users/users.module.js';
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
+      // Expose the HTTP request so the auth guard can read the Authorization header.
+      context: ({ req }: { req: unknown }) => ({ req }),
     }),
     UsersModule,
     AuthModule,
