@@ -1,0 +1,7 @@
+# Local guard: main only changes through a reviewed PR (GitHub branch protection needs a paid plan for private repos).
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "✖ Direct push to main is blocked. Push a feature branch and open a PR instead." >&2
+    exit 1
+  fi
+done
