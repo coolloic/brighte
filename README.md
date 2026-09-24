@@ -52,6 +52,24 @@ The schema is owned by [Umzug](https://github.com/sequelize/umzug) migrations in
 - `pnpm --filter @brighte/api db:migrate:undo`: revert the last migration.
 - Production: run `node dist/database/migrate.js up` from `apps/api` after `nest build`, before starting the app.
 
+## Data modelling trade-offs
+
+Brighte Eats leads can be interested in several services, and the service types "may change over time". Three tables (migration `2026.09.25T00.00.00.create-leads.ts`):
+
+| Table | Purpose |
+|---|---|
+| `service_types` | One row per service: stable `code` (`delivery`, `pick-up`, `payment`), display `label`, `active` flag |
+| `leads` | Name, email (unique, stored lowercase), mobile, postcode |
+| `lead_service_types` | Join table, primary key `(leadId, serviceTypeId)` |
+
+**Why a join table, not an enum.** A Postgres enum (or a TypeScript enum checked by the API) makes the list of services part of the schema and the code. Adding a type means a migration and a deploy. Removing or renaming a value is worse: Postgres can't drop an enum value, so the type has to be rebuilt and every row rewritten. With a table, a new service is an `INSERT`, and a retired one is `active = false`. Existing leads keep their history, and a foreign key with `ON DELETE RESTRICT` stops a type in use from being deleted. An enum also has nowhere to keep a label or an active flag.
+
+**Why not JSON.** A `services` JSON/array column on `leads` is the quickest thing to write, but the database can't protect it. Nothing stops `["delivry"]`, duplicates, or a code that was never a service, because there's no foreign key into a JSON value. Renaming a service means rewriting every lead's JSON. The dashboard filter "leads interested in X" becomes a JSON containment query that needs a GIN index, and counting leads per service needs `jsonb_array_elements`. With the join table, it's a plain indexed join.
+
+**What the join table costs.** Writes touch two tables, so `register` must insert the lead and its services in one transaction. Reads need a join or a batched lookup; the API will use a DataLoader to avoid N+1 when listing leads with their services. Both costs are small at this scale.
+
+**Indexes.** `leads(createdAt, id)` serves the default newest-first sort with a stable tie-breaker for offset pagination. `lead_service_types(serviceTypeId)` serves the filter by service type; the composite primary key already covers lookups by lead. The unique `leads.email` is what the API's duplicate-lead (idempotency) handling will rely on.
+
 ## Scripts
 
 `pnpm dev | build | lint | lint:style | typecheck | test | test:e2e` run across all apps via Turbo. A pre-commit hook runs ESLint + Stylelint on staged files and a full typecheck. Quality rules for Claude Code are in `CLAUDE.md` and `apps/web/CLAUDE.md`.
