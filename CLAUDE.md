@@ -23,3 +23,8 @@ pnpm workspaces + Turborepo. See `README.md` for setup and ports.
 - Use pnpm only, never npm or yarn.
 - Every change must pass `pnpm lint && pnpm lint:style && pnpm typecheck` before you report it as done.
 - API: invoke `nestjs-expert` / `graphql-architect` for back-end design. Use explicit field mapping when writing Sequelize models (no spreading class instances). Use `.js` extensions on relative imports (ESM, `nodenext`).
+- API imports (enforced by ESLint `no-restricted-imports` in `apps/api/eslint.config.mjs`):
+  - Each module folder (`auth`, `users`, `leads`, `common`) has an `index.ts` barrel exporting its public API. From another module, import only the barrel: `import { Role, Roles } from '../auth/index.js'` (ESM cannot import a bare directory, so `index.js` is spelled out).
+  - Barrels never re-export Nest `*.module.ts` classes or module-internal files (resolvers, guards, services only used inside). Import a Nest module by path: `import { UsersModule } from '../users/users.module.js'`. `auth` and `users` depend on each other, and routing module wiring through barrels creates import cycles that leave decorators undefined at load.
+  - Inside a module, import sibling files directly (`./user.model.js`), never your own barrel: that is a cycle, and Nest fails at boot ("circular dependency detected inside @InjectModel()").
+  - `src/database/**` scripts run uncompiled under Node type stripping and keep direct `.ts` imports: barrels' `.js` paths do not exist before a build, and strip-only mode rejects enums.

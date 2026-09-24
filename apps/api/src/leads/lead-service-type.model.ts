@@ -1,4 +1,4 @@
-import { Column, DataType, ForeignKey, Model, PrimaryKey, Table } from 'sequelize-typescript';
+import { BelongsTo, Column, DataType, ForeignKey, Model, PrimaryKey, Table } from 'sequelize-typescript';
 import { Lead } from './lead.model.js';
 import { ServiceType } from './service-type.model.js';
 
@@ -14,4 +14,7 @@ export class LeadServiceType extends Model {
   @ForeignKey(() => ServiceType)
   @Column({ type: DataType.INTEGER, allowNull: false })
   declare serviceTypeId: number;
+
+  @BelongsTo(() => ServiceType)
+  declare serviceType?: ServiceType;
 }

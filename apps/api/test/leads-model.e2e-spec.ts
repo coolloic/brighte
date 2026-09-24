@@ -3,9 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { getModelToken } from '@nestjs/sequelize';
 import { ForeignKeyConstraintError, Op, UniqueConstraintError } from 'sequelize';
 import { AppModule } from './../src/app.module.js';
-import { Lead } from './../src/leads/lead.model.js';
-import { LeadServiceType } from './../src/leads/lead-service-type.model.js';
-import { ServiceType } from './../src/leads/service-type.model.js';
+import { Lead, LeadServiceType, ServiceType } from './../src/leads/index.js';
 
 const PREFIX = `e2e-leads-${Date.now()}`;
 const email = (name: string) => `${PREFIX}-${name}@test.dev`;

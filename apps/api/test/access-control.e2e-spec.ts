@@ -6,9 +6,8 @@ import { Op } from 'sequelize';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
-import { hashPassword } from './../src/auth/password.js';
-import { Role } from './../src/auth/role.enum.js';
-import { User } from './../src/users/user.model.js';
+import { hashPassword, Role } from './../src/auth/index.js';
+import { User } from './../src/users/index.js';
 
 const PREFIX = `e2e-acl-${Date.now()}`;
 const email = (name: string) => `${PREFIX}-${name}@test.dev`;

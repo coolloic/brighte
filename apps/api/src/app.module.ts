@@ -8,8 +8,7 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
-import { formatError } from './common/format-error.js';
-import { GraphqlExceptionFilter } from './common/graphql-exception.filter.js';
+import { formatError, GraphqlExceptionFilter } from './common/index.js';
 import { LeadsModule } from './leads/leads.module.js';
 import { UsersModule } from './users/users.module.js';
 

@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthenticatedError } from '../common/errors.js';
-import { UsersService } from '../users/users.service.js';
-import type { User } from '../users/user.model.js';
+import { UnauthenticatedError } from '../common/index.js';
+import { UsersService, type User } from '../users/index.js';
 import type { AuthTokenPayload } from './auth-token.js';
 import { hashPassword, verifyPassword } from './password.js';
 
