@@ -7,8 +7,8 @@ import { ServiceType } from './service-type.model.js';
 export class LeadServiceType extends Model {
   @PrimaryKey
   @ForeignKey(() => Lead)
-  @Column({ type: DataType.INTEGER, allowNull: false })
-  declare leadId: number;
+  @Column({ type: DataType.UUID, allowNull: false })
+  declare leadId: string;
 
   @PrimaryKey
   @ForeignKey(() => ServiceType)

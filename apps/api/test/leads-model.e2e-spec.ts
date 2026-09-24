@@ -24,7 +24,7 @@ describe('Leads data model (e2e)', () => {
     return lead;
   };
 
-  const codesOf = async (leadId: number) => {
+  const codesOf = async (leadId: string) => {
     const lead = await leads.findByPk(leadId, { include: [ServiceType], rejectOnEmpty: true });
     return lead.services!.map((s) => s.code).sort();
   };
@@ -47,6 +47,13 @@ describe('Leads data model (e2e)', () => {
   it('ships the initial service types', async () => {
     const codes = (await serviceTypes.findAll({ where: { code: ['delivery', 'pick-up', 'payment'] } })).map((s) => s.code);
     expect(codes.sort()).toEqual(['delivery', 'payment', 'pick-up']);
+  });
+
+  it('gives leads time-ordered UUID v7 ids', async () => {
+    const first = await createLead('first', []);
+    const second = await createLead('second', []);
+    expect(first.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(second.id > first.id).toBe(true);
   });
 
   it('links a lead to several service types', async () => {
