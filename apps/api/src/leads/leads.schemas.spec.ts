@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildSchema, isNonNullType } from 'graphql';
-import { registerSchema } from './leads.schemas.js';
+import { leadsArgsSchema, registerSchema } from './leads.schemas.js';
 
 const valid = {
   name: 'Ada Lovelace',
@@ -68,5 +68,15 @@ describe('register in the published schema', () => {
     const register = schema.getMutationType()!.getFields().register;
     const args = Object.fromEntries(register.args.map((a) => [a.name, isNonNullType(a.type)]));
     expect(args).toEqual({ name: true, email: true, mobile: true, postcode: true, services: true });
+  });
+});
+
+describe('leadsArgsSchema', () => {
+  it.each([undefined, '', '   '])('treats serviceType %j as no filter', (serviceType) => {
+    expect(leadsArgsSchema.parse({ limit: 20, offset: 0, serviceType }).serviceType).toBeUndefined();
+  });
+
+  it('trims a service type code', () => {
+    expect(leadsArgsSchema.parse({ limit: 20, offset: 0, serviceType: ' pick-up ' }).serviceType).toBe('pick-up');
   });
 });
