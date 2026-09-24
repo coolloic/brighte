@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "dotenv -e ../../.env -- sh -c 'next dev --port ${WEB_PORT:-3001}'",
+    "dev": "dotenv -e ../../.env -- sh -c 'next dev --port ${WEB_PORT:-3001} \"$@\"' sh",
     "build": "next build",
-    "start": "dotenv -e ../../.env -- sh -c 'next start --port ${WEB_PORT:-3001}'",
+    "start": "dotenv -e ../../.env -- sh -c 'next start --port ${WEB_PORT:-3001} \"$@\"' sh",
     "lint": "eslint",
     "lint:style": "stylelint \"src/**/*.scss\"",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "storybook": "dotenv -e ../../.env -- sh -c 'storybook dev --port ${STORYBOOK_PORT:-6006}'",
+    "storybook": "dotenv -e ../../.env -- sh -c 'storybook dev --port ${STORYBOOK_PORT:-6006} \"$@\"' sh",
     "build-storybook": "storybook build",
     "test:e2e": "playwright test",
     "lighthouse": "lhci collect && lhci assert && lhci upload"
