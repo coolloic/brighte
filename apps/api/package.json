@@ -20,7 +20,10 @@
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "db:migrate": "node --env-file-if-exists=.env src/database/migrate.ts up",
+    "db:migrate:undo": "node --env-file-if-exists=.env src/database/migrate.ts down",
+    "db:migrate:status": "node --env-file-if-exists=.env src/database/migrate.ts pending"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",
@@ -38,7 +41,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sequelize": "^6.37.8",
-    "sequelize-typescript": "^2.1.6"
+    "sequelize-typescript": "^2.1.6",
+    "umzug": "^3.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
