@@ -1,23 +1,120 @@
 @use "tailwindcss";
 
-:root {
-  --background: #fff;
-  --foreground: #171717;
+// Design tokens. Light mode only. Two layers:
+// 1. Palette: Brighte's brand colors, taken from the CSS custom properties on brighte.com.au,
+//    plus a few darker "text-safe" shades (marked) derived so text meets WCAG AA contrast.
+// 2. Roles: what components use (bg-action, text-fg-muted, border-danger...). A role points at a
+//    palette color, so the palette can change without touching components.
+// Every role pairing is checked for contrast by the Foundations/Colors stories (pnpm test).
+
+// `static`: every token is emitted as a CSS variable, even if no class uses it yet, so SCSS and
+// the Storybook palette page can rely on var(--color-...).
+@theme static {
+  // Only our tokens exist: no Tailwind default palette (bg-zinc-600 etc. would bypass the tokens).
+  // Tailwind's `--color-*: initial` is not valid SCSS, so Sass outputs it through interpolation.
+  #{"--color-*"}: initial;
+
+  // White
+  --color-white: #fff;
+
+  // Neutrals: Brighte's dark (#1e2028) blended over white, as their site uses it with transparency.
+  --color-neutral-50: #f6f6f6;
+  --color-neutral-100: #ededee;
+  --color-neutral-200: #dddedf;
+  --color-neutral-300: #c4c5c7;
+  --color-neutral-400: #9a9b9e;
+  --color-neutral-500: #74757a;
+  --color-neutral-600: #585a60;
+  --color-neutral-700: #404148;
+  --color-neutral-800: #2e3037;
+  --color-neutral-900: #1e2028;
+
+  // Brand green.
+  --color-green-50: #edfaf5;
+  --color-green-100: #d7f4da;
+  --color-green-200: #b7eac5;
+  --color-green-400: #00e2a2;
+  --color-green-500: #00c28c;
+  --color-green-600: #00a87b;
+  --color-green-700: #00986e;
+  --color-green-800: #00805c; // text-safe (derived)
+
+  // Supporting colors: blue
+  --color-blue-50: #f3f8fc;
+  --color-blue-400: #70aaff;
+  --color-blue-500: #599cff;
+  --color-blue-600: #3d8cff;
+  --color-blue-700: #0065f7; // text-safe (derived)
+  // Lavender
+  --color-lavender-50: #f1f4ff;
+  --color-lavender-100: #ccd8ff;
+  --color-lavender-200: #a6b8f0;
+  --color-lavender-300: #98adf0;
+
+  // Yellow
+  --color-yellow-50: #fff0e0;
+  --color-yellow-300: #fc7;
+  --color-yellow-400: #fb6;
+  --color-yellow-500: #fa4;
+  --color-yellow-600: #e58f27;
+  --color-yellow-800: #9d5f13; // text-safe (derived)
+  // Red
+  --color-red-50: #fff4f4;
+  --color-red-300: #ff9595;
+  --color-red-400: #ff8181;
+  --color-red-500: #ff6d6d;
+  --color-red-600: #dd5858;
+  --color-red-700: #d42e2e; // text-safe (derived)
+
+  // System fonts only: no web font download.
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", roboto, "Helvetica Neue", arial, sans-serif;
+
+  // Corners
+  --radius-control: 0.75rem;
+  --radius-card: 1rem;
+
+  // Elevation
+  --shadow-card: 0 1px 2px rgb(30 32 40 / 6%), 0 8px 24px rgb(30 32 40 / 8%);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-}
+// Roles. `inline` so utilities reference the palette variable directly.
+@theme static inline {
+  // Surfaces
+  --color-canvas: var(--color-white);
+  --color-surface: var(--color-white);
+  --color-surface-muted: var(--color-neutral-50);
+  --color-surface-brand: var(--color-green-50);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  // Text and icons
+  --color-fg: var(--color-neutral-900);
+  --color-fg-muted: var(--color-neutral-600);
+  --color-fg-inverse: var(--color-white);
+  --color-fg-brand: var(--color-green-800);
+
+  // Lines
+  --color-border: var(--color-neutral-200);
+  --color-border-strong: var(--color-neutral-500);
+
+  // Call to action: brand green with dark text (white on green fails contrast).
+  --color-action: var(--color-green-500);
+  --color-action-hover: var(--color-green-600);
+  --color-on-action: var(--color-neutral-900);
+
+  // Keyboard focus ring
+  --color-focus: var(--color-green-700);
+
+  // Status: text/icon/border color, and a tinted background.
+  --color-success: var(--color-green-800);
+  --color-success-surface: var(--color-green-50);
+  --color-danger: var(--color-red-700);
+  --color-danger-surface: var(--color-red-50);
+  --color-warning: var(--color-yellow-800);
+  --color-warning-surface: var(--color-yellow-50);
+  --color-info: var(--color-blue-700);
+  --color-info-surface: var(--color-blue-50);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-canvas);
+  color: var(--color-fg);
 }

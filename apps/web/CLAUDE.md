@@ -78,3 +78,5 @@ A feature is not done until all of these pass. Show the output when reporting.
 - Tailwind first; SCSS modules (`*.module.scss`) only for what Tailwind cannot express. Never create `.css` files.
 - Use system fonts only (no `next/font/google` or other external font loading).
 - Colors go through CSS custom properties in `globals.scss`. Never hardcode brand colors in components.
+- Use the **role** tokens (`bg-action`, `text-fg-muted`, `border-danger`…), not palette colors (`green-500`). The roles, their Tailwind classes and contrast are in Storybook under **Foundations / Colors**. Tailwind's default palette is switched off, so `bg-zinc-600` and similar don't exist.
+- Focus rings: `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`. Don't put `transition-colors` on focusable elements: in Tailwind 4 it also animates `outline-color`, so the ring fades in instead of appearing at once. Transition only what changes, e.g. `transition-[background-color]`.
