@@ -95,6 +95,27 @@ The server is the source of truth: every input is parsed with a Zod schema (`app
 
 `leads.email` is unique, and `register` relies on that constraint rather than a prior lookup, so two concurrent registrations with one email cannot both succeed. The loser gets `CONFLICT` ("Email is already registered") and nothing is changed. `register` is public, so it deliberately does not merge into or return the existing lead: that would hand anyone who knows an email that person's stored name and mobile. The trade-off is that a retried request that already succeeded sees `CONFLICT`, which the form can present as "you're already registered".
 
+## Security
+
+Public operations (`register`, `serviceTypes`, `login`) need no token, so they are hardened at several layers. Everything below is covered by `apps/api/test/security.e2e-spec.ts`.
+
+| Threat | Protection |
+|---|---|
+| Spam registrations, password guessing, request floods | Rate limits per client IP and per operation (`@nestjs/throttler`): `register` 5/min, `login` 10/min, everything else 120/min, configurable with `RATE_LIMIT_*`. Over the limit: `TOO_MANY_REQUESTS` with `extensions.retryAfter` and a `Retry-After` header. Guards run per root field, so aliasing `register` 100 times in one request counts as 100. |
+| Expensive or huge queries | Documents over 1000 tokens are rejected before parsing finishes (`GRAPHQL_PARSE_FAILED`); JSON bodies over 100kb get 413; batched requests are off. There is no depth limit because the schema has no recursive types; add one if that changes. |
+| Other websites calling the API from a browser | CORS allows only the `WEB_ORIGIN` list (required in production), `GET`/`POST`, and the `Content-Type` and `Authorization` headers, without credentials, since auth is a bearer token rather than a cookie. Apollo's CSRF prevention rejects "simple" requests (e.g. `text/plain`) that skip the CORS preflight. |
+| Browser-side attacks on responses | `helmet` security headers (`nosniff`, HSTS, frame and referrer policies; CSP in production) and no `X-Powered-By`. |
+| Schema discovery | Introspection and GraphiQL are off when `NODE_ENV=production` (Apollo and Nest defaults). |
+| Leaking internals | Unexpected errors are logged and returned as `Internal server error` (see `formatError`). |
+| Injection | All database access goes through Sequelize with bound parameters; inputs are validated with Zod first. |
+
+**Behind a proxy**, set `TRUST_PROXY` to the number of hops so the limiter sees the client's IP. Otherwise every client shares the proxy's IP and one noisy client throttles everyone.
+
+**What this does not cover.** App-level rate limiting slows abuse; it does not stop a real DDoS, which has to be absorbed before it reaches Node (a CDN or WAF, e.g. Cloudflare or AWS WAF, plus load balancer limits). Counters are in memory, so each instance counts separately; with several instances, move them to Redis (`@nest-lab/throttler-storage-redis`). A distributed password-guessing attack spreads across IPs, so per-account lockout or a CAPTCHA on repeated failures would be the next step, and a CAPTCHA (e.g. Turnstile) on `register` if bots get past the per-IP limit. Oversized bodies (413) are still logged at ERROR with a stack, which is noisy under attack.
+
 ## Scripts
+
+**API smoke test:** `pnpm --filter @brighte/api test:smoke` builds the API, starts real servers (dev, dev with the real rate limits, production) on ports 4801-4804 (`SMOKE_PORT` to move them), and checks every operation, edge case and error code over HTTP, the way the web app calls it. It needs Postgres migrated and seeded (`pnpm db:up && pnpm db:migrate && pnpm db:seed`), cleans up its data, and exits non-zero on any failure.
+
 
 `pnpm dev | build | lint | lint:style | typecheck | test | test:e2e` run across all apps via Turbo. A pre-commit hook runs ESLint + Stylelint on staged files and a full typecheck. Quality rules for Claude Code are in `CLAUDE.md` and `apps/web/CLAUDE.md`.

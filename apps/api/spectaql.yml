@@ -67,10 +67,12 @@ info:
         |---|---|---|
         | `UNAUTHENTICATED` | 200 | Missing, invalid or expired token; account no longer exists; or wrong email/password on `login` |
         | `FORBIDDEN` | 200 | Signed in, but your role is not allowed |
-        | `BAD_USER_INPUT` | 200 | Input rejected, e.g. an invalid email. `extensions.fields` maps each invalid argument to a message |
+        | `BAD_USER_INPUT` | 200 | Input failed a check, e.g. an invalid email. `extensions.fields` maps each invalid field to a message to show next to that input |
         | `CONFLICT` | 200 | The request clashes with existing data, e.g. `createUser` or `register` with an email that is already registered |
+        | `TOO_MANY_REQUESTS` | 200 | Rate limit hit (per client IP and operation). Wait `extensions.retryAfter` seconds (also the `Retry-After` header) |
         | `INTERNAL_SERVER_ERROR` | 200 | Unexpected failure. The message is always `Internal server error`; details are logged on the server |
-        | `GRAPHQL_VALIDATION_FAILED` | 400 | Unknown field, wrong argument or variable type |
+        | `BAD_USER_INPUT` | 400 | A variable has the wrong type, is out of `Int` range, or is null where required. No `extensions.fields`: this is a client bug, not something to show the user |
+        | `GRAPHQL_VALIDATION_FAILED` | 400 | Unknown field or argument, missing required argument, or invalid enum value |
         | `GRAPHQL_PARSE_FAILED` | 400 | The query is not valid GraphQL syntax |
 
         In development, errors other than `INTERNAL_SERVER_ERROR` also include `extensions.stacktrace`.

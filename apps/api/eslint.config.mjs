@@ -45,6 +45,17 @@ export default tseslint.config(
       ],
     },
   },
+  // Black-box smoke test: reads untyped JSON responses, as any HTTP client would.
+  {
+    files: ['test/smoke/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    },
+  },
   {
     files: ['src/*.ts'],
     rules: {

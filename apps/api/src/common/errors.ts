@@ -22,3 +22,10 @@ export class ConflictError extends GraphQLError {
     super(message, { extensions: { code: 'CONFLICT' } });
   }
 }
+
+/** Rate limit hit. `retryAfter` is in seconds; the Retry-After header carries the same value. */
+export class TooManyRequestsError extends GraphQLError {
+  constructor(retryAfter: number) {
+    super('Too many requests, try again later', { extensions: { code: 'TOO_MANY_REQUESTS', retryAfter } });
+  }
+}

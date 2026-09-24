@@ -39,7 +39,12 @@ export const MAX_LEADS_LIMIT = 100;
 export const leadsArgsSchema = z.object({
   limit: z.int().min(1, 'limit must be at least 1').max(MAX_LEADS_LIMIT, `limit must be at most ${MAX_LEADS_LIMIT}`),
   offset: z.int().min(0, 'offset must be 0 or more'),
-  serviceType: z.string().trim().min(1).optional(),
+  // Blank means no filter, so an "All services" option can send "".
+  serviceType: z
+    .string()
+    .trim()
+    .optional()
+    .transform((code) => code || undefined),
 });
 
 export const leadIdSchema = z.object({ id: z.uuid('Not a valid lead id') });
