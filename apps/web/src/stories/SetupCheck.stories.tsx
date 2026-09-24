@@ -21,7 +21,7 @@ export const TailwindAndGlobalStyles: StoryObj = {
     const heading = canvas.getByRole("heading", { level: 1 });
     // Tailwind's p-4 = 1rem; only true if the Tailwind PostCSS pipeline ran.
     await expect(getComputedStyle(heading).paddingTop).toBe("16px");
-    // globals.scss sets the body text colour from the --foreground variable.
-    await expect(getComputedStyle(document.body).color).toBe("rgb(23, 23, 23)");
+    // globals.scss sets the body text color from the --color-fg token (#1e2028).
+    await expect(getComputedStyle(document.body).color).toBe("rgb(30, 32, 40)");
   },
 };
