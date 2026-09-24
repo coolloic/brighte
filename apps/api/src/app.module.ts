@@ -15,7 +15,8 @@ import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // apps/api/.env first, then the root .env (shared ports); a variable already set wins.
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../../.env'] }),
     // Per client IP and per operation; stricter limits on login and register (see RateLimits).
     ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: RATE_LIMIT_WINDOW_MS, limit: RateLimits.default }] }),
     SequelizeModule.forRootAsync({

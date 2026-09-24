@@ -1,14 +1,13 @@
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 
-const DEV_WEB_ORIGIN = 'http://localhost:3001';
-
 /** HTTP-level hardening shared by main.ts and the e2e tests. */
 export function configureApp(app: NestExpressApplication, env: NodeJS.ProcessEnv = process.env): void {
   const production = env.NODE_ENV === 'production';
 
   // Comma-separated list of browser origins allowed to call the API.
-  const origins = (env.WEB_ORIGIN ?? (production ? '' : DEV_WEB_ORIGIN))
+  // Outside production, the local web app (WEB_PORT from the root .env) is allowed by default.
+  const origins = (env.WEB_ORIGIN ?? (production ? '' : `http://localhost:${env.WEB_PORT ?? 3001}`))
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
