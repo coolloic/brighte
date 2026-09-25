@@ -29,7 +29,8 @@ test.describe("admin sign-in", () => {
   test("checks the form in the browser without sending anything", async ({ page }) => {
     const posts: string[] = [];
     page.on("request", (request) => {
-      if (request.method() === "POST") posts.push(request.url());
+      // Browser reports (Web Vitals) aren't the form: they never reach the API.
+      if (request.method() === "POST" && !request.url().endsWith("/api/browser-reports")) posts.push(request.url());
     });
     await page.goto("/admin/login");
     await page.getByRole("button", { name: "Sign in" }).click();
