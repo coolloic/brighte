@@ -34,7 +34,7 @@ export const List: Story = {
   },
 };
 
-/** From lg: list and detail side by side. Below lg: the detail replaces the list, with a link back. */
+/** From lg: list and detail side by side, with a close button in the corner. Below lg: the detail replaces the list, with a link back. */
 export const WithDetail: Story = {
   args: {
     list: <LeadsTable leads={LEADS} hrefFor={leadHref} selectedId={LEADS[0].id} />,
@@ -45,14 +45,21 @@ export const WithDetail: Story = {
     const aside = canvas.getByRole("complementary", { name: "Selected lead" });
     await expect(aside).toContainElement(canvas.getByRole("article", { name: "Ada Lovelace" }));
     const listColumn = canvasElement.querySelector("aside")!.previousElementSibling as HTMLElement;
-    const back = canvasElement.querySelector('a[href="/leads"]') as HTMLElement;
+    // Both go back to the list: one link for each layout, the other hidden.
+    const [back, close] = aside.querySelectorAll<HTMLElement>('a[href="/leads"]');
+    await expect(back).toHaveTextContent("Back to all leads");
+    await expect(close).toHaveAccessibleName("Close lead details");
+    // Last in the detail, so its content is read (and tabbed through) before "Close".
+    await expect([...aside.querySelectorAll("a")].at(-1)).toBe(close);
 
     if (window.matchMedia("(min-width: 64rem)").matches) {
       await expect(getComputedStyle(listColumn).display).not.toBe("none");
-      await expect(getComputedStyle(back).display).toBe("none");
+      await expect(back).not.toBeVisible();
+      await expect(close).toBeVisible();
     } else {
       await expect(getComputedStyle(listColumn).display).toBe("none");
       await expect(back).toBeVisible();
+      await expect(close).not.toBeVisible();
     }
   },
 };

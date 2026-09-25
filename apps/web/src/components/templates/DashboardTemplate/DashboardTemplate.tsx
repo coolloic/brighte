@@ -17,14 +17,17 @@ export type DashboardTemplateProps = {
   pagination?: ReactNode;
   /** The selected item, e.g. <LeadDetail />. */
   detail?: ReactNode;
-  /** Where "Back to all leads" goes when a selected item replaces the list on mobile. */
+  /**
+   * The list without the selected item: "Back to all leads" when the item replaces the list on
+   * mobile, the × close button from lg (the list goes back to full width).
+   */
   backToListHref?: string;
 };
 
 /**
- * List page with an optional detail. From lg: list and a sticky detail column side by side. On mobile,
- * a selected item replaces the list (with a link back), instead of appearing under a long list.
- * CSS only, so it works as a Server Component.
+ * List page with an optional detail. From lg: list and a sticky detail column side by side, with a
+ * close button. On mobile, a selected item replaces the list (with a link back), instead of appearing
+ * under a long list. CSS only, so it works as a Server Component.
  */
 export function DashboardTemplate({ title, headerActions, toolbar, list, pagination, detail, backToListHref = "?" }: DashboardTemplateProps) {
   return (
@@ -46,7 +49,20 @@ export function DashboardTemplate({ title, headerActions, toolbar, list, paginat
               <Icon name="chevron-left" className="size-4" />
               Back to all leads
             </Link>
-            {detail}
+            <div className="relative">
+              {detail}
+              {/* From lg, an × in the detail's top-right corner closes it, giving the list its full width
+                  back without scrolling it. Last in the markup, so screen readers and Tab reach the
+                  lead's details first and "Close" after them. */}
+              <Link
+                href={backToListHref}
+                scroll={false}
+                aria-label="Close lead details"
+                className="absolute top-2 right-2 hidden size-11 items-center justify-center rounded-control text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:focus-ring lg:inline-flex"
+              >
+                <Icon name="x" className="size-5" />
+              </Link>
+            </div>
           </aside>
         )}
       </div>

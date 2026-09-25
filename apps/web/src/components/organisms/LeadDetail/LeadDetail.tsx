@@ -53,7 +53,8 @@ export function LeadDetail({ lead, status = "ready", retryHref }: LeadDetailProp
 
   return (
     <article aria-labelledby="lead-name" className="rounded-card border border-border bg-surface p-5 shadow-card">
-      <Heading level={2} size="lg" id="lead-name">
+      {/* lg:pr-9 leaves room for the dashboard's close button in the top-right corner (DashboardTemplate); break-words keeps a very long word inside the card. */}
+      <Heading level={2} size="lg" id="lead-name" className="break-words lg:pr-9">
         {lead.name}
       </Heading>
       <p className="mt-1 text-sm text-fg-muted">
