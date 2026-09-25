@@ -80,7 +80,7 @@ A feature is not done until all of these pass. Show the output when reporting.
 - After an interaction, an element with a CSS transition is mid-fade: `await Promise.all(el.getAnimations().map((a) => a.finished))` before checking its computed colors. Don't use `waitFor` around Storybook's `expect` in play functions: in the Vitest runner it can hang instead of timing out.
 - `userEvent.hover` fires simulated events, so CSS `:hover` (and `group-hover:`) never applies in story tests. Don't assert hover styles there; check them in Storybook or with a real pointer (Playwright). Likewise, a simulated Enter or Space doesn't trigger the browser's own behaviour, such as toggling a `<details>`: test that with real key presses in e2e.
 - Every story is a test: `pnpm --filter @brighte/web test` renders it in Chromium and fails on a thrown error, a failing `play` function, or any WCAG 2.1 AA violation. Don't turn the a11y check off for a story; fix the component.
-- Run it locally with `pnpm --filter @brighte/web storybook` (http://localhost:6006).
+- Run it locally with `pnpm storybook` from the repo root (http://localhost:6006).
 - Until pages exist (PR 10 of the frontend plan), story tests replace the Playwright/Lighthouse steps of the definition of done for component-only changes.
 
 ## Styling

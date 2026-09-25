@@ -1,8 +1,10 @@
 import { Sequelize } from 'sequelize';
 // `.ts` (rewritten to `.js` on build) because this script runs under Node type stripping.
 import { hashPassword } from '../auth/password.ts';
+import { SEED_EMAIL_DOMAIN, seedLeads } from './seed-leads.ts';
 
-// Dev-only: creates or updates the seed accounts, matched by email.
+// Dev-only: creates or updates the seed accounts (matched by email), and adds the sample leads
+// that aren't there yet.
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -49,6 +51,8 @@ try {
     );
     console.log(`seeded ${seed.email} (${seed.role})`);
   }
+  const added = await seedLeads(sequelize);
+  console.log(`seeded ${added} sample leads (@${SEED_EMAIL_DOMAIN})${added === 0 ? ': all there already' : ''}`);
 } finally {
   await sequelize.close();
 }
