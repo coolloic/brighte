@@ -77,16 +77,21 @@ export const RateLimited: Story = {
     alert: { tone: "warning", title: "Too many attempts", message: "Please wait 2 minutes and try again." },
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("status")).toHaveTextContent("Too many attempts");
+    await expect(canvas.getByText("Too many attempts").closest("[role=status]")).toBeInTheDocument();
   },
 };
 
-/** While signing in: fields and button disabled, the button says so. */
+/** While signing in: the button says so and ignores clicks, a status message is announced, and focus stays put. */
 export const Submitting: Story = {
   args: { defaultEmail: "admin@brighte.dev", submitting: true },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByRole("button", { name: "Signing in…" })).toBeDisabled();
-    await expect(canvas.getByRole("textbox", { name: "Email" })).toBeDisabled();
+  play: async ({ args, canvas }) => {
+    const button = canvas.getByRole("button", { name: "Signing in…" });
+    await expect(button).toHaveAttribute("aria-disabled", "true");
+    await expect(canvas.getByRole("status")).toHaveTextContent("Signing in…");
+    await expect(canvas.getByRole("textbox", { name: "Email" })).toBeEnabled();
+    await userEvent.click(button);
+    await expect(button).toHaveFocus();
+    await expect(args.onSubmit).not.toHaveBeenCalled();
     await expect(canvas.getByRole("button", { name: "Signing in…" }).closest("form")).toHaveAttribute("aria-busy", "true");
   },
 };

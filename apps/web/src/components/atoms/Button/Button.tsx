@@ -21,7 +21,7 @@ export const buttonVariants = cva(
       fullWidth: { true: "w-full" },
       /** Shows a spinner and blocks further clicks (prevents double submits). Change the label too, e.g. "Submitting…". */
       loading: {
-        // Loading also disables the button, but "Submitting…" must stay readable: only a real disabled state fades.
+        // Loading blocks clicks but keeps the button enabled and readable: only a real disabled state fades.
         true: "cursor-progress",
         false: "disabled:cursor-not-allowed disabled:opacity-60",
       },
@@ -33,12 +33,23 @@ export const buttonVariants = cva(
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>;
 export type ButtonVariant = NonNullable<ButtonProps["variant"]>;
 
-export function Button({ variant, fullWidth, loading = false, disabled, type = "button", className, children, ...rest }: ButtonProps) {
+export function Button({ variant, fullWidth, loading = false, disabled, type = "button", className, children, onClick, ...rest }: ButtonProps) {
   return (
     <button
       type={type}
-      disabled={disabled || !!loading}
+      disabled={disabled}
+      // While loading: aria-disabled, not disabled. A disabled button loses keyboard focus (it drops to
+      // the page), and it is usually the button that was just pressed. Clicks, including the implicit
+      // one when Enter is pressed in a form field, are cancelled instead.
+      aria-disabled={loading || undefined}
       aria-busy={loading || undefined}
+      onClick={(event) => {
+        if (loading) {
+          event.preventDefault();
+          return;
+        }
+        onClick?.(event);
+      }}
       className={cn(buttonVariants({ variant, fullWidth, loading }), className)}
       {...rest}
     >

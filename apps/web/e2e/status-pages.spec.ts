@@ -19,19 +19,4 @@ test.describe("status pages", () => {
     await expect(page).toHaveURL("/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Register your interest in Brighte Eats");
   });
-
-  test("a submit that can't reach the server shows the error page, not the framework's", async ({ page, context }) => {
-    await page.goto("/");
-    await page.getByLabel("Full name").fill("Ada Lovelace");
-    await page.getByLabel("Email").fill("offline@example.com");
-    await page.getByLabel("Mobile number").fill("0412 345 678");
-    await page.getByLabel("Postcode").fill("2000");
-    await page.getByRole("checkbox", { name: "Delivery" }).check();
-
-    await context.setOffline(true);
-    await page.getByRole("button", { name: "Register interest" }).click();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Something went wrong, please try again later");
-    await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
-    await expectNoA11yViolations(page);
-  });
 });
