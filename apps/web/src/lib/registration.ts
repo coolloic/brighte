@@ -1,4 +1,5 @@
-import type { RegistrationFeedback, RegistrationFieldName } from "@/lib/api/registration-feedback";
+import { messagesByField, registrationSchema } from "@brighte/validation";
+import { withoutExample, type RegistrationFeedback, type RegistrationFieldName } from "./api/registration-feedback";
 
 // Shared by the register page's Server Action and its client wrapper (no server-only imports).
 
@@ -47,29 +48,15 @@ export function registrationToFormData(values: RegistrationValues): FormData {
   return formData;
 }
 
-// The API's rules (apps/api/src/leads/leads.schemas.ts), checked in the browser before anything is
-// sent: mistakes show at once and never count against the API's rate limit. Not a security
-// boundary: the API validates every request again and stays the source of truth. Messages match
-// the API's, without the examples the field hints already show.
-const AU_MOBILE = /^(?:\+?61|0)4\d{8}$/;
-// The API's MAX_NAME_LENGTH.
-const MAX_NAME_LENGTH = 70;
-// zod's default email pattern, which the API uses.
-const EMAIL = /^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
-
-/** Field errors for values the API would reject; empty when the values look valid. */
+/**
+ * Field errors for values the API would reject; empty when the values look valid. The API's own
+ * rules (@brighte/validation), checked in the browser before anything is sent: mistakes show at
+ * once and never count against the API's rate limit. Not a security boundary: the API validates
+ * every request again. Messages drop their examples, which the field hints already show.
+ */
 export function validateRegistration(values: RegistrationValues): Partial<Record<RegistrationFieldName, string>> {
-  const errors: Partial<Record<RegistrationFieldName, string>> = {};
-  const name = values.name.trim();
-  if (!name) errors.name = "Name is required";
-  else if (name.length > MAX_NAME_LENGTH) errors.name = `Name must be ${MAX_NAME_LENGTH} characters or fewer`;
-
-  const email = values.email.trim();
-  if (email.length > 255) errors.email = "Email is too long";
-  else if (!EMAIL.test(email)) errors.email = "Enter a valid email address";
-
-  if (!AU_MOBILE.test(values.mobile.replace(/[\s()-]/g, ""))) errors.mobile = "Enter an Australian mobile number";
-  if (!/^\d{4}$/.test(values.postcode.trim())) errors.postcode = "Enter a 4-digit postcode";
-  if (values.services.length === 0) errors.services = "Choose at least one service";
-  return errors;
+  const result = registrationSchema.safeParse(values);
+  if (result.success) return {};
+  const messages = messagesByField(result.error.issues);
+  return Object.fromEntries(Object.entries(messages).map(([field, message]) => [field, withoutExample(message)]));
 }

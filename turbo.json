@@ -12,15 +12,33 @@
       ]
     },
     "dev": {
+      "dependsOn": [
+        "^build"
+      ],
       "cache": false,
       "persistent": true
     },
-    "lint": {},
-    "test": {},
+    "lint": {
+      "dependsOn": [
+        "^build"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^build"
+      ]
+    },
     "lint:style": {},
-    "typecheck": {},
+    "typecheck": {
+      "dependsOn": [
+        "^build"
+      ]
+    },
     "test:e2e": {
-      "cache": false
+      "cache": false,
+      "dependsOn": [
+        "^build"
+      ]
     }
   }
 }

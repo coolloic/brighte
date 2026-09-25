@@ -19,13 +19,11 @@ Needs Node 24 (`.nvmrc`), pnpm 12 (`corepack enable`) and Docker.
 
 ```bash
 pnpm install
-cp .env.example .env                     # optional: only to change the ports above
-cp apps/api/.env.example apps/api/.env   # then set JWT_SECRET (command in the file)
-pnpm db:up        # Postgres in Docker
-pnpm db:migrate   # apply pending migrations
-pnpm db:seed      # dev accounts: admin@brighte.dev / user@brighte.dev
+pnpm bootstrap    # env files, Postgres in Docker, migrations, dev accounts
 pnpm dev          # web + api in parallel
 ```
+
+`pnpm bootstrap` is safe to run again. It creates `.env` (ports) and `apps/api/.env` from their examples with a random `JWT_SECRET`, keeping any file that already exists (only an empty `JWT_SECRET` is filled in), then runs `pnpm db:up` (Postgres in Docker, waits until it's ready), `pnpm db:migrate` and `pnpm db:seed` (dev accounts `admin@brighte.dev` / `user@brighte.dev`). For other ports, copy `.env.example` to `.env` and edit it before the first run: `apps/api/.env` takes its database port from it.
 
 Then open:
 
@@ -78,10 +76,11 @@ Brighte Eats leads can be interested in several services, and the service types 
 
 **Both, with the server as the source of truth.**
 
-- **Server (API).** Every input is parsed with a Zod schema (`apps/api/src/leads/leads.schemas.ts`) before any database work: name required and at most 70 characters, a valid email, an Australian mobile, a 4-digit postcode, at least one service. It also normalises: lowercase email, mobile stored as `04xxxxxxxx`, trimmed text, de-duplicated services. A failure returns `BAD_USER_INPUT` with `extensions.fields`, a map from each invalid field to a message. Whether a service code exists (and is still active) is only known to the database, so that check lives only on the server.
-- **Browser (web).** `validateRegistration` and `validateSignIn` (`apps/web/src/lib`) repeat the same rules and messages, so mistakes show at once and **nothing is sent**, which also means typos never count against the API's rate limit. They're a convenience, not a security boundary: bots skip them, and without JavaScript the form relies on the server alone.
+- **One set of rules.** The registration and sign-in rules and their messages live in one workspace package, `packages/validation` (`@brighte/validation`, Zod's small `zod/mini` build), used by both apps.
+- **Server (API).** Every input is parsed with a Zod schema (the shared rules, plus the API-only ones in `apps/api/src/leads/leads.schemas.ts`) before any database work: name required and at most 70 characters, a valid email, an Australian mobile, a 4-digit postcode, at least one service. It also normalises: lowercase email, mobile stored as `04xxxxxxxx`, trimmed text, de-duplicated services. A failure returns `BAD_USER_INPUT` with `extensions.fields`, a map from each invalid field to a message. Whether a service code exists (and is still active) is only known to the database, so that check lives only on the server.
+- **Browser (web).** `validateRegistration` and `validateSignIn` (`apps/web/src/lib`) run the same shared rules, so mistakes show at once and **nothing is sent**, which also means typos never count against the API's rate limit. They're a convenience, not a security boundary: bots skip them, and without JavaScript the form relies on the server alone.
 - **Showing server errors.** The web maps each API error code to plain copy (`apps/web/src/lib/api/*-feedback.ts`); it branches on `extensions.code`, never on messages. Field messages appear under their field, without repeating the example the field's hint already shows.
-- **Trade-off:** the rules exist twice (Zod on the API, plain functions on the web), and only review keeps them in step. If they drift, the API still has the final word and its message is shown. A shared schema package would remove the duplication (see [TODOs](#todos--known-gaps)).
+- **Trade-off:** sharing the rules puts Zod in the register and sign-in pages' JavaScript (about 8 KB gzipped with `zod/mini`) in exchange for rules that can't drift. The package is compiled to `dist/` on `pnpm install` and before any `turbo` task that needs it. After editing it while `pnpm dev` runs, rebuild it (`pnpm --filter @brighte/validation build`) or restart `pnpm dev`.
 
 ## Idempotency approach
 
@@ -232,7 +231,6 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Sessions that can be revoked.** Tokens can't be cancelled before they expire (signing out only removes the cookie). Keep sessions or refresh tokens server-side (a table or Redis) so "sign out everywhere" and account lockout take effect at once.
 - **Database.** A connection pooler (PgBouncer), and a read replica for the dashboard so reads don't compete with registrations.
 - **Caching.** Service types change rarely but are fetched on every form load; cache them on the web server with a short revalidation.
-- **One validation schema.** Share a single schema between the API and the web (a `packages/validation` workspace) instead of two copies.
 - **Observability.** Structured logs, tracing across web → API → database (OpenTelemetry), and alerts on error rates and rate-limit spikes.
 - **Search.** Trigram indexes serve substring search well into the millions of rows; beyond that, or for ranking and typo tolerance, move to Postgres full-text search or a search service.
 - **Dashboard features.** CSV export, and an audit trail of service-interest changes.
@@ -240,8 +238,6 @@ Every request has a test, so the collection also runs from the command line: `cd
 
 ## TODOs / known gaps
 
-- **Validation rules are duplicated** between the API and the web (see [Validation strategy](#validation-strategy--client-vs-server)).
-- **One manual setup step:** `JWT_SECRET` in `apps/api/.env` must be generated by hand (the command is in the file).
 - **No CI configuration** in the repo yet; quality gates run in the pre-commit hook and locally.
 - **Sign out doesn't revoke the token**, only removes the cookie (see 10× scale).
 - **No admin user management UI**; admins are created with `createUser` (ADMIN only) or the dev seed.

@@ -74,7 +74,7 @@ export function registrationFeedback(error: ApiError): RegistrationFeedback {
 
 // The form shows an example under each field as a hint, so an error doesn't repeat it:
 // "Enter an Australian mobile number, e.g. 0412 345 678" becomes "Enter an Australian mobile number".
-function withoutExample(message: string): string {
+export function withoutExample(message: string): string {
   return message.replace(/,?\s*e\.g\..*$/, "");
 }
 

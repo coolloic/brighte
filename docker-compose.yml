@@ -9,6 +9,12 @@ services:
       - "${POSTGRES_PORT:-5435}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # Lets `docker compose up --wait` (pnpm db:up) return once Postgres accepts connections.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brighte -d brighte"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
 
 volumes:
   pgdata:
