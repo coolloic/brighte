@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { registerLead, signInAsAdmin, visitorIp } from "./support";
+import { registerLead, signInAsAdmin, uniqueToken, visitorIp } from "./support";
 
 // The web app's security headers (src/proxy.ts, next.config.ts), and that the strict CSP doesn't
 // block anything the app itself needs.
@@ -55,7 +55,7 @@ test("the CSP blocks nothing while registering", async ({ page }) => {
 });
 
 test("the CSP blocks nothing on the admin pages and the 404", async ({ page }) => {
-  const lead = await registerLead({ name: `Csp ${Date.now().toString(36)}` });
+  const lead = await registerLead({ name: `Csp ${uniqueToken()}` });
   await signInAsAdmin(page);
   await page.getByRole("searchbox", { name: "Search leads" }).fill(lead.name);
   await expect(page.getByRole("link", { name: lead.name })).toBeVisible();
