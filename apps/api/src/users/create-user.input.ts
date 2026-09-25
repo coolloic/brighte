@@ -9,7 +9,7 @@ export class CreateUserInput {
   @Field()
   name: string;
 
-  @Field({ description: 'At least 8 characters.' })
+  @Field({ description: '8 to 128 characters.' })
   password: string;
 
   @Field(() => Role, { defaultValue: Role.USER })

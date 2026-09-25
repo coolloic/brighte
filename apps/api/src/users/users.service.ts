@@ -2,11 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { UniqueConstraintError } from 'sequelize';
 import { hashPassword } from '../auth/index.js';
-import { BadUserInputError, ConflictError, UnauthenticatedError } from '../common/index.js';
+import { ConflictError, UnauthenticatedError } from '../common/index.js';
 import { User } from './user.model.js';
-import { CreateUserInput } from './create-user.input.js';
-
-export const MIN_PASSWORD_LENGTH = 8;
+import type { CreateUser } from './users.schemas.js';
 
 @Injectable()
 export class UsersService {
@@ -28,13 +26,11 @@ export class UsersService {
     return this.userModel.scope('withPassword').findOne({ where: { email: email.toLowerCase() } });
   }
 
-  async create(input: CreateUserInput): Promise<User> {
-    if (input.password.length < MIN_PASSWORD_LENGTH) {
-      throw new BadUserInputError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
-    }
+  /** `input` is already validated and normalised (createUserSchema). */
+  async create(input: CreateUser): Promise<User> {
     const user = await this.userModel
       .create({
-        email: input.email.toLowerCase(),
+        email: input.email,
         name: input.name,
         role: input.role,
         passwordHash: await hashPassword(input.password),

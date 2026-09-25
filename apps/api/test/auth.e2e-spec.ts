@@ -15,7 +15,7 @@ process.env.JWT_EXPIRES_IN = '15m';
 const PREFIX = `e2e-auth-${Date.now()}`;
 const email = (name: string) => `${PREFIX}-${name}@test.dev`;
 
-type GqlResponse<T> = { data?: T; errors?: { message: string; extensions?: { code?: string } }[] };
+type GqlResponse<T> = { data?: T; errors?: { message: string; extensions?: { code?: string; fields?: Record<string, string> } }[] };
 type LoginResult = { login: { accessToken: string; user: { id: string; email: string; role: Role } } };
 type TokenPayload = { sub: number; role: Role; auth_time: number; iat: number; exp: number };
 type RenewResult = { renewToken: { accessToken: string; user: { id: string; role: Role } } };
@@ -209,9 +209,16 @@ describe('Auth (e2e)', () => {
 
     it('rejects a password shorter than 8 characters', async () => {
       const { errors } = await createUser({ email: email('short'), name: 'Short', password: '1234567' });
-      expect(errors?.[0].message).toBe('Password must be at least 8 characters');
       expect(errors?.[0].extensions?.code).toBe('BAD_USER_INPUT');
+      expect(errors?.[0].extensions?.fields).toEqual({ password: 'Password must be at least 8 characters' });
       expect(await users.count({ where: { email: email('short') } })).toBe(0);
+    });
+
+    it('trims the email, so the new user can log in with it', async () => {
+      const { errors } = await createUser({ email: ` ${email('Spaced')} `, name: ' Spaced ', password: 'spaced-password' });
+      expect(errors).toBeUndefined();
+      const loggedIn = await login(email('spaced'), 'spaced-password');
+      expect(loggedIn.data!.login.user.email).toBe(email('spaced'));
     });
 
     it('rejects an email that is already registered, whatever its case', async () => {

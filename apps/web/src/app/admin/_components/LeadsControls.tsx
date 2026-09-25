@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useTransition } from "react";
 import { LeadsSearchForm } from "@/components/organisms/LeadsSearchForm";
 import { dashboardHref, type DashboardParams, type DashboardSort } from "@/lib/dashboard";
 
@@ -31,6 +31,28 @@ export function LeadsControls({ params }: { params: DashboardParams }) {
   const [query, setQuery] = useState(params.q ?? "");
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+  // The URL as it is now. A debounced search fires after later renders, and building its URL from
+  // the params it was typed with would undo a sort or filter changed in the meantime.
+  const latestParams = useRef(params);
+  useEffect(() => {
+    latestParams.current = params;
+  });
+
+  // Text waiting out the pause before its search, and text held back from searching while a link
+  // (a column sort, a service filter, a lead) loads: searching then would replace that navigation
+  // with one built from the old URL. The held-back search runs once the link's page arrives.
+  const waiting = useRef<string>(undefined);
+  const heldBack = useRef<string>(undefined);
+  useEffect(() => {
+    const holdBack = (event: MouseEvent) => {
+      if (waiting.current === undefined || !(event.target instanceof Element) || !event.target.closest('a[href^="/"]')) return;
+      clearTimeout(timer.current);
+      heldBack.current = waiting.current;
+      waiting.current = undefined;
+    };
+    document.addEventListener("click", holdBack, true);
+    return () => document.removeEventListener("click", holdBack, true);
+  }, []);
 
   // The URL's search changed. If it's the search this box sent, leave the box alone: the admin may
   // have typed more while it loaded, and copying the URL back would erase those letters. Otherwise
@@ -46,7 +68,7 @@ export function LeadsControls({ params }: { params: DashboardParams }) {
   }
 
   const go = (changes: Partial<DashboardParams>, history: "push" | "replace" = "push") => {
-    const { q, service, sort, size, lead } = params;
+    const { q, service, sort, size, lead } = latestParams.current;
     const href = dashboardHref({ q, service, sort, size, lead, ...changes, page: 1 });
     startTransition(() => router[history](href, { scroll: false }));
   };
@@ -57,6 +79,15 @@ export function LeadsControls({ params }: { params: DashboardParams }) {
     go({ q, lead: undefined }, sentQ ? "replace" : "push");
     setSentQ(q);
   };
+  const searchHeldBack = useEffectEvent(() => {
+    if (heldBack.current === undefined) return;
+    const q = heldBack.current.trim() || undefined;
+    heldBack.current = undefined;
+    // Keeps a lead the link just opened, and replaces the link's history entry: one step for both.
+    go({ q }, "replace");
+    setSentQ(q);
+  });
+  useEffect(() => searchHeldBack(), [params]);
 
   return (
     <LeadsSearchForm
@@ -65,16 +96,28 @@ export function LeadsControls({ params }: { params: DashboardParams }) {
       onQueryChange={(value) => {
         setQuery(value);
         clearTimeout(timer.current);
-        timer.current = setTimeout(() => search(value), SEARCH_DELAY_MS);
+        waiting.current = value;
+        timer.current = setTimeout(() => {
+          waiting.current = undefined;
+          search(value);
+        }, SEARCH_DELAY_MS);
       }}
       onSubmit={(event) => {
         event.preventDefault();
         clearTimeout(timer.current);
+        waiting.current = undefined;
         search(query);
       }}
       sort={params.sort}
       sortOptions={SORT_OPTIONS}
-      onSortChange={(value) => go({ sort: value as DashboardSort })}
+      onSortChange={(value) => {
+        // Take a search still waiting out its pause along, instead of letting it land after this.
+        clearTimeout(timer.current);
+        waiting.current = undefined;
+        const q = query.trim() || undefined;
+        go({ sort: value as DashboardSort, q, ...(q !== params.q && { lead: undefined }) });
+        setSentQ(q);
+      }}
       hiddenFields={{ service: params.service, size: String(params.size) }}
       busy={busy}
     />

@@ -1,8 +1,10 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Role, Roles, type AuthUser } from '../auth/index.js';
+import { validate } from '../common/index.js';
 import { User } from './user.model.js';
 import { UsersService } from './users.service.js';
 import { CreateUserInput } from './create-user.input.js';
+import { createUserSchema } from './users.schemas.js';
 
 @Resolver(() => User)
 export class UsersResolver {
@@ -35,12 +37,12 @@ export class UsersResolver {
   @Roles(Role.ADMIN)
   @Mutation(() => User, {
     description: [
-      'Create a user. `role` defaults to `USER`; the email is stored lowercase.',
+      'Create a user. `role` defaults to `USER`; the email is trimmed and stored lowercase, the name trimmed.',
       '**Auth:** `ADMIN`.',
-      '**Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`), `BAD_USER_INPUT` (password shorter than 8 characters), `CONFLICT` (email already registered).',
+      '**Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`), `BAD_USER_INPUT` (invalid email, name empty or over 70 characters, password not 8 to 128 characters; `extensions.fields` names each field), `CONFLICT` (email already registered).',
     ].join('\n\n'),
   })
   createUser(@Args('input') input: CreateUserInput): Promise<User> {
-    return this.usersService.create(input);
+    return this.usersService.create(validate(createUserSchema, input));
   }
 }
