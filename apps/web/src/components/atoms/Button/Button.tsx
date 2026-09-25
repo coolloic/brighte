@@ -4,7 +4,8 @@ import { cn } from "@/lib/cn";
 import { Spinner } from "../Spinner";
 
 // Shape follows brighte.com.au's .cta; the green is deep enough for a white label to pass (see globals.scss).
-const buttonVariants = cva(
+/** Button styles, also for links that should look like buttons (e.g. a "Try again" link to reload). */
+export const buttonVariants = cva(
   // 44px touch target, Brighte's 4px corners and 2px border; 20px bold is WCAG "large text" (AAA at 4.5:1).
   // Only colors animate, so the focus ring appears at once (apps/web/CLAUDE.md).
   "inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-control border-2 px-7 py-1.5 text-xl font-bold transition-[background-color,border-color] duration-150 focus-visible:focus-ring",

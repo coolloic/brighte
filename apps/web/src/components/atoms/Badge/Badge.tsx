@@ -8,6 +8,8 @@ const badgeVariants = cva("inline-flex items-center rounded-full px-3 py-1 text-
     tone: {
       brand: "bg-surface-brand text-fg-brand",
       neutral: "bg-surface-muted text-fg",
+      // For badges on a brand-tinted background (e.g. a selected row), where the brand tint would vanish.
+      outline: "bg-surface text-fg-brand ring-1 ring-action ring-inset",
     },
   },
   defaultVariants: { tone: "brand" },
