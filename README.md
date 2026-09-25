@@ -9,7 +9,7 @@ Brighte Eats collects expressions of interest before launch (a public registrati
 | Storybook     | `apps/web` component library                             | 6006 (`STORYBOOK_PORT`) |
 | Postgres 17   | `docker-compose.yml`                                      | 5435 (`POSTGRES_PORT`) |
 
-**Contents:** [How to run](#how-to-run) · [Why I chose Postgres, NestJS and Next.js](#why-i-chose-postgres-nestjs-and-nextjs) · [Data modelling trade-offs](#data-modelling-trade-offs) · [Validation strategy](#validation-strategy--client-vs-server) · [Idempotency approach](#idempotency-approach) · [Frontend](#frontend) · [Leads API](#leads-api) · [Authentication](#authentication) · [Security](#security) · [Database migrations](#database-migrations) · [Testing](#testing) · [API collection (Bruno)](#api-collection-bruno) · [What I'd change at 10× scale](#what-id-change-at-10-scale) · [TODOs / known gaps](#todos--known-gaps) · [AI Assistance](#ai-assistance)
+**Contents:** [How to run](#how-to-run) · [Why I chose Postgres, NestJS and Next.js](#why-i-chose-postgres-nestjs-and-nextjs) · [Data modelling trade-offs](#data-modelling-trade-offs) · [Validation strategy](#validation-strategy--client-vs-server) · [Idempotency approach](#idempotency-approach) · [Stretch goals](#stretch-goals) · [Frontend](#frontend) · [Leads API](#leads-api) · [Authentication](#authentication) · [Security](#security) · [Database migrations](#database-migrations) · [Testing](#testing) · [API collection (Bruno)](#api-collection-bruno) · [What I'd change at 10× scale](#what-id-change-at-10-scale) · [TODOs / known gaps](#todos--known-gaps) · [AI Assistance](#ai-assistance)
 
 **Diagrams:** [docs/architecture.md](docs/architecture.md): the [database ER diagram](docs/architecture.md#database-er-diagram), the [system architecture](docs/architecture.md#system-architecture) and the [main request flows](docs/architecture.md#request-flows) (Mermaid, rendered by GitHub).
 
@@ -19,7 +19,7 @@ Needs Node 24 (`.nvmrc`), pnpm 12 (`corepack enable`) and Docker.
 
 ```bash
 pnpm install
-pnpm bootstrap    # env files, Postgres in Docker, migrations, dev accounts
+pnpm bootstrap    # env files, Postgres in Docker, migrations, dev accounts and sample leads
 pnpm dev          # web + api in parallel
 ```
 
@@ -34,7 +34,7 @@ Then open:
 | http://localhost:4001/graphql | GraphiQL (development only) |
 | http://localhost:6006 | Storybook: `pnpm storybook` |
 
-Tests: `pnpm test` (unit and component), `pnpm test:e2e` (API and browser end-to-end; needs `pnpm db:up`, `db:migrate` and `db:seed`). See [Testing](#testing).
+Tests: `pnpm test` (unit and component), `pnpm test:e2e` (API and browser end-to-end; needs `pnpm bootstrap` first). See [Testing](#testing).
 
 **Ports** live in one place, the root `.env` (see `.env.example`). Every script and tool reads it and falls back to the defaults above when a value (or the file) is missing: `pnpm dev`, `start`, `storybook`, Playwright, Lighthouse, Docker Compose, and the API's default CORS origin and the web app's API URL. A variable set in your shell still wins, e.g. `WEB_PORT=3002 pnpm dev`. Two exceptions: `DATABASE_URL` in `apps/api/.env` carries its own port, so change it together with `POSTGRES_PORT`; and an explicit `PORT` (set by hosting platforms and the smoke test) wins over `API_PORT`.
 
@@ -88,13 +88,24 @@ Brighte Eats leads can be interested in several services, and the service types 
 
 `register` is public, so it deliberately doesn't merge into or return the existing lead: that would hand anyone who knows an email that person's stored name and mobile. The trade-off is that a retried request that already succeeded sees `CONFLICT`. Double submits from the form are also blocked in the browser while a submit is in flight.
 
+## Stretch goals
+
+The spec suggests picking one. I picked the **admin boundary for the dashboard**, since the leads are personal data: sign-in, `ADMIN`-only `leads` and `lead`, deny by default on the API, and a sliding session on the web (see [Authentication](#authentication)).
+
+**Rate limiting on `register`** came with it. Once `register` and `login` are the only public operations, they are the attack surface, so both are limited per IP with a doubling backoff, and the form shows a countdown (see [Security](#security)).
+
+Not done:
+
+- **Optimistic UI, on purpose.** Whether a registration succeeds is only known on the server (duplicate email, rate limit, an inactive service), so showing success early would sometimes mean taking it back. Instead the form validates in the browser first, then shows a clear submitting state.
+- **Audit trail:** listed under [10× scale](#what-id-change-at-10-scale).
+
 ## Frontend
 
 | Route | What |
 |---|---|
 | `/` | Registration form. Service options come from the API (`serviceTypes`), so a new service appears without a deploy |
 | `/admin/login` | Admin sign-in (`noindex`) |
-| `/admin` | Leads dashboard: search as you type (name, email, mobile or postcode), filter by service, sortable columns (newest first by default), 10/20/50/100 per page, lead detail beside the list. State in the URL: `/admin?q=ada&service=delivery&sort=name_asc&size=50&page=2&lead=<id>` |
+| `/admin` | Leads dashboard: search as you type (name, email, mobile or postcode), filter by service, sortable columns (newest first by default), 10/20/50/100 per page, lead detail beside the list (closed with its × to give the list its full width back). State in the URL: `/admin?q=ada&service=delivery&sort=name_asc&size=50&page=2&lead=<id>` |
 | anything else | Branded 404; failures show a branded "Something went wrong" page |
 
 **How the web talks to the API** ([architecture diagram and request flows](docs/architecture.md#system-architecture)). Only through the Next server, via a server-only data access layer (`apps/web/src/lib/api`): `graphql()` adds the admin's token and the visitor's IP, times out after 10 seconds, and turns failures into an `ApiError` with the API's code. Admin pages and actions start with `requireAdmin()`, which asks the API (`me`) who the session belongs to; the cookie alone proves nothing. `apps/web/src/proxy.ts` renews an active admin's token when it has under 10 minutes left (a sliding session: 30 minutes idle, 8 hours at most; see [Authentication](#authentication)).
@@ -163,7 +174,8 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 | Browser-side attacks on responses | API: `helmet` security headers (`nosniff`, HSTS, frame and referrer policies; CSP in production) and no `X-Powered-By`. Web: a **nonce-based Content-Security-Policy** set per request by `apps/web/src/proxy.ts` (scripts and styles only with that request's nonce, `frame-ancestors 'none'`, `object-src 'none'`, forms only to this site), plus `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options: DENY` and no `X-Powered-By`; HSTS and `upgrade-insecure-requests` when `SITE_URL` is HTTPS. `apps/web/e2e/security.spec.ts` checks the headers and that the policy blocks nothing the app needs. |
 | Schema discovery | Introspection and GraphiQL are off when `NODE_ENV=production` (Apollo and Nest defaults). |
 | Leaking internals | Unexpected errors are logged and returned as `Internal server error` (see `formatError`). |
-| Injection | All database access goes through Sequelize with bound parameters; inputs are validated with Zod first. |
+| Injection | All database access goes through Sequelize with bound parameters; inputs are validated with Zod first. Search terms escape `%` and `_`, so they match literally. |
+| Secrets in git | None are committed: every `.env` is gitignored and only `.env.example` files are tracked. `JWT_SECRET` is empty in the example (`pnpm bootstrap` generates one), and the seed passwords in it are for local development only. |
 
 **Behind a proxy**, set `TRUST_PROXY` to the number of hops so the limiter sees the client's IP. Otherwise every client shares the proxy's IP and one noisy client throttles everyone.
 
@@ -181,7 +193,8 @@ Without this, every visitor shares the web server's IP, and five registrations a
 
 The schema is owned by [Umzug](https://github.com/sequelize/umzug) migrations in `apps/api/src/database/migrations/`. Sequelize `synchronize` is off, so changing a model does not change the database.
 
-- Add a migration: create `apps/api/src/database/migrations/<YYYY.MM.DDTHH.mm.ss>.<description>.ts` exporting `up` and `down` (see the existing one). Files run in name order.
+- The history shows the schema evolving in small steps: users, then roles and auth fields on users, then leads and service types, then search indexes.
+- Add a migration: create `apps/api/src/database/migrations/<YYYY.MM.DDTHH.mm.ss>.<description>.ts` exporting `up` and `down` (see the existing ones). Files run in name order, and each applied one is recorded in the `SequelizeMeta` table.
 - `pnpm db:migrate`: apply pending migrations.
 - `pnpm --filter @brighte/api db:migrate:status`: list pending migrations.
 - `pnpm --filter @brighte/api db:migrate:undo`: revert the last migration.
@@ -239,6 +252,7 @@ Every request has a test, so the collection also runs from the command line: `cd
 
 ## TODOs / known gaps
 
+- **Running needs Node and pnpm as well as Docker.** To simplify it, I'd add a Compose profile that builds and runs the API and web too, so `docker compose up` alone starts everything.
 - **No CI configuration** in the repo yet; quality gates run in the pre-commit hook and locally.
 - **Sign out doesn't revoke the token**, only removes the cookie (see 10× scale).
 - **No admin user management UI**; admins are created with `createUser` (ADMIN only) or the dev seed.
