@@ -18,6 +18,8 @@ const apiPort = Number(process.env.API_PORT ?? 4001) + 100;
 // e2e/api-down.spec.ts. Set here so the test workers inherit it.
 const apiDownWebPort = webPort + 1;
 process.env.E2E_API_DOWN_URL = `http://localhost:${apiDownWebPort}`;
+// The e2e API itself, for tests that create data directly (e2e/support.ts).
+process.env.E2E_API_URL = `http://localhost:${apiPort}/graphql`;
 
 export default defineConfig({
   testDir: "./e2e",

@@ -172,6 +172,13 @@ describe('Leads API (e2e)', () => {
       expect(page2.total).toBe(page1.total);
     });
 
+    it('treats a null, blank or omitted serviceType as no filter', async () => {
+      const totals = await Promise.all([{}, { serviceType: null }, { serviceType: '' }].map(async (args) => (await listLeads({ ...args, limit: 1 })).data!.leads.total));
+      expect(new Set(totals).size).toBe(1);
+      // Unfiltered: at least as many as any filter.
+      expect(totals[0]).toBeGreaterThanOrEqual((await listLeads({ serviceType: TEST_TYPE, limit: 1 })).data!.leads.total);
+    });
+
     it('returns every service of a filtered lead, not only the one filtered on', async () => {
       const page = (await listLeads({ serviceType: 'pick-up', limit: 100 })).data!.leads;
       const lead = page.items.find((l) => l.id === ordered[0])!;

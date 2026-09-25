@@ -119,7 +119,7 @@ type Query {
     offset: Int! = 0
 
     """
-    Only leads interested in this service type code. Blank or omitted: no filter.
+    Only leads interested in this service type code. Blank, null or omitted: no filter.
     """
     serviceType: String
     sort: LeadSort! = NEWEST_FIRST
