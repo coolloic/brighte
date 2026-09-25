@@ -199,6 +199,16 @@ One request id follows a page from the web server to the API: search the logs fo
 - **JSON logs** (`src/lib/log.ts`): one object per line, in the API's shape (`level` 30/40/50, `time`, `msg`), so one collector and one query cover both.
 - **Server errors.** `src/instrumentation.ts` (`onRequestError`) logs every error the Next server catches, with its `digest`, the request id, the route and, for an API failure, its `code`. The error page shows the digest as a *Reference*, so a visitor's report leads to the log line. `app/global-error.tsx` shows the same page when the root layout itself fails. Errors pages handle themselves (the API down on the register form, a failed sign-in, a failed session renewal) are logged where they're handled.
 
+### Browser
+
+The browser reports to the web server, which writes the reports into the same log, so there is no third-party service or CSP change (reports go to the same origin).
+
+- **Errors.** `src/instrumentation-client.ts` catches uncaught errors and unhandled promise rejections, including errors React recovers from, such as a hydration mismatch. `app/error.tsx` reports errors it catches while rendering in the browser; errors with a digest came from the server, which has already logged them. Each distinct error is sent once per page load, and at most 10 per page.
+- **Web Vitals.** `app/_components/WebVitals.tsx` (`useReportWebVitals`) sends real visitors' TTFB, FCP, LCP, CLS and INP. Lighthouse runs in a lab; these are field numbers.
+- **Correlation.** Each report carries the page's request id (a `<meta name="request-id">` in the root layout) and its path without the query string: the dashboard's `?q=` holds searched names.
+- **Endpoint.** `POST /api/browser-reports` logs `Browser error` at warn and `Web vital` at info. It is public, so it allows 60 reports a minute per visitor IP (answering `429` beyond), refuses bodies over 8 KB unread (`413`), and keeps only known fields, cut to size (`400` for anything that isn't a report).
+- **Limits.** Stacks from production bundles are minified, so reading one means matching it against the build's source maps by hand. Nothing groups repeated errors or alerts on them; that is left to whatever collects the logs. At real traffic, [Sentry](https://sentry.io) (`@sentry/nextjs`) is the upgrade: it groups errors into issues, maps stacks back to source with uploaded source maps, and tracks releases, alerts and Web Vitals. It would replace the listeners and this endpoint; it needs its ingest host in the CSP's `connect-src` and its personal-data scrubbing turned on.
+
 ### API
 
 The API logs with [nestjs-pino](https://github.com/iamolegga/nestjs-pino): one JSON object per line on stdout, ready for any log collector. Running it in a terminal (`pnpm dev`) pretty-prints instead. `LOG_LEVEL` sets the level (default `info`; e2e tests are silent).
@@ -229,9 +239,9 @@ Tests are chosen to protect what would hurt most if it broke, not for coverage n
 | API unit | `pnpm --filter @brighte/api test` | Input schemas, error formatting, password hashing, rate-limit backoff, request ids and the operation log, the API docs contract |
 | API end-to-end | `pnpm --filter @brighte/api test:e2e` | Every operation against real Postgres (Supertest): register, leads, lead, auth, session renewal, access rules, security limits, N+1 query count, health checks, request ids, security and audit log events |
 | API smoke | `pnpm --filter @brighte/api test:smoke` | Builds and starts real servers (dev and production) and checks every operation, edge case and error code over HTTP, plus the production logs: all JSON, and no passwords, emails or tokens |
-| Web unit | `pnpm --filter @brighte/web test` | API client (including request ids), error-to-copy mapping, validation, URL and session helpers, JSON logging, `onRequestError` |
+| Web unit | `pnpm --filter @brighte/web test` | API client (including request ids), error-to-copy mapping, validation, URL and session helpers, JSON logging, `onRequestError`, browser report parsing and rate limiting |
 | Component stories | same command | Every Storybook story renders in Chromium, runs its interaction test, and must pass axe (WCAG 2.1 AA) |
-| Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: register, sign-in, dashboard (search, sort, page size), sessions, offline, slow submits, API down (with the error's reference), 404, SEO files, security headers and CSP, and each flow without JavaScript |
+| Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: register, sign-in, dashboard (search, sort, page size), sessions, offline, slow submits, API down (with the error's reference), browser error and Web Vitals reports, 404, SEO files, security headers and CSP, and each flow without JavaScript |
 
 The e2e suite starts its own production API and web servers (dev ports + 100, so it never touches a running dev setup), plus a web server whose API is unreachable. Each test sends its own visitor IP, so tests don't share rate limits. It needs Postgres migrated and seeded, and leaves its test leads in the dev database (useful data for trying the dashboard). Lighthouse: `pnpm --filter @brighte/web lighthouse` against a running production build. The public page must score 90+ for Performance and Best Practices, 95+ for Accessibility and 100 for SEO (it scores 100 in all four); admin pages are held to the same except SEO, since they are `noindex` on purpose.
 
@@ -265,7 +275,7 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Sessions that can be revoked.** Tokens can't be cancelled before they expire (signing out only removes the cookie). Keep sessions or refresh tokens server-side (a table or Redis) so "sign out everywhere" and account lockout take effect at once.
 - **Database.** A connection pooler (PgBouncer), and a read replica for the dashboard so reads don't compete with registrations.
 - **Caching.** Service types change rarely but are fetched on every form load; cache them on the web server with a short revalidation.
-- **Observability.** The API and web server write structured logs and share request ids (see [Observability](#observability)). Next: browser errors and Web Vitals; tracing across web → API → database (OpenTelemetry); metrics; and alerts on error rates and `rate_limit.blocked` spikes.
+- **Observability.** The API and web server write structured logs and share request ids (see [Observability](#observability)). Browser errors and Web Vitals reach the same log. Next: Sentry once there is real traffic (see [Browser](#browser)); tracing across web → API → database (OpenTelemetry); metrics; and alerts on error rates and `rate_limit.blocked` spikes.
 - **Search.** Trigram indexes serve substring search well into the millions of rows; beyond that, or for ranking and typo tolerance, move to Postgres full-text search or a search service.
 - **Dashboard features.** CSV export, and an audit trail of service-interest changes.
 - **Delivery.** CI running the full test suite on every pull request, against a dedicated test database, and deploying the API on a private network behind the web app.

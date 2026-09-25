@@ -84,7 +84,8 @@ test.describe("register page", () => {
   test("checks the form in the browser, without sending anything, and focuses the first problem", async ({ page }) => {
     const posts: string[] = [];
     page.on("request", (request) => {
-      if (request.method() === "POST") posts.push(request.url());
+      // Browser reports (Web Vitals) aren't the form: they never reach the API.
+      if (request.method() === "POST" && !request.url().endsWith("/api/browser-reports")) posts.push(request.url());
     });
     await page.goto("/");
     await submit(page);
