@@ -68,13 +68,13 @@ Brighte Eats leads can be interested in several services, and the service types 
 
 **What the join table costs.** Writes touch two tables, so `register` must insert the lead and its services in one transaction. Reads need a join or a batched lookup; the API uses a per-request DataLoader, so listing leads with their services doesn't cause N+1 queries. Both costs are small at this scale.
 
-**Indexes.** `leads(createdAt, id)` serves the default newest-first sort with a stable tie-breaker for offset pagination. `lead_service_types(serviceTypeId)` serves the filter by service type; the composite primary key already covers lookups by lead. The unique `leads.email` is what duplicate-lead (idempotency) handling relies on.
+**Indexes.** `leads(createdAt, id)` serves the default newest-first sort with a stable tie-breaker for offset pagination. `lead_service_types(serviceTypeId)` serves the filter by service type; the composite primary key already covers lookups by lead. The unique `leads.email` is what duplicate-lead (idempotency) handling relies on. Trigram (`pg_trgm`) GIN indexes on `leads.name` and `leads.email` serve the dashboard search, which matches anywhere in the text (`ILIKE '%term%'`), something a normal index can't do.
 
 ## Validation strategy — client vs server
 
 **Both, with the server as the source of truth.**
 
-- **Server (API).** Every input is parsed with a Zod schema (`apps/api/src/leads/leads.schemas.ts`) before any database work. It also normalises: lowercase email, mobile stored as `04xxxxxxxx`, trimmed text, de-duplicated services. A failure returns `BAD_USER_INPUT` with `extensions.fields`, a map from each invalid field to a message. Whether a service code exists (and is still active) is only known to the database, so that check lives only on the server.
+- **Server (API).** Every input is parsed with a Zod schema (`apps/api/src/leads/leads.schemas.ts`) before any database work: name required and at most 70 characters, a valid email, an Australian mobile, a 4-digit postcode, at least one service. It also normalises: lowercase email, mobile stored as `04xxxxxxxx`, trimmed text, de-duplicated services. A failure returns `BAD_USER_INPUT` with `extensions.fields`, a map from each invalid field to a message. Whether a service code exists (and is still active) is only known to the database, so that check lives only on the server.
 - **Browser (web).** `validateRegistration` and `validateSignIn` (`apps/web/src/lib`) repeat the same rules and messages, so mistakes show at once and **nothing is sent**, which also means typos never count against the API's rate limit. They're a convenience, not a security boundary: bots skip them, and without JavaScript the form relies on the server alone.
 - **Showing server errors.** The web maps each API error code to plain copy (`apps/web/src/lib/api/*-feedback.ts`); it branches on `extensions.code`, never on messages. Field messages appear under their field, without repeating the example the field's hint already shows.
 - **Trade-off:** the rules exist twice (Zod on the API, plain functions on the web), and only review keeps them in step. If they drift, the API still has the final word and its message is shown. A shared schema package would remove the duplication (see [TODOs](#todos--known-gaps)).
@@ -91,7 +91,7 @@ Brighte Eats leads can be interested in several services, and the service types 
 |---|---|
 | `/` | Registration form. Service options come from the API (`serviceTypes`), so a new service appears without a deploy |
 | `/admin/login` | Admin sign-in (`noindex`) |
-| `/admin` | Leads dashboard: filter by service, 20 per page, newest first, lead detail. State in the URL: `/admin?service=delivery&page=2&lead=<id>` |
+| `/admin` | Leads dashboard: search as you type (name, email, mobile or postcode), filter by service, sortable columns (newest first by default), 10/20/50/100 per page, lead detail beside the list. State in the URL: `/admin?q=ada&service=delivery&sort=name_asc&size=50&page=2&lead=<id>` |
 | anything else | Branded 404; failures show a branded "Something went wrong" page |
 
 **How the web talks to the API.** Only through the Next server, via a server-only data access layer (`apps/web/src/lib/api`): `graphql()` adds the admin's token and the visitor's IP, times out after 10 seconds, and turns failures into an `ApiError` with the API's code. Admin pages and actions start with `requireAdmin()`, which asks the API (`me`) who the session belongs to; the cookie alone proves nothing. `apps/web/src/proxy.ts` renews an active admin's token when it has under 10 minutes left (a sliding session: 30 minutes idle, 8 hours at most; see [Authentication](#authentication)).
@@ -106,9 +106,12 @@ Brighte Eats leads can be interested in several services, and the service types 
 | Rate limited | "Too many attempts" with a live countdown from the API's `retryAfter` (the API doubles the wait for repeat offenders) |
 | Connection lost mid-submit | The form stays with everything typed, and "Check your connection and try again" with **Try again** |
 | API down | Register: "We can't show the form right now" with Try again. Admin pages: the branded error page, with Try again |
-| Admin session expired | Sign in again, then straight back to the same URL (filter, page and lead kept) |
+| Admin session expired | Sign in again, then straight back to the same URL (search, filter, sort, page and lead kept) |
+| Searching (slow) | Results follow the typing after a 300 ms pause, focus stays in the box, and letters typed while a search loads are kept; the lead count is announced to screen readers |
 
-**Without JavaScript**, registering, signing in and out, and browsing the dashboard all work, because forms post to their Server Actions and the dashboard is links.
+**Without JavaScript**, registering, signing in and out, and browsing the dashboard all work, because forms post to their Server Actions and the dashboard is links and GET forms (a Search and an Apply button appear only then).
+
+**SEO and security headers.** The public page has a canonical URL, Open Graph and Twitter tags, JSON-LD structured data, `/robots.txt` and `/sitemap.xml` (Lighthouse SEO 100); admin pages are `noindex`. Every page sends a nonce-based Content-Security-Policy and other security headers (see [Security](#security)). Set `SITE_URL` (root `.env.example`) to the public address in production.
 
 **Components** follow atomic design (`apps/web/src/components`: atoms, molecules, organisms, templates, enforced by ESLint), use design tokens from Brighte's palette, and meet WCAG 2.1 AA with **AAA text contrast**. Every component has Storybook stories, and every story is a test with an axe check. Conventions: `apps/web/CLAUDE.md`.
 
@@ -117,7 +120,7 @@ Brighte Eats leads can be interested in several services, and the service types 
 | Operation | What it does |
 |---|---|
 | `register(name, email, mobile, postcode, services)` | Records a lead and its service interests in one transaction. Returns the lead. |
-| `leads(limit = 20, offset = 0, serviceType, sort = NEWEST_FIRST)` | One page of leads plus `total`. `limit` is 1–100. `sort`: `NEWEST_FIRST`, `OLDEST_FIRST`, `NAME_ASC`, each with `id` as tie-breaker so pages are stable. |
+| `leads(limit = 20, offset = 0, serviceType, search, sort = NEWEST_FIRST)` | One page of leads plus `total`. `limit` is 1–100. `search` (up to 100 characters): name or email containing it (any case), postcode starting with it, or mobile containing its digits; `%` and `_` match literally. `sort`: `NEWEST_FIRST`, `OLDEST_FIRST`, `NAME_ASC`/`DESC`, `EMAIL_ASC`/`DESC`, `POSTCODE_ASC`/`DESC`, each with `id` as tie-breaker so pages are stable. |
 | `lead(id)` | One lead with its services, or `null`. |
 | `serviceTypes` | Active service types, so the form is not hardcoded. |
 
@@ -153,7 +156,7 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 | Spam registrations, password guessing, request floods | Rate limits per client IP and per operation (`@nestjs/throttler`): `register` 5/min, `login` 10/min, everything else 120/min, configurable with `RATE_LIMIT_*`. Over the limit: `TOO_MANY_REQUESTS` with `extensions.retryAfter` and a `Retry-After` header. **Backoff:** a client that goes over the same operation's limit again is blocked twice as long each time (60s, 120s, 240s… up to 15 minutes), back to 60s after 15 minutes without a block. Guards run per root field, so aliasing `register` 100 times in one request counts as 100. |
 | Expensive or huge queries | Documents over 1000 tokens are rejected before parsing finishes (`GRAPHQL_PARSE_FAILED`); JSON bodies over 100kb get 413; batched requests are off. There is no depth limit because the schema has no recursive types; add one if that changes. |
 | Other websites calling the API from a browser | CORS allows only the `WEB_ORIGIN` list (required in production), `GET`/`POST`, and the `Content-Type` and `Authorization` headers, without credentials, since auth is a bearer token rather than a cookie. Apollo's CSRF prevention rejects "simple" requests (e.g. `text/plain`) that skip the CORS preflight. Our own web app never calls the API from the browser (see [Frontend](#frontend)); CORS stays as defence in depth for any browser client. |
-| Browser-side attacks on responses | `helmet` security headers (`nosniff`, HSTS, frame and referrer policies; CSP in production) and no `X-Powered-By`. |
+| Browser-side attacks on responses | API: `helmet` security headers (`nosniff`, HSTS, frame and referrer policies; CSP in production) and no `X-Powered-By`. Web: a **nonce-based Content-Security-Policy** set per request by `apps/web/src/proxy.ts` (scripts and styles only with that request's nonce, `frame-ancestors 'none'`, `object-src 'none'`, forms only to this site), plus `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options: DENY` and no `X-Powered-By`; HSTS and `upgrade-insecure-requests` when `SITE_URL` is HTTPS. `apps/web/e2e/security.spec.ts` checks the headers and that the policy blocks nothing the app needs. |
 | Schema discovery | Introspection and GraphiQL are off when `NODE_ENV=production` (Apollo and Nest defaults). |
 | Leaking internals | Unexpected errors are logged and returned as `Internal server error` (see `formatError`). |
 | Injection | All database access goes through Sequelize with bound parameters; inputs are validated with Zod first. |
@@ -191,9 +194,9 @@ Tests are chosen to protect what would hurt most if it broke, not for coverage n
 | API smoke | `pnpm --filter @brighte/api test:smoke` | Builds and starts real servers (dev and production) and checks every operation, edge case and error code over HTTP |
 | Web unit | `pnpm --filter @brighte/web test` | API client, error-to-copy mapping, validation, URL and session helpers |
 | Component stories | same command | Every Storybook story renders in Chromium, runs its interaction test, and must pass axe (WCAG 2.1 AA) |
-| Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: register, sign-in, dashboard, sessions, offline, slow submits, API down, 404, and each flow without JavaScript |
+| Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: register, sign-in, dashboard (search, sort, page size), sessions, offline, slow submits, API down, 404, SEO files, security headers and CSP, and each flow without JavaScript |
 
-The e2e suite starts its own production API and web servers (dev ports + 100, so it never touches a running dev setup), plus a web server whose API is unreachable. Each test sends its own visitor IP, so tests don't share rate limits. It needs Postgres migrated and seeded, and leaves its test leads in the dev database (useful data for trying the dashboard). Lighthouse: `pnpm --filter @brighte/web lighthouse` against a running production build (Performance, Accessibility and Best Practices score 99–100).
+The e2e suite starts its own production API and web servers (dev ports + 100, so it never touches a running dev setup), plus a web server whose API is unreachable. Each test sends its own visitor IP, so tests don't share rate limits. It needs Postgres migrated and seeded, and leaves its test leads in the dev database (useful data for trying the dashboard). Lighthouse: `pnpm --filter @brighte/web lighthouse` against a running production build. The public page must score 90+ for Performance and Best Practices, 95+ for Accessibility and 100 for SEO (it scores 100 in all four); admin pages are held to the same except SEO, since they are `noindex` on purpose.
 
 The spec's suggested tests, and where they live:
 
@@ -227,18 +230,17 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Caching.** Service types change rarely but are fetched on every form load; cache them on the web server with a short revalidation.
 - **One validation schema.** Share a single schema between the API and the web (a `packages/validation` workspace) instead of two copies.
 - **Observability.** Structured logs, tracing across web → API → database (OpenTelemetry), and alerts on error rates and rate-limit spikes.
-- **Dashboard features.** Search by name or email (a trigram index), CSV export, and an audit trail of service-interest changes.
+- **Search.** Trigram indexes serve substring search well into the millions of rows; beyond that, or for ranking and typo tolerance, move to Postgres full-text search or a search service.
+- **Dashboard features.** CSV export, and an audit trail of service-interest changes.
 - **Delivery.** CI running the full test suite on every pull request, against a dedicated test database, and deploying the API on a private network behind the web app.
 
 ## TODOs / known gaps
 
-- **Web security headers.** The API sends `helmet` headers, but the web app doesn't yet set a Content-Security-Policy, `frame-ancestors`, `nosniff`, Referrer-Policy or HSTS. Next on the list.
 - **Validation rules are duplicated** between the API and the web (see [Validation strategy](#validation-strategy--client-vs-server)).
 - **One manual setup step:** `JWT_SECRET` in `apps/api/.env` must be generated by hand (the command is in the file).
 - **No CI configuration** in the repo yet; quality gates run in the pre-commit hook and locally.
 - **Sign out doesn't revoke the token**, only removes the cookie (see 10× scale).
 - **No admin user management UI**; admins are created with `createUser` (ADMIN only) or the dev seed.
-- **The dashboard has no search or sort controls**, though the API supports sorting.
 - **Lighthouse can't sign in**, so `/admin` was measured by hand with a session cookie (100 for Performance, Accessibility and Best Practices).
 
 ## AI Assistance
