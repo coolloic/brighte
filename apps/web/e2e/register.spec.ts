@@ -32,6 +32,13 @@ test.describe("register page", () => {
     await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Brighte Eats/);
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "Register your interest in Brighte Eats");
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /icon\.png/);
+    // Canonical and sharing URLs are absolute, on SITE_URL (the e2e server's own address).
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", new URL("/", page.url()).origin);
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", new URL("/", page.url()).origin);
+    await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+    // Structured data parses, and describes this page.
+    const jsonLd = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!) as Record<string, unknown>;
+    expect(jsonLd).toMatchObject({ "@type": "WebPage", name: "Register your interest in Brighte Eats", url: new URL("/", page.url()).href });
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Register your interest in Brighte Eats");
     await expect(page.getByRole("banner")).toBeVisible();
     await expect(page.getByRole("main")).toBeVisible();
@@ -142,6 +149,18 @@ test.describe("register page", () => {
     await expect(countdown).not.toHaveText(first!, { timeout: 3000 });
     await expect(countdown).toHaveText(/Please wait 5\d seconds and try again\./);
   });
+});
+
+test("robots.txt allows crawling and points to a sitemap that lists only the public page", async ({ request, baseURL }) => {
+  const robots = await (await request.get("/robots.txt")).text();
+  expect(robots).toContain("Allow: /");
+  // /admin isn't disallowed: crawlers must be able to see its noindex.
+  expect(robots).not.toContain("Disallow");
+  expect(robots).toContain(`Sitemap: ${baseURL}/sitemap.xml`);
+
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).toContain(`<loc>${baseURL}/</loc>`);
+  expect(sitemap).not.toContain("/admin");
 });
 
 test.describe("register page without JavaScript", () => {
