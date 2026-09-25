@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./errors";
 
 vi.mock("server-only", () => ({}));
 const graphql = vi.fn();
 vi.mock("./client", () => ({ graphql: (...args: unknown[]) => graphql(...args) }));
 
-const { getServiceOptions, registerInterest } = await import("./registration");
+const { getServiceOptions, registerInterest, serviceOptionsTtlMs } = await import("./registration");
 
 const input = { name: "Ada", email: "ada@example.com", mobile: "0412345678", postcode: "2000", services: ["delivery"] };
 
@@ -38,6 +38,41 @@ describe("getServiceOptions", () => {
     await expect(getServiceOptions()).rejects.toMatchObject({ code: "NETWORK_ERROR" });
     graphql.mockResolvedValueOnce({ serviceTypes: [] });
     await expect(getServiceOptions()).resolves.toEqual([]);
+  });
+});
+
+describe("serviceOptionsTtlMs", () => {
+  it("keeps the service types for 5 minutes by default", () => {
+    expect(serviceOptionsTtlMs({})).toBe(300_000);
+  });
+
+  it("reads SERVICE_TYPES_CACHE_SECONDS", () => {
+    expect(serviceOptionsTtlMs({ SERVICE_TYPES_CACHE_SECONDS: "60" })).toBe(60_000);
+  });
+
+  it("turns the cache off with 0", () => {
+    expect(serviceOptionsTtlMs({ SERVICE_TYPES_CACHE_SECONDS: "0" })).toBe(0);
+  });
+
+  it.each(["-1", "1.5", "abc", ""])("falls back to the default for %j", (value) => {
+    expect(serviceOptionsTtlMs({ SERVICE_TYPES_CACHE_SECONDS: value })).toBe(300_000);
+  });
+});
+
+describe("getServiceOptions with SERVICE_TYPES_CACHE_SECONDS=0", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("asks the API on every call", async () => {
+    vi.stubEnv("SERVICE_TYPES_CACHE_SECONDS", "0");
+    vi.resetModules();
+    const fresh = await import("./registration");
+    graphql.mockResolvedValue({ serviceTypes: [] });
+    await fresh.getServiceOptions();
+    await fresh.getServiceOptions();
+    expect(graphql).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -33,20 +33,27 @@ const REGISTER = /* GraphQL */ `
   }
 `;
 
+const DEFAULT_SERVICE_TYPES_CACHE_SECONDS = 300;
+
 /**
- * How long the service types are kept. They change a few times a year: a new one shows up within
- * this time, and a retired one can still be offered for as long (register then rejects it with a
- * field message).
+ * How long the service types are kept: SERVICE_TYPES_CACHE_SECONDS (root .env), 5 minutes by
+ * default, 0 for no cache. They change a few times a year: a new one shows up within this time, and
+ * a retired one can still be offered for as long (register then rejects it with a field message).
+ * Anything but a whole number of seconds, 0 or more, falls back to the default.
  */
-export const SERVICE_OPTIONS_TTL_MS = 5 * 60_000;
+export function serviceOptionsTtlMs(env: Record<string, string | undefined> = process.env): number {
+  const raw = env.SERVICE_TYPES_CACHE_SECONDS;
+  const seconds = raw ? Number(raw) : Number.NaN;
+  return (Number.isInteger(seconds) && seconds >= 0 ? seconds : DEFAULT_SERVICE_TYPES_CACHE_SECONDS) * 1000;
+}
 
 /**
  * Service types a visitor can choose, in display order (the API leaves retired ones out). Kept for
- * SERVICE_OPTIONS_TTL_MS per server instance (cachedFor), so pages don't ask the API on every render.
+ * serviceOptionsTtlMs() per server instance (cachedFor), so pages don't ask the API on every render.
  * A load forwards the IP of the visitor whose render started it, like any call: the API's rate limit
  * then counts retries during an outage per visitor, not in one bucket for the whole web server.
  */
-export const getServiceOptions = cachedFor(SERVICE_OPTIONS_TTL_MS, async (): Promise<ServiceOption[]> => {
+export const getServiceOptions = cachedFor(serviceOptionsTtlMs(), async (): Promise<ServiceOption[]> => {
   const data = await graphql<{ serviceTypes: ServiceOption[] }>(SERVICE_TYPES);
   // Only what the form needs: nothing else from the API reaches the client.
   return data.serviceTypes.map(({ code, label }) => ({ code, label }));
