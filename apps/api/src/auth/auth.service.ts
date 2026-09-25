@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthenticatedError } from '../common/index.js';
@@ -9,6 +9,8 @@ import { hashPassword, verifyPassword } from './password.js';
 
 const INVALID_CREDENTIALS = 'Invalid email or password';
 const SESSION_EXPIRED = 'Session expired, sign in again';
+
+const logger = new Logger('Auth');
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
@@ -26,11 +28,16 @@ export class AuthService {
   async login(email: string, password: string): Promise<{ accessToken: string; user: User }> {
     const user = await this.users.findByEmailWithPassword(email);
     const valid = await verifyPassword(password, user?.passwordHash ?? (await this.dummyHash));
-    if (!user || !valid) throw new UnauthenticatedError(INVALID_CREDENTIALS);
+    // The email itself isn't logged: it's personal data, and a mistyped password lands in it at times.
+    if (!user || !valid) {
+      logger.warn({ msg: 'Login failed', event: 'auth.login_failed', reason: user ? 'wrong_password' : 'unknown_email', userId: user?.id });
+      throw new UnauthenticatedError(INVALID_CREDENTIALS);
+    }
 
     const payload: AuthTokenPayload = { sub: user.id, role: user.role, auth_time: nowSeconds() };
     const accessToken = await this.jwt.signAsync(payload);
     user.set('passwordHash', undefined);
+    logger.log({ msg: 'Login', event: 'auth.login', userId: user.id, role: user.role });
     return { accessToken, user };
   }
 
@@ -43,7 +50,10 @@ export class AuthService {
     const now = nowSeconds();
     const sessionEnd = (caller.authTime ?? 0) + this.sessionMaxSeconds();
     // Tokens from before sessions had a limit carry no auth_time: those sign in again.
-    if (!caller.authTime || now >= sessionEnd) throw new UnauthenticatedError(SESSION_EXPIRED);
+    if (!caller.authTime || now >= sessionEnd) {
+      logger.log({ msg: 'Session renewal refused: session over', event: 'auth.session_ended', userId: caller.id });
+      throw new UnauthenticatedError(SESSION_EXPIRED);
+    }
 
     const user = await this.users.findCaller(caller.id);
     const payload: AuthTokenPayload = { sub: user.id, role: user.role, auth_time: caller.authTime };

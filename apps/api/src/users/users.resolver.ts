@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser, Role, Roles, type AuthUser } from '../auth/index.js';
 import { validate } from '../common/index.js';
@@ -5,6 +6,8 @@ import { User } from './user.model.js';
 import { UsersService } from './users.service.js';
 import { CreateUserInput } from './create-user.input.js';
 import { createUserSchema } from './users.schemas.js';
+
+const logger = new Logger('Users');
 
 @Resolver(() => User)
 export class UsersResolver {
@@ -42,7 +45,10 @@ export class UsersResolver {
       '**Errors:** `UNAUTHENTICATED`, `FORBIDDEN` (caller is not `ADMIN`), `BAD_USER_INPUT` (invalid email, name empty or over 70 characters, password not 8 to 128 characters; `extensions.fields` names each field), `CONFLICT` (email already registered).',
     ].join('\n\n'),
   })
-  createUser(@Args('input') input: CreateUserInput): Promise<User> {
-    return this.usersService.create(validate(createUserSchema, input));
+  async createUser(@CurrentUser() caller: AuthUser, @Args('input') input: CreateUserInput): Promise<User> {
+    const user = await this.usersService.create(validate(createUserSchema, input));
+    // Audit trail: who created which account, with which role.
+    logger.log({ msg: 'User created', event: 'user.created', userId: user.id, role: user.role, createdBy: caller.id });
+    return user;
   }
 }

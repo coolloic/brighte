@@ -1,8 +1,10 @@
-import { Injectable, type ExecutionContext } from '@nestjs/common';
+import { Injectable, Logger, type ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext, type GqlContextType } from '@nestjs/graphql';
 import { Throttle, ThrottlerGuard, type ThrottlerLimitDetail, type ThrottlerRequest } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { TooManyRequestsError } from './errors.js';
+
+const logger = new Logger('RateLimit');
 
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 
@@ -44,13 +46,18 @@ export class RateLimitBackoff {
     return Math.min(baseMs * BACKOFF_FACTOR ** blocks, Math.max(baseMs, MAX_BLOCK_MS));
   }
 
-  /** Called for every blocked request; counts a new block only once, when it starts. */
-  recordBlock(key: string, retryAfterSeconds: number): void {
+  /**
+   * Called for every blocked request; counts a new block only once, when it starts. Returns the
+   * key's block count when a new block starts (1 for the first), undefined during a block.
+   */
+  recordBlock(key: string, retryAfterSeconds: number): number | undefined {
     const now = this.now();
     const record = this.current(key);
-    if (record && record.blockedUntil > now) return; // still the same block
-    this.records.set(key, { blocks: (record?.blocks ?? 0) + 1, blockedUntil: now + retryAfterSeconds * 1000 });
+    if (record && record.blockedUntil > now) return undefined; // still the same block
+    const blocks = (record?.blocks ?? 0) + 1;
+    this.records.set(key, { blocks, blockedUntil: now + retryAfterSeconds * 1000 });
     this.forgetQuietKeys(now);
+    return blocks;
   }
 
   private current(key: string) {
@@ -90,7 +97,19 @@ export class GqlThrottlerGuard extends ThrottlerGuard {
   }
 
   protected async throwThrottlingException(context: ExecutionContext, detail: ThrottlerLimitDetail): Promise<void> {
-    this.backoff.recordBlock(detail.key, detail.timeToBlockExpire);
+    const blocks = this.backoff.recordBlock(detail.key, detail.timeToBlockExpire);
+    // Once per block, not per refused request: repeated blocks for one client are the sign of password guessing.
+    if (blocks) {
+      logger.warn({
+        msg: 'Rate limit block started',
+        event: 'rate_limit.blocked',
+        operation: context.getHandler().name,
+        ip: detail.tracker,
+        limit: detail.limit,
+        blockSeconds: detail.timeToBlockExpire,
+        blocks,
+      });
+    }
     if (context.getType<GqlContextType>() !== 'graphql') return super.throwThrottlingException(context, detail);
     throw new TooManyRequestsError(detail.timeToBlockExpire);
   }
