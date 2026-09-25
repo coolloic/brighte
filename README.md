@@ -23,7 +23,7 @@ pnpm bootstrap    # env files, Postgres in Docker, migrations, dev accounts
 pnpm dev          # web + api in parallel
 ```
 
-`pnpm bootstrap` is safe to run again. It creates `.env` (ports) and `apps/api/.env` from their examples with a random `JWT_SECRET`, keeping any file that already exists (only an empty `JWT_SECRET` is filled in), then runs `pnpm db:up` (Postgres in Docker, waits until it's ready), `pnpm db:migrate` and `pnpm db:seed` (dev accounts `admin@brighte.dev` / `user@brighte.dev`). For other ports, copy `.env.example` to `.env` and edit it before the first run: `apps/api/.env` takes its database port from it.
+`pnpm bootstrap` is safe to run again. It creates `.env` (ports) and `apps/api/.env` from their examples with a random `JWT_SECRET`, keeping any file that already exists (only an empty `JWT_SECRET` is filled in), then runs `pnpm db:up` (Postgres in Docker, waits until it's ready), `pnpm db:migrate` and `pnpm db:seed` (dev accounts `admin@brighte.dev` / `user@brighte.dev`, and 150 sample leads to page through, search and filter; see [Authentication](#authentication)). For other ports, copy `.env.example` to `.env` and edit it before the first run: `apps/api/.env` takes its database port from it.
 
 Then open:
 
@@ -32,7 +32,7 @@ Then open:
 | http://localhost:3001/ | Registration form (public) |
 | http://localhost:3001/admin | Leads dashboard: sign in as `admin@brighte.dev` / `admin-dev-password` (the seed passwords in `apps/api/.env`) |
 | http://localhost:4001/graphql | GraphiQL (development only) |
-| http://localhost:6006 | Storybook: `pnpm --filter @brighte/web storybook` |
+| http://localhost:6006 | Storybook: `pnpm storybook` |
 
 Tests: `pnpm test` (unit and component), `pnpm test:e2e` (API and browser end-to-end; needs `pnpm db:up`, `db:migrate` and `db:seed`). See [Testing](#testing).
 
@@ -148,6 +148,7 @@ Brighte Eats leads can be interested in several services, and the service types 
 | `GET /` | public |
 
 - `pnpm db:seed` (dev only) creates or updates `admin@brighte.dev` (ADMIN) and `user@brighte.dev` (USER) with passwords from `SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD` in `apps/api/.env`.
+- It also adds 150 sample leads (`apps/api/src/database/seed-leads.ts`): the same ones every time, with `@seed.example.com` emails, one about every 14 hours back to three months ago, and a mix of services and capital-city postcodes. That's 8 pages at the default page size, with enough overlap to try search (`nguyen`, `o'brien`, `3000`), each service filter and every sort. Each lead passes the API's own validation rules, and running the seed again only adds leads that are missing (matched by email).
 - The API refuses to start if `JWT_SECRET` is missing or shorter than 32 characters.
 
 ## Security
@@ -222,7 +223,7 @@ Every request has a test, so the collection also runs from the command line: `cd
 
 ## Scripts
 
-`pnpm dev | build | lint | lint:style | typecheck | test | test:e2e` run across all apps via Turbo. A pre-commit hook runs ESLint + Stylelint on staged files and a full typecheck (never bypassed with `--no-verify`). Quality rules for Claude Code are in `CLAUDE.md` and `apps/web/CLAUDE.md`.
+`pnpm dev | build | lint | lint:style | typecheck | test | test:e2e` run across all apps via Turbo; `pnpm storybook` starts the web component library. A pre-commit hook runs ESLint + Stylelint on staged files and a full typecheck (never bypassed with `--no-verify`). Quality rules for Claude Code are in `CLAUDE.md` and `apps/web/CLAUDE.md`.
 
 ## What I'd change at 10× scale
 

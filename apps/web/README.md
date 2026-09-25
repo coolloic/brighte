@@ -6,7 +6,7 @@ Setup, scripts and design notes are in the [root README](../../README.md), in pa
 
 ```bash
 pnpm --filter @brighte/web dev          # http://localhost:3001 (WEB_PORT)
-pnpm --filter @brighte/web storybook    # http://localhost:6006
+pnpm storybook                          # http://localhost:6006 (STORYBOOK_PORT)
 pnpm --filter @brighte/web test         # unit and component story tests
 pnpm --filter @brighte/web test:e2e     # Playwright (starts its own API and web)
 ```

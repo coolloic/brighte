@@ -4,6 +4,7 @@
   "scripts": {
     "bootstrap": "node scripts/bootstrap-env.mjs && pnpm db:up && pnpm db:migrate && pnpm db:seed",
     "dev": "turbo run dev",
+    "storybook": "pnpm --filter @brighte/web storybook",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
