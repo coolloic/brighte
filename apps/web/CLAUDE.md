@@ -37,6 +37,7 @@ src/app/       # pages = routes. Fetch data here and pass it into templates/orga
 - Only the Next server calls the API. Server Components and Server Actions use the functions in `src/lib/api/` (server-only: they import `server-only`, so a Client Component importing them fails the build). The browser never calls the API, and `process.env` is read only there.
 - Add an operation as a function next to its feature (`registration.ts`), built on `graphql()` from `client.ts`. Return only the fields the UI needs.
 - `graphql()` throws `ApiError` with the API's `code`. Branch on `code`, never on `message`, and turn it into user-facing copy in `src/lib/api` (e.g. `registrationFeedback`) before it reaches a component. Don't show API messages or error details to users, except field messages from `BAD_USER_INPUT`.
+- Forms check their values in the browser first, with the API's rules and messages (e.g. `validateRegistration` in `src/lib/registration.ts`), and send nothing when that check fails. Mistakes show at once and never count against the API's rate limit, which counts every request it receives. The API still validates everything (the browser check is a convenience, not a security boundary), and a form without JavaScript relies on it.
 
 ## 3. Mobile-first responsive
 

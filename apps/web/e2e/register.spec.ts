@@ -51,7 +51,34 @@ test.describe("register page", () => {
     await expectNoA11yViolations(page);
   });
 
-  test("shows the API's field errors next to each field and focuses the first", async ({ page }) => {
+  test("the logo goes home: after registering, it brings back an empty form", async ({ page }) => {
+    await page.goto("/");
+    await fillValid(page);
+    await submit(page);
+    await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toBeVisible();
+
+    await page.getByRole("link", { name: "Brighte Eats" }).click();
+    await expect(page).toHaveURL("/");
+    await expect(page.getByLabel("Full name")).toHaveValue("");
+    await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toHaveCount(0);
+  });
+
+  test("the skip link is the first Tab stop, shows when focused and moves focus to the main content", async ({ page }) => {
+    await page.goto("/");
+    const skip = page.getByRole("link", { name: "Skip to main content" });
+    await expect(skip).not.toBeInViewport();
+    await page.keyboard.press("Tab");
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeInViewport();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("main")).toBeFocused();
+  });
+
+  test("checks the form in the browser, without sending anything, and focuses the first problem", async ({ page }) => {
+    const posts: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "POST") posts.push(request.url());
+    });
     await page.goto("/");
     await submit(page);
     await expect(page.getByLabel("Full name")).toBeFocused();
@@ -62,6 +89,15 @@ test.describe("register page", () => {
     await expect(page.getByLabel("Postcode")).toHaveAccessibleDescription("Enter a 4-digit postcode 4 digits, e.g. 2000");
     await expect(page.getByText("Choose at least one service")).toBeVisible();
     await expectNoA11yViolations(page);
+    // Caught in the browser: nothing reached the server, so nothing counted against the rate limit.
+    expect(posts).toEqual([]);
+
+    // Fixing one field and submitting again updates the messages.
+    await page.getByLabel("Full name").fill("Ada Lovelace");
+    await submit(page);
+    await expect(page.getByLabel("Email")).toBeFocused();
+    await expect(page.getByLabel("Full name")).toHaveAccessibleDescription("");
+    expect(posts).toEqual([]);
   });
 
   test("flags an email that has already registered, keeping what was typed", async ({ page }) => {
@@ -80,13 +116,21 @@ test.describe("register page", () => {
   });
 
   test("asks the visitor to wait after too many attempts", async ({ page }) => {
+    // The API allows 5 registrations a minute per visitor. Only values that pass the browser's check
+    // reach it, so use a valid email that is already registered: 1 success, then 4 duplicates...
+    const email = uniqueEmail();
     await page.goto("/");
-    // The API allows 5 registrations a minute per visitor; each submit here is one attempt.
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      await submit(page);
-      await expect(page.getByLabel("Full name")).toHaveAccessibleDescription("Name is required");
-      await expect(page.getByRole("button", { name: "Register interest" })).toBeEnabled();
+    await fillValid(page, email);
+    await submit(page);
+    await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toBeVisible();
+
+    await page.goto("/");
+    await fillValid(page, email);
+    for (let attempt = 2; attempt <= 5; attempt++) {
+      await Promise.all([page.waitForResponse((response) => response.request().method() === "POST"), submit(page)]);
+      await expect(page.getByLabel("Email")).toHaveAccessibleDescription("This email has already registered interest. Use a different email.");
     }
+    // ...and the 6th attempt is over the limit.
     await submit(page);
     const status = page.getByRole("status").filter({ hasText: "Too many attempts" });
     // Screen readers get the wait once (the first block is 1 minute)...

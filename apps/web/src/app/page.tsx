@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/atoms/Button";
@@ -34,7 +35,9 @@ export default async function RegisterPage() {
       highlights={["Delivery, pick-up and payment options", "Be first to hear when we launch", "No commitment: it takes a minute"]}
     >
       {serviceOptions ? (
-        <RegisterInterest serviceOptions={serviceOptions} />
+        // New on every server render of this page, so navigating to it again (the logo, a link to /) starts
+        // a fresh form. Submitting with JavaScript doesn't re-render the page, so the result stays.
+        <RegisterInterest serviceOptions={serviceOptions} renderId={randomUUID()} />
       ) : (
         <Alert
           tone="error"
