@@ -120,6 +120,8 @@ flowchart TB
 | `apps/api/src/database` | Migrations (Umzug), migration runner, dev seed |
 | `apps/api/test` | API end-to-end tests against real Postgres, and the HTTP smoke test |
 | `apps/api/bruno` | A Bruno collection of every operation |
+| `packages/validation` | Registration and sign-in rules (Zod), shared by the API and the web forms |
+| `scripts/bootstrap-env.mjs` | Creates the local env files for `pnpm bootstrap` |
 
 ## Request flows
 

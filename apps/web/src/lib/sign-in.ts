@@ -1,3 +1,4 @@
+import { messagesByField, signInSchema } from "@brighte/validation";
 import type { SignInAlert } from "@/lib/api/sign-in-feedback";
 
 // Shared by the sign-in Server Action and its client wrapper (no server-only imports).
@@ -32,15 +33,13 @@ export function signInToFormData(values: SignInValues): FormData {
   return formData;
 }
 
-// zod's default email pattern, which the API uses.
-const EMAIL = /^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
-
-/** Checked in the browser before sending (and again by the Server Action): nothing counts against the login limit for a typo. */
+/**
+ * The shared sign-in rules (@brighte/validation), checked in the browser before sending (and again
+ * by the Server Action): nothing counts against the login limit for a typo.
+ */
 export function validateSignIn(values: SignInValues): Partial<Record<SignInField, string>> {
-  const errors: Partial<Record<SignInField, string>> = {};
-  if (!EMAIL.test(values.email.trim())) errors.email = "Enter a valid email address";
-  if (!values.password) errors.password = "Enter your password";
-  return errors;
+  const result = signInSchema.safeParse(values);
+  return result.success ? {} : messagesByField(result.error.issues);
 }
 
 /**

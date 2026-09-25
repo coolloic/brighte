@@ -2,11 +2,12 @@
   "name": "brighte",
   "private": true,
   "scripts": {
+    "bootstrap": "node scripts/bootstrap-env.mjs && pnpm db:up && pnpm db:migrate && pnpm db:seed",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "db:up": "docker compose up -d postgres",
+    "db:up": "docker compose up -d --wait postgres",
     "db:migrate": "pnpm --filter @brighte/api db:migrate",
     "db:seed": "pnpm --filter @brighte/api db:seed",
     "lint:style": "turbo run lint:style",
