@@ -212,6 +212,9 @@ The schema is owned by [Umzug](https://github.com/sequelize/umzug) migrations in
 - `pnpm --filter @brighte/api db:migrate:status`: list pending migrations.
 - `pnpm --filter @brighte/api db:migrate:undo`: revert the last migration.
 - Production: run `node dist/database/migrate.js up` from `apps/api` after `nest build`, before starting the app.
+- **Atomic:** each migration runs in its own transaction, committed together with its `SequelizeMeta` row. `SequelizeMeta` records only migrations that finished, so without this a migration failing halfway would leave its first statements applied but unrecorded, and every rerun would fail on them ("relation already exists"). Now a failure is rolled back, and the rerun starts clean.
+- **Non-blocking indexes:** a migration that exports `transaction = false` runs outside a transaction. Use it for `CREATE INDEX CONCURRENTLY`, which builds without blocking writes (a plain `CREATE INDEX` would stall `register` on a big table), and drop the index `IF EXISTS` first, since a failed concurrent build leaves an invalid index behind.
+- **One run at a time:** the runner holds a Postgres advisory lock. A second run (another deploy job or instance) waits, then finds nothing pending, instead of reading `SequelizeMeta` before the first run has recorded anything and applying the same migration twice.
 
 ## Testing
 
