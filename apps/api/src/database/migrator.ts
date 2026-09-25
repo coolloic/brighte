@@ -84,11 +84,25 @@ export function createMigrator(
   // A migration's transaction stays open until Umzug has written (or deleted) its SequelizeMeta
   // row, so the change and the record of it commit together.
   let inTransaction = false;
+  // The Postgres backend the transaction began on. If the connection is lost mid-migration, the
+  // pool quietly opens a new one: the transaction's statements die with the old connection, and the
+  // rest would autocommit on the new one and be recorded as applied. Checked before that can happen.
+  let backendPid: number | undefined;
+  const currentPid = async () =>
+    (await sequelize.query<{ pid: number }>('SELECT pg_backend_pid() AS pid', { type: QueryTypes.SELECT }))[0].pid;
+  const assertSameConnection = async (name: string) => {
+    if (!inTransaction || (await currentPid()) === backendPid) return;
+    inTransaction = false;
+    throw new Error(`The database connection was lost during migration ${name}: it may be partly applied. Check the schema before running it again.`);
+  };
+
   const begin = async () => {
     await sequelize.query('BEGIN');
+    backendPid = await currentPid();
     inTransaction = true;
   };
-  const commit = async () => {
+  const commit = async ({ name }: { name: string }) => {
+    await assertSameConnection(name);
     if (!inTransaction) return;
     inTransaction = false;
     await sequelize.query('COMMIT');
@@ -107,7 +121,10 @@ export function createMigrator(
       const migration = await load(path);
       // CREATE INDEX CONCURRENTLY (and a few other statements) can't run inside a transaction.
       if (migration.transaction !== false) await begin();
-      return migration[direction](params);
+      const result = await migration[direction](params);
+      // Before Umzug records it: a migration whose connection was lost must fail, not count as applied.
+      await assertSameConnection(params.name);
+      return result;
     };
 
   const umzug = new Umzug({

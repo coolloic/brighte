@@ -101,6 +101,16 @@ describe('Migration runner (e2e)', () => {
     expect(Number(held)).toBe(0);
   });
 
+  it('fails, instead of recording it as applied, when the connection is lost mid-migration', async () => {
+    const { sequelize } = await freshDatabase();
+    const { umzug, rollback } = migratorFor(sequelize, 'connection-lost');
+
+    await expect(umzug.up()).rejects.toThrow(/connection was lost/);
+    await rollback();
+
+    expect(await umzug.executed()).toEqual([]);
+  });
+
   it('lets only one run migrate at a time; the other waits, then finds nothing to do', async () => {
     const { url, sequelize: first } = await freshDatabase();
     const second = migrationSequelize(url);
