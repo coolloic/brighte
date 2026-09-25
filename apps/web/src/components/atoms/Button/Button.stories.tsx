@@ -48,8 +48,12 @@ export const Loading: Story = {
   args: { loading: true, children: "Submitting…" },
   play: async ({ args, canvas }) => {
     const button = canvas.getByRole("button", { name: "Submitting…" });
-    await expect(button).toBeDisabled();
+    // Not disabled, so it keeps keyboard focus; aria-disabled tells screen readers it can't be used now.
+    await expect(button).toBeEnabled();
+    await expect(button).toHaveAttribute("aria-disabled", "true");
     await expect(button).toHaveAttribute("aria-busy", "true");
+    button.focus();
+    await expect(button).toHaveFocus();
     await expect(getComputedStyle(button).opacity).toBe("1");
     await userEvent.click(button);
     await expect(args.onClick).not.toHaveBeenCalled();

@@ -44,6 +44,7 @@ export function SignInForm({ onSubmit, action, fieldErrors = {}, alert, submitti
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
     onSubmit(values);
   };
 
@@ -55,7 +56,9 @@ export function SignInForm({ onSubmit, action, fieldErrors = {}, alert, submitti
           {alert.message}
         </Alert>
       )}
-      <fieldset disabled={submitting} className="space-y-5">
+      {/* Fields stay enabled while submitting: disabling them would drop keyboard focus from the field or
+          button in use. A second submit is ignored instead, and the values being sent are already captured. */}
+      <fieldset className="space-y-5">
         <FormField
           id="email"
           name="email"
@@ -80,6 +83,10 @@ export function SignInForm({ onSubmit, action, fieldErrors = {}, alert, submitti
           error={fieldErrors.password}
         />
       </fieldset>
+      {/* Screen readers hear that it's working, wherever focus is. */}
+      <p role="status" className="sr-only">
+        {submitting ? "Signing in…" : ""}
+      </p>
       <Button type="submit" fullWidth loading={submitting}>
         {submitting ? "Signing in…" : "Sign in"}
       </Button>

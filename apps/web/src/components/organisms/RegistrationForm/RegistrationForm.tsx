@@ -106,13 +106,16 @@ export function RegistrationForm({
   const set = <K extends RegistrationField>(field: K, value: RegistrationValues[K]) => setValues((current) => ({ ...current, [field]: value }));
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (submitting) return;
     onSubmit(values);
   };
 
   return (
     // noValidate: errors show in Brighte's style below each field instead of browser bubbles.
     <form ref={formRef} noValidate action={action} onSubmit={submit} aria-busy={submitting || undefined} className="space-y-5">
-      <fieldset disabled={submitting} className="space-y-5">
+      {/* Fields stay enabled while submitting: disabling them would drop keyboard focus from the field or
+          button in use. A second submit is ignored instead, and the values being sent are already captured. */}
+      <fieldset className="space-y-5">
         <FormField
           id="name"
           name="name"
@@ -192,6 +195,10 @@ export function RegistrationForm({
       )}
 
       <div className="space-y-3">
+        {/* Screen readers hear that it's working, wherever focus is. */}
+        <p role="status" className="sr-only">
+          {submitting ? "Submitting your registration…" : ""}
+        </p>
         <Button type="submit" fullWidth loading={submitting}>
           {submitting ? "Submitting…" : "Register interest"}
           {!submitting && <Icon name="chevron-right" />}

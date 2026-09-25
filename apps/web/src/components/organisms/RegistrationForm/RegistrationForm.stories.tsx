@@ -87,10 +87,15 @@ export const Submitting: Story = {
   args: { defaultValues: filled, submitting: true },
   play: async ({ args, canvas, canvasElement }) => {
     const button = canvas.getByRole("button", { name: "Submitting…" });
-    await expect(button).toBeDisabled();
+    await expect(button).toHaveAttribute("aria-disabled", "true");
     await expect(canvasElement.querySelector("form")).toHaveAttribute("aria-busy", "true");
-    await expect(canvas.getByRole("textbox", { name: "Email" })).toBeDisabled();
+    // Announced wherever focus is.
+    await expect(canvas.getByRole("status")).toHaveTextContent("Submitting your registration…");
+    // Nothing is disabled, so focus stays where it was; a second submit, by click or Enter, is ignored.
+    await expect(canvas.getByRole("textbox", { name: "Email" })).toBeEnabled();
     await userEvent.click(button);
+    await expect(button).toHaveFocus();
+    await userEvent.type(canvas.getByRole("textbox", { name: "Postcode" }), "{Enter}");
     await expect(args.onSubmit).not.toHaveBeenCalled();
   },
 };
@@ -114,7 +119,7 @@ export const RateLimited: Story = {
     formAlert: { tone: "warning", title: "Too many attempts", message: "Please wait a minute, then submit again." },
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("status")).toHaveTextContent("Too many attempts");
+    await expect(canvas.getByText("Too many attempts").closest("[role=status]")).toBeInTheDocument();
     await expect(canvas.queryByRole("button", { name: "Try again" })).toBeNull();
   },
 };
