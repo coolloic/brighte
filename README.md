@@ -189,7 +189,17 @@ Without this, every visitor shares the web server's IP, and five registrations a
 
 **What this does not cover.** App-level rate limiting slows abuse; it does not stop a real DDoS, which has to be absorbed before it reaches Node (a CDN or WAF, e.g. Cloudflare or AWS WAF, plus load balancer limits). Counters are in memory, so each instance counts separately; with several instances, move them to Redis (`@nest-lab/throttler-storage-redis`). A distributed password-guessing attack spreads across IPs, so per-account lockout or a CAPTCHA on repeated failures would be the next step, and a CAPTCHA (e.g. Turnstile) on `register` if bots get past the per-IP limit. Oversized bodies (413) are still logged at ERROR with a stack, which is noisy under attack.
 
-## Observability (API)
+## Observability
+
+One request id follows a page from the web server to the API: search the logs for it and you get both sides.
+
+### Web server
+
+- **Request id.** `src/proxy.ts` gives every page request and Server Action an id (an incoming `X-Request-Id` is kept if it looks like one), puts it in the response's `X-Request-Id`, and `graphql()` sends it to the API, which logs its lines under the same `reqId`. A failed API call's `ApiError` carries it too.
+- **JSON logs** (`src/lib/log.ts`): one object per line, in the API's shape (`level` 30/40/50, `time`, `msg`), so one collector and one query cover both.
+- **Server errors.** `src/instrumentation.ts` (`onRequestError`) logs every error the Next server catches, with its `digest`, the request id, the route and, for an API failure, its `code`. The error page shows the digest as a *Reference*, so a visitor's report leads to the log line. `app/global-error.tsx` shows the same page when the root layout itself fails. Errors pages handle themselves (the API down on the register form, a failed sign-in, a failed session renewal) are logged where they're handled.
+
+### API
 
 The API logs with [nestjs-pino](https://github.com/iamolegga/nestjs-pino): one JSON object per line on stdout, ready for any log collector. Running it in a terminal (`pnpm dev`) pretty-prints instead. `LOG_LEVEL` sets the level (default `info`; e2e tests are silent).
 
@@ -219,9 +229,9 @@ Tests are chosen to protect what would hurt most if it broke, not for coverage n
 | API unit | `pnpm --filter @brighte/api test` | Input schemas, error formatting, password hashing, rate-limit backoff, request ids and the operation log, the API docs contract |
 | API end-to-end | `pnpm --filter @brighte/api test:e2e` | Every operation against real Postgres (Supertest): register, leads, lead, auth, session renewal, access rules, security limits, N+1 query count, health checks, request ids, security and audit log events |
 | API smoke | `pnpm --filter @brighte/api test:smoke` | Builds and starts real servers (dev and production) and checks every operation, edge case and error code over HTTP, plus the production logs: all JSON, and no passwords, emails or tokens |
-| Web unit | `pnpm --filter @brighte/web test` | API client, error-to-copy mapping, validation, URL and session helpers |
+| Web unit | `pnpm --filter @brighte/web test` | API client (including request ids), error-to-copy mapping, validation, URL and session helpers, JSON logging, `onRequestError` |
 | Component stories | same command | Every Storybook story renders in Chromium, runs its interaction test, and must pass axe (WCAG 2.1 AA) |
-| Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: register, sign-in, dashboard (search, sort, page size), sessions, offline, slow submits, API down, 404, SEO files, security headers and CSP, and each flow without JavaScript |
+| Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: register, sign-in, dashboard (search, sort, page size), sessions, offline, slow submits, API down (with the error's reference), 404, SEO files, security headers and CSP, and each flow without JavaScript |
 
 The e2e suite starts its own production API and web servers (dev ports + 100, so it never touches a running dev setup), plus a web server whose API is unreachable. Each test sends its own visitor IP, so tests don't share rate limits. It needs Postgres migrated and seeded, and leaves its test leads in the dev database (useful data for trying the dashboard). Lighthouse: `pnpm --filter @brighte/web lighthouse` against a running production build. The public page must score 90+ for Performance and Best Practices, 95+ for Accessibility and 100 for SEO (it scores 100 in all four); admin pages are held to the same except SEO, since they are `noindex` on purpose.
 
@@ -255,7 +265,7 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Sessions that can be revoked.** Tokens can't be cancelled before they expire (signing out only removes the cookie). Keep sessions or refresh tokens server-side (a table or Redis) so "sign out everywhere" and account lockout take effect at once.
 - **Database.** A connection pooler (PgBouncer), and a read replica for the dashboard so reads don't compete with registrations.
 - **Caching.** Service types change rarely but are fetched on every form load; cache them on the web server with a short revalidation.
-- **Observability.** The API already writes structured logs with request ids (see [Observability](#observability-api)). Next: the same on the web server, sending its request id to the API; tracing across web → API → database (OpenTelemetry); metrics; and alerts on error rates and `rate_limit.blocked` spikes.
+- **Observability.** The API and web server write structured logs and share request ids (see [Observability](#observability)). Next: browser errors and Web Vitals; tracing across web → API → database (OpenTelemetry); metrics; and alerts on error rates and `rate_limit.blocked` spikes.
 - **Search.** Trigram indexes serve substring search well into the millions of rows; beyond that, or for ranking and typo tolerance, move to Postgres full-text search or a search service.
 - **Dashboard features.** CSV export, and an audit trail of service-interest changes.
 - **Delivery.** CI running the full test suite on every pull request, against a dedicated test database, and deploying the API on a private network behind the web app.

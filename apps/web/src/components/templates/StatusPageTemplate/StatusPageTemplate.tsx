@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Heading } from "@/components/atoms/Heading";
+import { Text } from "@/components/atoms/Text";
 import { AppShell } from "../AppShell";
 
 export type StatusPageTemplateProps = {
@@ -7,13 +8,15 @@ export type StatusPageTemplateProps = {
   title: string;
   /** What to do next, e.g. a "Back to home" link styled as a button. */
   action: ReactNode;
+  /** An id to quote to support, e.g. the error's digest, which the server logged the error under. */
+  reference?: string;
 };
 
 /**
  * A page that only says what happened and what to do next (not found, something went wrong), in the
  * style of brighte.com.au's 404: Brighte's yellow pattern with a translucent dark panel on top.
  */
-export function StatusPageTemplate({ title, action }: StatusPageTemplateProps) {
+export function StatusPageTemplate({ title, action, reference }: StatusPageTemplateProps) {
   return (
     <AppShell>
       {/* The pattern is decorative, so it's a CSS background. */}
@@ -24,6 +27,11 @@ export function StatusPageTemplate({ title, action }: StatusPageTemplateProps) {
             {title}
           </Heading>
           <div className="mt-8 flex justify-center">{action}</div>
+          {reference && (
+            <Text size="sm" className="mt-6 text-fg-inverse">
+              Reference: <span className="break-all">{reference}</span>
+            </Text>
+          )}
         </div>
       </div>
     </AppShell>

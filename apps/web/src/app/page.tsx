@@ -6,6 +6,7 @@ import { Alert } from "@/components/molecules/Alert";
 import { FormPageTemplate } from "@/components/templates/FormPageTemplate";
 import { ApiError } from "@/lib/api/errors";
 import { getServiceOptions, type ServiceOption } from "@/lib/api/registration";
+import { errorFields, log } from "@/lib/log";
 import { siteUrl } from "@/lib/site";
 import { RegisterInterest } from "./_components/RegisterInterest";
 
@@ -43,7 +44,7 @@ export default async function RegisterPage() {
     serviceOptions = await getServiceOptions();
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
-    console.error("serviceTypes failed:", error.message);
+    log.error("serviceTypes failed", errorFields(error));
   }
 
   return (
