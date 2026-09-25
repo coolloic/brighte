@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, Ref } from "react";
 import { cn } from "@/lib/cn";
 
 const headingVariants = cva("font-bold tracking-tight text-fg", {
@@ -20,6 +20,8 @@ export type HeadingProps = HTMLAttributes<HTMLHeadingElement> &
   VariantProps<typeof headingVariants> & {
     /** The heading level (h1-h4): keep them in order on a page, one h1. Use `size` to change only the look. */
     level: Level;
+    /** e.g. to move focus to the heading after a form succeeds (with tabIndex={-1}). */
+    ref?: Ref<HTMLHeadingElement>;
   };
 
 export function Heading({ level, size, className, ...rest }: HeadingProps) {
