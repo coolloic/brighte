@@ -21,8 +21,8 @@ test.describe("when the API is down", () => {
     const response = await page.goto("/admin");
     expect(response?.status()).toBe(500);
 
-    const alert = alertWith(page, "We can't load this page right now");
-    await expect(alert).toContainText("Something went wrong on our side. Please try again in a moment.");
+    const heading = page.getByRole("heading", { level: 1, name: "Something went wrong, please try again later" });
+    await expect(heading).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
     await expect(page.getByText(/ECONNREFUSED|localhost:9|NETWORK_ERROR/)).toHaveCount(0);
     await expectNoA11yViolations(page);
@@ -31,7 +31,7 @@ test.describe("when the API is down", () => {
     const refetch = page.waitForRequest((request) => request.url().includes("/admin"));
     await page.getByRole("button", { name: "Try again" }).click();
     await refetch;
-    await expect(alert).toBeVisible();
+    await expect(heading).toBeVisible();
   });
 
   test("the register page explains it can't show the form, with a link to try again", async ({ page }) => {

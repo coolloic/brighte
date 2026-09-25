@@ -112,6 +112,7 @@
   --color-surface: var(--color-white);
   --color-surface-muted: var(--color-neutral-50);
   --color-surface-brand: var(--color-green-50);
+  --color-surface-inverse: var(--color-neutral-900); // dark panels, e.g. on the 404 page's pattern
 
   // Text and icons
   --color-fg: var(--color-neutral-900);
@@ -135,6 +136,7 @@
 
   // Keyboard focus ring
   --color-focus: var(--color-green-700);
+  --color-focus-inverse: var(--color-white); // focus ring on dark panels (theme-dark): the green is under 3:1 there
 
   // Checked checkbox/radio fill: needs 3:1 against the page (WCAG 1.4.11); brand green is 2.31:1.
   --color-control-checked: var(--color-green-700);
@@ -156,6 +158,11 @@
 @utility focus-ring {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+// Dark panels, like Brighte's .theme-dark: focus rings inside turn white (green is under 3:1 on dark).
+@utility theme-dark {
+  --color-focus: var(--color-focus-inverse);
 }
 
 body {
