@@ -1,5 +1,5 @@
 import "server-only";
-import { PAGE_SIZE } from "@/lib/dashboard";
+import type { ApiLeadSort } from "@/lib/dashboard";
 import type { Lead } from "@/lib/leads";
 import { graphql } from "./client";
 import { ApiError } from "./errors";
@@ -20,8 +20,8 @@ const LEAD_FIELDS = /* GraphQL */ `
 `;
 
 const LEADS = /* GraphQL */ `
-  query Leads($limit: Int!, $offset: Int!, $serviceType: String) {
-    leads(limit: $limit, offset: $offset, serviceType: $serviceType, sort: NEWEST_FIRST) {
+  query Leads($limit: Int!, $offset: Int!, $serviceType: String, $search: String, $sort: LeadSort!) {
+    leads(limit: $limit, offset: $offset, serviceType: $serviceType, search: $search, sort: $sort) {
       total
       items { ${LEAD_FIELDS} }
     }
@@ -45,12 +45,14 @@ const toLead = (lead: Lead): Lead => ({
   services: lead.services.map(({ code, label }) => ({ code, label })),
 });
 
-/** One page of leads, newest first, optionally only those interested in `service`. */
-export async function getLeads(token: string, { page, service }: { page: number; service?: string }): Promise<{ leads: Lead[]; total: number }> {
+export type LeadsQuery = { page: number; pageSize: number; service?: string; search?: string; sort: ApiLeadSort };
+
+/** One page of leads in the given order, optionally only those interested in `service` and matching `search`. */
+export async function getLeads(token: string, { page, pageSize, service, search, sort }: LeadsQuery): Promise<{ leads: Lead[]; total: number }> {
   const { leads } = await graphql<{ leads: { total: number; items: Lead[] } }>(
     LEADS,
-    // No filter: leave serviceType out.
-    { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, ...(service && { serviceType: service }) },
+    // No filter or search: leave those variables out.
+    { limit: pageSize, offset: (page - 1) * pageSize, sort, ...(service && { serviceType: service }), ...(search && { search }) },
     { token },
   );
   return { leads: leads.items.map(toLead), total: leads.total };

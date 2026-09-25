@@ -42,6 +42,7 @@ export const registerSchema = z.object({
 export type RegisterInput = z.output<typeof registerSchema>;
 
 export const MAX_LEADS_LIMIT = 100;
+export const MAX_SEARCH_LENGTH = 100;
 
 export const leadsArgsSchema = z.object({
   limit: z.int().min(1, 'limit must be at least 1').max(MAX_LEADS_LIMIT, `limit must be at most ${MAX_LEADS_LIMIT}`),
@@ -53,6 +54,13 @@ export const leadsArgsSchema = z.object({
     .trim()
     .nullish()
     .transform((code) => code || undefined),
+  // Same for search: blank, null or omitted means no search.
+  search: z
+    .string()
+    .trim()
+    .max(MAX_SEARCH_LENGTH, `search must be at most ${MAX_SEARCH_LENGTH} characters`)
+    .nullish()
+    .transform((text) => text || undefined),
 });
 
 export const leadIdSchema = z.object({ id: z.uuid('Not a valid lead id') });

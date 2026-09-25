@@ -3,7 +3,7 @@ import { Public, Role, Roles } from '../auth/index.js';
 import { RateLimits, ThrottlePerMinute, validate } from '../common/index.js';
 import { LeadPage, LeadSort } from './dto/lead-page.js';
 import { Lead } from './lead.model.js';
-import { leadIdSchema, leadsArgsSchema, MAX_LEADS_LIMIT, MAX_NAME_LENGTH, registerSchema } from './leads.schemas.js';
+import { leadIdSchema, leadsArgsSchema, MAX_LEADS_LIMIT, MAX_NAME_LENGTH, MAX_SEARCH_LENGTH, registerSchema } from './leads.schemas.js';
 import { LeadsService } from './leads.service.js';
 import { ServiceType } from './service-type.model.js';
 
@@ -34,9 +34,9 @@ export class LeadsResolver {
   @Query(() => LeadPage, {
     name: 'leads',
     description: [
-      'Leads, one page at a time. An unknown `serviceType` returns an empty page.',
+      'Leads, one page at a time, optionally filtered by service type and a search. An unknown `serviceType` returns an empty page.',
       '**Auth:** `ADMIN`.',
-      `**Errors:** \`UNAUTHENTICATED\`, \`FORBIDDEN\` (caller is not \`ADMIN\`), \`BAD_USER_INPUT\` (\`limit\` outside 1–${MAX_LEADS_LIMIT}, or negative \`offset\`).`,
+      `**Errors:** \`UNAUTHENTICATED\`, \`FORBIDDEN\` (caller is not \`ADMIN\`), \`BAD_USER_INPUT\` (\`limit\` outside 1–${MAX_LEADS_LIMIT}, negative \`offset\`, or \`search\` over ${MAX_SEARCH_LENGTH} characters).`,
     ].join('\n\n'),
   })
   listLeads(
@@ -44,9 +44,15 @@ export class LeadsResolver {
     @Args('offset', { type: () => Int, defaultValue: 0 }) offset: number,
     @Args('serviceType', { type: () => String, nullable: true, description: 'Only leads interested in this service type code. Blank, null or omitted: no filter.' })
     serviceType: string | null | undefined,
+    @Args('search', {
+      type: () => String,
+      nullable: true,
+      description: `Case-insensitive: name or email containing it, postcode starting with it, or mobile containing its digits (3 or more). Up to ${MAX_SEARCH_LENGTH} characters. Blank, null or omitted: no search.`,
+    })
+    search: string | null | undefined,
     @Args('sort', { type: () => LeadSort, defaultValue: LeadSort.NEWEST_FIRST }) sort: LeadSort,
   ): Promise<LeadPage> {
-    return this.leadsService.list({ ...validate(leadsArgsSchema, { limit, offset, serviceType }), sort });
+    return this.leadsService.list({ ...validate(leadsArgsSchema, { limit, offset, serviceType, search }), sort });
   }
 
   @Roles(Role.ADMIN)

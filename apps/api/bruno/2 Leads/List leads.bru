@@ -11,8 +11,8 @@ post {
 }
 
 body:graphql {
-  query Leads($limit: Int, $offset: Int, $serviceType: String, $sort: LeadSort) {
-    leads(limit: $limit, offset: $offset, serviceType: $serviceType, sort: $sort) {
+  query Leads($limit: Int, $offset: Int, $serviceType: String, $search: String, $sort: LeadSort) {
+    leads(limit: $limit, offset: $offset, serviceType: $serviceType, search: $search, sort: $sort) {
       total
       limit
       offset
@@ -36,13 +36,17 @@ body:graphql:vars {
     "limit": 20,
     "offset": 0,
     "serviceType": "delivery",
+    "search": null,
     "sort": "NEWEST_FIRST"
   }
 }
 
 docs {
-  `sort`: `NEWEST_FIRST` (default), `OLDEST_FIRST`, `NAME_ASC`. `limit` 1–100.
+  `sort`: `NEWEST_FIRST` (default), `OLDEST_FIRST`, `NAME_ASC`/`NAME_DESC`, `EMAIL_ASC`/`EMAIL_DESC`,
+  `POSTCODE_ASC`/`POSTCODE_DESC`. `limit` 1–100.
   `serviceType` is a code from **Service types**; omit it for all leads.
+  `search` (up to 100 characters): name or email containing it (any case), postcode starting with
+  it, or mobile containing its digits, e.g. `"ada"`, `"2000"`, `"0412 345"`. Omit or null for none.
 }
 
 tests {

@@ -15,7 +15,8 @@ export function LeadsToolbar({ serviceOptions, selectedService, hrefFor, total }
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <ServiceFilter options={serviceOptions} selected={selectedService} hrefFor={hrefFor} />
-      <p className="text-sm text-fg-muted">
+      {/* A live region: when a search or filter changes the count, screen readers hear it. */}
+      <p role="status" className="text-sm text-fg-muted">
         {total} {total === 1 ? "lead" : "leads"}
       </p>
     </div>

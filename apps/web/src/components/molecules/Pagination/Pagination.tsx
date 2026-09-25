@@ -11,6 +11,8 @@ export type PaginationProps = {
   hrefFor: (page: number) => string;
   /** What is being counted, e.g. "leads". */
   itemLabel?: string;
+  /** e.g. a <PageSizeSelect>, shown beside the page links. */
+  pageSizeControl?: ReactNode;
 };
 
 // min-w-24 (96px, wider than either label at 18px) with centred content: Prev and Next are the same size.
@@ -33,7 +35,7 @@ function PageLink({ href, disabled, rel, children }: { href: string; disabled: b
   );
 }
 
-export function Pagination({ page, pageSize, total, hrefFor, itemLabel = "items" }: PaginationProps) {
+export function Pagination({ page, pageSize, total, hrefFor, itemLabel = "items", pageSizeControl }: PaginationProps) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
@@ -41,18 +43,24 @@ export function Pagination({ page, pageSize, total, hrefFor, itemLabel = "items"
     <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-fg-muted">{total === 0 ? `No ${itemLabel}` : `Showing ${from}–${to} of ${total} ${itemLabel}`}</p>
       {/* ml-auto: right-aligned, also when it wraps below the count on narrow screens. */}
-      <div className="ml-auto flex items-center gap-2">
-        <PageLink href={hrefFor(page - 1)} disabled={page <= 1} rel="prev">
-          <Icon name="chevron-left" className="size-4" />
-          Prev
-        </PageLink>
-        <p className="px-1 text-sm text-fg">
-          Page {page} of {pageCount}
-        </p>
-        <PageLink href={hrefFor(page + 1)} disabled={page >= pageCount} rel="next">
-          Next
-          <Icon name="chevron-right" className="size-4" />
-        </PageLink>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+        {pageSizeControl}
+        {/* Page links only when there's more than one page. */}
+        {pageCount > 1 && (
+          <div className="flex items-center gap-2">
+            <PageLink href={hrefFor(page - 1)} disabled={page <= 1} rel="prev">
+              <Icon name="chevron-left" className="size-4" />
+              Prev
+            </PageLink>
+            <p className="px-1 text-sm text-fg">
+              Page {page} of {pageCount}
+            </p>
+            <PageLink href={hrefFor(page + 1)} disabled={page >= pageCount} rel="next">
+              Next
+              <Icon name="chevron-right" className="size-4" />
+            </PageLink>
+          </div>
+        )}
       </div>
     </nav>
   );

@@ -2,11 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonVariants } from "@/components/atoms/Button";
 import { EmailAddress } from "@/components/atoms/EmailAddress";
+import { Icon } from "@/components/atoms/Icon";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Alert } from "@/components/molecules/Alert";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { ServiceBadges } from "@/components/molecules/ServiceBadges";
 import { cn } from "@/lib/cn";
+import type { SortColumn, SortDirection } from "@/lib/dashboard";
 import { formatMobile, formatRegistered, type Lead } from "@/lib/leads";
 
 export type LeadsTableProps = {
@@ -26,9 +28,50 @@ export type LeadsTableProps = {
   emptyTitle?: string;
   emptyMessage?: string;
   emptyAction?: ReactNode;
+  /** The current sort, shown on its column header (aria-sort and an arrow). */
+  sort?: { column: SortColumn; direction: SortDirection };
+  /** URL that sorts by a column (what clicking its header does). Without it, headers are plain text. */
+  sortHrefFor?: (column: SortColumn) => string;
 };
 
-const COLUMNS = ["Name", "Email", "Mobile", "Postcode", "Services", "Registered"];
+const COLUMNS: { label: string; sort?: SortColumn }[] = [
+  { label: "Name", sort: "name" },
+  { label: "Email", sort: "email" },
+  { label: "Mobile" },
+  { label: "Postcode", sort: "postcode" },
+  { label: "Services" },
+  { label: "Registered", sort: "registered" },
+];
+
+/**
+ * A column header. Sortable ones are links (no JavaScript needed); the sorted column carries
+ * aria-sort, which screen readers announce with the header, and an arrow for its direction.
+ */
+function HeaderCell({ column, sort, sortHrefFor }: { column: (typeof COLUMNS)[number]; sort?: LeadsTableProps["sort"]; sortHrefFor?: LeadsTableProps["sortHrefFor"] }) {
+  const className = "py-3 pr-4 font-semibold first:pl-3";
+  if (!column.sort || !sortHrefFor) {
+    return (
+      <th scope="col" className={className}>
+        {column.label}
+      </th>
+    );
+  }
+  const direction = sort?.column === column.sort ? sort.direction : undefined;
+  return (
+    <th scope="col" aria-sort={direction} className={cn(className, "py-1")}>
+      <Link
+        href={sortHrefFor(column.sort)}
+        className="-ml-1 inline-flex min-h-11 items-center gap-1 rounded-control px-1 hover:underline focus-visible:focus-ring"
+      >
+        {column.label}
+        <Icon
+          name={direction === "ascending" ? "arrow-up" : direction === "descending" ? "arrow-down" : "chevrons-up-down"}
+          className={cn("size-4", !direction && "text-fg-muted")}
+        />
+      </Link>
+    </th>
+  );
+}
 
 // A highlighted lead (selected or hovered) has a tinted background, where the default tinted badges
 // would fade out. Its badges switch to the outline look: white pill with a green ring.
@@ -62,6 +105,8 @@ export function LeadsTable({
   emptyTitle = "No leads yet",
   emptyMessage = "Leads appear here as soon as someone registers their interest.",
   emptyAction,
+  sort,
+  sortHrefFor,
 }: LeadsTableProps) {
   if (status === "loading") {
     // Same two layouts as the loaded list, so nothing jumps when the data arrives.
@@ -89,8 +134,8 @@ export function LeadsTable({
           <thead>
             <tr className="border-b border-border-strong text-fg">
               {COLUMNS.map((column) => (
-                <th key={column} scope="col" className="py-3 pr-4 font-semibold first:pl-3">
-                  {column}
+                <th key={column.label} scope="col" className="py-3 pr-4 font-semibold first:pl-3">
+                  {column.label}
                 </th>
               ))}
             </tr>
@@ -140,6 +185,9 @@ export function LeadsTable({
   const linkProps = (lead: Lead) => ({
     href: hrefFor(lead.id),
     "aria-current": lead.id === selectedId ? ("page" as const) : undefined,
+    // Selecting a lead keeps the list where it is (Next would scroll to the top): the detail
+    // appears beside it, sticky, from lg; on phones it replaces the list.
+    scroll: false,
   });
 
   return (
@@ -181,9 +229,7 @@ export function LeadsTable({
         <thead>
           <tr className="border-b border-border-strong text-fg">
             {COLUMNS.map((column) => (
-              <th key={column} scope="col" className="py-3 pr-4 font-semibold first:pl-3">
-                {column}
-              </th>
+              <HeaderCell key={column.label} column={column} sort={sort} sortHrefFor={sortHrefFor} />
             ))}
           </tr>
         </thead>
