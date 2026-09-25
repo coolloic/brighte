@@ -1,6 +1,7 @@
 import { extname } from 'node:path';
-import { Sequelize } from 'sequelize';
-import { SequelizeStorage, Umzug } from 'umzug';
+import { createMigrator, migrationSequelize } from './migrator.ts';
+
+export type { Migration } from './migrator.ts';
 
 // Runs as `.ts` via Node type stripping in dev and as compiled `.js` from dist,
 // so it globs migrations with its own extension.
@@ -11,23 +12,8 @@ if (!databaseUrl) {
   throw new Error('DATABASE_URL is not set');
 }
 
-const sequelize = new Sequelize(databaseUrl, { logging: false });
-
-const umzug = new Umzug({
-  migrations: {
-    glob: `${import.meta.dirname}/migrations/*${ext}`,
-    // Record names without extension so dev (.ts) and prod (.js) runs match.
-    resolve: (params) => ({
-      ...Umzug.defaultResolver(params),
-      name: params.name.slice(0, -ext.length),
-    }),
-  },
-  context: sequelize.getQueryInterface(),
-  storage: new SequelizeStorage({ sequelize }),
-  logger: console,
-});
-
-export type Migration = typeof umzug._types.migration;
+const sequelize = migrationSequelize(databaseUrl);
+const { umzug } = createMigrator(sequelize, { glob: `${import.meta.dirname}/migrations/*${ext}`, ext });
 
 try {
   await umzug.runAsCLI();
