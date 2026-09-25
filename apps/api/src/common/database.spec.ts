@@ -13,15 +13,15 @@ describe('databaseOptions', () => {
     });
   });
 
-  it('reads the pool size and statement timeout from the environment', () => {
-    const options = databaseOptions({ DB_POOL_MAX: '25', DB_STATEMENT_TIMEOUT_MS: '15000' });
-    expect(options.pool?.max).toBe(25);
+  it('reads the pool size, idle time and statement timeout from the environment', () => {
+    const options = databaseOptions({ DB_POOL_MAX: '25', DB_POOL_IDLE_MS: '60000', DB_STATEMENT_TIMEOUT_MS: '15000' });
+    expect(options.pool).toMatchObject({ max: 25, idle: 60_000 });
     expect(options.dialectOptions).toMatchObject({ statement_timeout: 15_000 });
   });
 
   it.each(['0', '-1', '2.5', 'abc', ''])('falls back to the default for %j', (value) => {
-    const options = databaseOptions({ DB_POOL_MAX: value, DB_STATEMENT_TIMEOUT_MS: value });
-    expect(options.pool?.max).toBe(10);
+    const options = databaseOptions({ DB_POOL_MAX: value, DB_POOL_IDLE_MS: value, DB_STATEMENT_TIMEOUT_MS: value });
+    expect(options.pool).toMatchObject({ max: 10, idle: 10_000 });
     expect(options.dialectOptions).toMatchObject({ statement_timeout: 5_000 });
   });
 });
