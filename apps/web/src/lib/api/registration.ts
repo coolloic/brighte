@@ -43,10 +43,11 @@ export const SERVICE_OPTIONS_TTL_MS = 5 * 60_000;
 /**
  * Service types a visitor can choose, in display order (the API leaves retired ones out). Kept for
  * SERVICE_OPTIONS_TTL_MS per server instance (cachedFor), so pages don't ask the API on every render.
- * Sent without the visitor's IP (empty request headers): the answer is shared by every visitor.
+ * A load forwards the IP of the visitor whose render started it, like any call: the API's rate limit
+ * then counts retries during an outage per visitor, not in one bucket for the whole web server.
  */
 export const getServiceOptions = cachedFor(SERVICE_OPTIONS_TTL_MS, async (): Promise<ServiceOption[]> => {
-  const data = await graphql<{ serviceTypes: ServiceOption[] }>(SERVICE_TYPES, {}, { requestHeaders: new Headers() });
+  const data = await graphql<{ serviceTypes: ServiceOption[] }>(SERVICE_TYPES);
   // Only what the form needs: nothing else from the API reaches the client.
   return data.serviceTypes.map(({ code, label }) => ({ code, label }));
 });

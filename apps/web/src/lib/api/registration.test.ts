@@ -25,11 +25,12 @@ describe("getServiceOptions", () => {
     expect(graphql).toHaveBeenCalledOnce();
   });
 
-  it("doesn't forward the visitor's IP: the answer is shared by every visitor", async () => {
+  it("counts a load against the visitor whose render started it, like any other call", async () => {
+    // Not against the web server's own IP: while the API returns errors every render retries, and
+    // one shared bucket would fill and stay blocked (with backoff) after the API recovers.
     graphql.mockResolvedValueOnce({ serviceTypes: [] });
     await getServiceOptions();
-    const [, , options] = graphql.mock.calls[0] as [string, object, { requestHeaders?: Headers }];
-    expect(options.requestHeaders?.get("x-forwarded-for")).toBeNull();
+    expect(graphql).toHaveBeenCalledWith(expect.stringContaining("query ServiceTypes"));
   });
 
   it("asks again after a failure", async () => {
