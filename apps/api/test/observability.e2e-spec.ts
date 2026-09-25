@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { Logger, type INestApplication } from '@nestjs/common';
 import { getModelToken } from '@nestjs/sequelize';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
@@ -58,6 +58,26 @@ describe('Observability (e2e)', () => {
     it('reports live without a token', () => request(app.getHttpServer()).get('/health/live').expect(200, { status: 'ok' }));
 
     it('reports ready when the database answers', () => request(app.getHttpServer()).get('/health/ready').expect(200, { status: 'ok' }));
+  });
+
+  describe('database connections', () => {
+    const setting = async (name: string) => {
+      const [row] = await users.sequelize!.query<Record<string, string>>(`SHOW ${name}`, { type: QueryTypes.SELECT });
+      return row[name];
+    };
+
+    it('have Postgres cancel slow statements and end abandoned transactions', async () => {
+      expect(await setting('statement_timeout')).toBe('5s');
+      expect(await setting('idle_in_transaction_session_timeout')).toBe('10s');
+    });
+
+    it('name themselves, so they can be told apart in pg_stat_activity', async () => {
+      expect(await setting('application_name')).toBe('brighte-api');
+    });
+
+    it('cancel a statement that runs past the timeout', async () => {
+      await expect(users.sequelize!.query('SELECT pg_sleep(6)')).rejects.toThrow(/statement timeout/);
+    }, 10_000);
   });
 
   describe('request id', () => {
