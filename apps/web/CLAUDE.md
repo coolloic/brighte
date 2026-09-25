@@ -32,6 +32,12 @@ src/app/       # pages = routes. Fetch data here and pass it into templates/orga
 - Atoms and molecules are presentational: props in, markup out, no data fetching, no global state.
 - Before creating a new atom or molecule, check whether an existing one can be reused.
 
+## Data: calling the API
+
+- Only the Next server calls the API. Server Components and Server Actions use the functions in `src/lib/api/` (server-only: they import `server-only`, so a Client Component importing them fails the build). The browser never calls the API, and `process.env` is read only there.
+- Add an operation as a function next to its feature (`registration.ts`), built on `graphql()` from `client.ts`. Return only the fields the UI needs.
+- `graphql()` throws `ApiError` with the API's `code`. Branch on `code`, never on `message`, and turn it into user-facing copy in `src/lib/api` (e.g. `registrationFeedback`) before it reaches a component. Don't show API messages or error details to users, except field messages from `BAD_USER_INPUT`.
+
 ## 3. Mobile-first responsive
 
 - Unprefixed Tailwind classes target mobile; add `sm:` / `md:` / `lg:` to scale **up**. Never design desktop-first and patch downward.
