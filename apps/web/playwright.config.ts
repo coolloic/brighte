@@ -5,6 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
 // Ports come from the root .env (see .env.example), falling back to the defaults.
 const rootEnv = path.join(__dirname, "../../.env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+// The API's .env holds the seed accounts' passwords (pnpm db:seed), used by the admin sign-in tests.
+const apiEnv = path.join(__dirname, "../api/.env");
+if (existsSync(apiEnv)) process.loadEnvFile(apiEnv);
 // The suite starts its own production API and web servers, 100 above the dev ports, so it never
 // runs against (or disturbs) a dev setup. They trust X-Forwarded-For (TRUST_PROXY on the API,
 // WEB_TRUST_PROXY on the web), and each test sends its own visitor IP: tests don't share a rate
