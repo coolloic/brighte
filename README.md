@@ -11,6 +11,8 @@ Brighte Eats collects expressions of interest before launch (a public registrati
 
 **Contents:** [How to run](#how-to-run) · [Why I chose Postgres, NestJS and Next.js](#why-i-chose-postgres-nestjs-and-nextjs) · [Data modelling trade-offs](#data-modelling-trade-offs) · [Validation strategy](#validation-strategy--client-vs-server) · [Idempotency approach](#idempotency-approach) · [Frontend](#frontend) · [Leads API](#leads-api) · [Authentication](#authentication) · [Security](#security) · [Database migrations](#database-migrations) · [Testing](#testing) · [API collection (Bruno)](#api-collection-bruno) · [What I'd change at 10× scale](#what-id-change-at-10-scale) · [TODOs / known gaps](#todos--known-gaps) · [AI Assistance](#ai-assistance)
 
+**Diagrams:** [docs/architecture.md](docs/architecture.md): the [database ER diagram](docs/architecture.md#database-er-diagram), the [system architecture](docs/architecture.md#system-architecture) and the [main request flows](docs/architecture.md#request-flows) (Mermaid, rendered by GitHub).
+
 ## How to run
 
 Needs Node 24 (`.nvmrc`), pnpm 12 (`corepack enable`) and Docker.
@@ -51,6 +53,8 @@ Tests: `pnpm test` (unit and component), `pnpm test:e2e` (API and browser end-to
 **Next.js 16 (App Router) with React 19 for the web.** Server Components and Server Actions mean **the browser never calls the API**: pages and forms talk to the Next server, which calls the API. So the API URL and the admin's token stay on the server (the session is an httpOnly cookie), and the visitor's IP is forwarded for rate limits. Forms still work without JavaScript, because a Server Action is also a plain form POST. The dashboard's state (filter, page, selected lead) lives in the URL, so it needs no client JavaScript at all. Tailwind 4 with design tokens, and Storybook, for a small atomic-design component library.
 
 ## Data modelling trade-offs
+
+The ER diagram, with every column, key and index, is in [docs/architecture.md](docs/architecture.md#database-er-diagram).
 
 Brighte Eats leads can be interested in several services, and the service types "may change over time". Three tables (migration `2026.09.25T00.00.00.create-leads.ts`):
 
@@ -94,7 +98,7 @@ Brighte Eats leads can be interested in several services, and the service types 
 | `/admin` | Leads dashboard: search as you type (name, email, mobile or postcode), filter by service, sortable columns (newest first by default), 10/20/50/100 per page, lead detail beside the list. State in the URL: `/admin?q=ada&service=delivery&sort=name_asc&size=50&page=2&lead=<id>` |
 | anything else | Branded 404; failures show a branded "Something went wrong" page |
 
-**How the web talks to the API.** Only through the Next server, via a server-only data access layer (`apps/web/src/lib/api`): `graphql()` adds the admin's token and the visitor's IP, times out after 10 seconds, and turns failures into an `ApiError` with the API's code. Admin pages and actions start with `requireAdmin()`, which asks the API (`me`) who the session belongs to; the cookie alone proves nothing. `apps/web/src/proxy.ts` renews an active admin's token when it has under 10 minutes left (a sliding session: 30 minutes idle, 8 hours at most; see [Authentication](#authentication)).
+**How the web talks to the API** ([architecture diagram and request flows](docs/architecture.md#system-architecture)). Only through the Next server, via a server-only data access layer (`apps/web/src/lib/api`): `graphql()` adds the admin's token and the visitor's IP, times out after 10 seconds, and turns failures into an `ApiError` with the API's code. Admin pages and actions start with `requireAdmin()`, which asks the API (`me`) who the session belongs to; the cookie alone proves nothing. `apps/web/src/proxy.ts` renews an active admin's token when it has under 10 minutes left (a sliding session: 30 minutes idle, 8 hours at most; see [Authentication](#authentication)).
 
 **When the API is slow or fails**, the UI says what happened and what to do, and keeps what was typed:
 
