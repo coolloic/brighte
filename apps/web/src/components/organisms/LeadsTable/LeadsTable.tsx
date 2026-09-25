@@ -13,8 +13,8 @@ export type LeadsTableProps = {
   /** URL of a lead's detail view, e.g. (id) => `/leads/${id}`. */
   hrefFor: (id: string) => string;
   /**
-   * Lead shown in the detail view: marked with a green bar (desktop) or border (mobile) and a bold
-   * name, and its link gets aria-current. The background stays as is, so badges keep their contrast.
+   * Lead shown in the detail view: tinted, its link marked aria-current. Its badges use the outline
+   * look (see badgesFor), like a hovered row's.
    */
   selectedId?: string;
   status?: "ready" | "loading" | "error";
@@ -27,7 +27,24 @@ export type LeadsTableProps = {
   emptyAction?: ReactNode;
 };
 
-const nameLink = "font-semibold text-fg-brand underline-offset-2 hover:underline focus-visible:focus-ring";
+const COLUMNS = ["Name", "Email", "Mobile", "Postcode", "Services", "Registered"];
+
+// A highlighted lead (selected or hovered) has a tinted background, where the default tinted badges
+// would fade out. Its badges switch to the outline look: white pill with a green ring.
+const badgesFor = (selected: boolean) =>
+  selected
+    ? ({ tone: "outline" } as const)
+    : ({ tone: "brand", badgeClassName: "group-hover:bg-surface group-hover:ring-1 group-hover:ring-action group-hover:ring-inset" } as const);
+const SKELETON_ROWS = [1, 2, 3];
+
+// Stretched link: its ::after covers the whole row or card (the nearest `relative` ancestor), so the
+// row is the click target while staying one link for keyboard and screen readers. Keyboard focus
+// outlines the whole row; hovering the row underlines the name.
+const nameLink = [
+  "font-semibold text-fg-brand underline-offset-2 group-hover:underline",
+  "after:absolute after:inset-0 focus-visible:outline-none",
+  "focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-focus",
+].join(" ");
 
 /**
  * Leads as cards on mobile and a table from md up. The two layouts are both in the markup; the
@@ -46,16 +63,55 @@ export function LeadsTable({
   emptyAction,
 }: LeadsTableProps) {
   if (status === "loading") {
+    // Same two layouts as the loaded list, so nothing jumps when the data arrives.
     return (
-      <div aria-busy="true" className="space-y-3">
+      <div aria-busy="true">
         <span className="sr-only">Loading leads</span>
-        {[1, 2, 3].map((row) => (
-          <div key={row} className="space-y-2 rounded-card border border-border p-4">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="h-4 w-64 max-w-full" />
-            <Skeleton className="h-6 w-32 rounded-full" />
-          </div>
-        ))}
+        <ul aria-hidden="true" className="space-y-3 md:hidden">
+          {SKELETON_ROWS.map((row) => (
+            <li key={row} className="rounded-card border border-border bg-surface p-4">
+              <Skeleton className="h-6 w-40" />
+              <div className="mt-3 space-y-2">
+                <Skeleton className="h-4 w-56 max-w-full" />
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <div className="mt-3 flex gap-1.5">
+                <Skeleton className="h-7 w-20 rounded-full" />
+                <Skeleton className="h-7 w-20 rounded-full" />
+              </div>
+              <Skeleton className="mt-3 h-4 w-48" />
+            </li>
+          ))}
+        </ul>
+        <table aria-hidden="true" className="hidden w-full border-collapse text-left text-sm md:table">
+          <thead>
+            <tr className="border-b border-border-strong text-fg">
+              {COLUMNS.map((column) => (
+                <th key={column} scope="col" className="py-3 pr-4 font-semibold first:pl-3">
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {SKELETON_ROWS.map((row) => (
+              <tr key={row} className="border-b border-border">
+                <td className="py-3 pr-4 pl-3"><Skeleton className="h-4 w-28" /></td>
+                <td className="py-3 pr-4"><Skeleton className="h-4 w-44" /></td>
+                <td className="py-3 pr-4"><Skeleton className="h-4 w-24" /></td>
+                <td className="py-3 pr-4"><Skeleton className="h-4 w-10" /></td>
+                <td className="py-3 pr-4">
+                  <div className="flex gap-1.5">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                </td>
+                <td className="py-3"><Skeleton className="h-4 w-32" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
@@ -92,10 +148,12 @@ export function LeadsTable({
         {leads.map((lead) => (
           <li
             key={lead.id}
-            // Selected: a 2px green edge via border + inset ring, so the card doesn't shift.
-            className={cn("rounded-card border bg-surface p-4", lead.id === selectedId ? "border-action ring-1 ring-action ring-inset" : "border-border")}
+            className={cn(
+              "group relative rounded-card border p-4",
+              lead.id === selectedId ? "border-action bg-surface-brand" : "border-border bg-surface hover:bg-surface-muted",
+            )}
           >
-            <Link {...linkProps(lead)} className={cn(nameLink, "text-lg", lead.id === selectedId && "font-bold")}>
+            <Link {...linkProps(lead)} className={cn(nameLink, "text-lg")}>
               {lead.name}
             </Link>
             <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
@@ -106,7 +164,7 @@ export function LeadsTable({
               <dt className="text-fg-muted">Postcode</dt>
               <dd className="text-fg">{lead.postcode}</dd>
             </dl>
-            <ServiceBadges services={lead.services} className="mt-3" />
+            <ServiceBadges services={lead.services} {...badgesFor(lead.id === selectedId)} className="mt-3" />
             <p className="mt-2 text-sm text-fg-muted">
               Registered <time dateTime={lead.createdAt}>{formatRegistered(lead.createdAt)}</time>
             </p>
@@ -119,7 +177,7 @@ export function LeadsTable({
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b border-border-strong text-fg">
-            {["Name", "Email", "Mobile", "Postcode", "Services", "Registered"].map((column) => (
+            {COLUMNS.map((column) => (
               <th key={column} scope="col" className="py-3 pr-4 font-semibold first:pl-3">
                 {column}
               </th>
@@ -128,13 +186,12 @@ export function LeadsTable({
         </thead>
         <tbody>
           {leads.map((lead) => (
-            <tr key={lead.id} className="border-b border-border align-top">
-              {/* Selected: a 4px green bar inside the name cell. */}
-              <th
-                scope="row"
-                className={cn("py-3 pr-4 pl-3 font-normal", lead.id === selectedId && "shadow-[inset_4px_0_0_var(--color-action)]")}
-              >
-                <Link {...linkProps(lead)} className={cn(nameLink, lead.id === selectedId && "font-bold")}>
+            <tr
+              key={lead.id}
+              className={cn("group relative border-b border-border align-top", lead.id === selectedId ? "bg-surface-brand" : "hover:bg-surface-muted")}
+            >
+              <th scope="row" className="py-3 pr-4 pl-3 font-normal">
+                <Link {...linkProps(lead)} className={nameLink}>
                   {lead.name}
                 </Link>
               </th>
@@ -142,7 +199,7 @@ export function LeadsTable({
               <td className="py-3 pr-4 whitespace-nowrap text-fg">{formatMobile(lead.mobile)}</td>
               <td className="py-3 pr-4 text-fg">{lead.postcode}</td>
               <td className="py-3 pr-4">
-                <ServiceBadges services={lead.services} />
+                <ServiceBadges services={lead.services} {...badgesFor(lead.id === selectedId)} />
               </td>
               <td className="py-3 whitespace-nowrap text-fg-muted">
                 <time dateTime={lead.createdAt}>{formatRegistered(lead.createdAt)}</time>

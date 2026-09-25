@@ -24,6 +24,21 @@ export const Brand: Story = {
 
 export const Neutral: Story = { args: { tone: "neutral", children: "Retired service" } };
 
+/** On a brand-tinted background the brand badge would disappear: use the outline tone there. */
+export const OutlineOnTint: Story = {
+  args: { tone: "outline" },
+  render: (args) => (
+    <div className="rounded-card bg-surface-brand p-4">
+      <Badge {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const badge = canvas.getByText("Delivery");
+    await expect(getComputedStyle(badge).backgroundColor).toBe(rgb("surface"));
+    await expect(getComputedStyle(badge).backgroundColor).not.toBe(getComputedStyle(badge.parentElement!).backgroundColor);
+  },
+};
+
 /** How a lead's services read in the dashboard. */
 export const ServiceList: Story = {
   render: () => (
