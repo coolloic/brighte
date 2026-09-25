@@ -15,8 +15,15 @@ export const MiddlePage: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("navigation", { name: "Pagination" })).toHaveTextContent("Showing 21–40 of 97 leads");
     await expect(canvas.getByText("Page 2 of 5")).toBeInTheDocument();
-    await expect(canvas.getByRole("link", { name: "Previous" })).toHaveAttribute("href", "?page=1");
+    await expect(canvas.getByRole("link", { name: "Prev" })).toHaveAttribute("href", "?page=1");
     await expect(canvas.getByRole("link", { name: "Next" })).toHaveAttribute("href", "?page=3");
+    // Prev and Next are the same size.
+    const prev = canvas.getByRole("link", { name: "Prev" }).getBoundingClientRect();
+    const next = canvas.getByRole("link", { name: "Next" }).getBoundingClientRect();
+    await expect([prev.width, prev.height]).toEqual([next.width, next.height]);
+    // Right-aligned: Next ends at the navigation's right edge, also when the controls wrap.
+    const nav = canvas.getByRole("navigation", { name: "Pagination" }).getBoundingClientRect();
+    await expect(next.right).toBe(nav.right);
   },
 };
 
@@ -24,8 +31,8 @@ export const FirstPage: Story = {
   args: { page: 1 },
   play: async ({ canvas }) => {
     // Nowhere to go back to: shown, but not a link.
-    await expect(canvas.queryByRole("link", { name: "Previous" })).toBeNull();
-    await expect(canvas.getByText("Previous").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
+    await expect(canvas.queryByRole("link", { name: "Prev" })).toBeNull();
+    await expect(canvas.getByText("Prev").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
   },
 };
 
