@@ -67,8 +67,8 @@ src/app/       # pages = routes. Fetch data here and pass it into templates/orga
 A feature is not done until all of these pass. Show the output when reporting.
 
 1. `pnpm lint && pnpm lint:style && pnpm typecheck`
-2. **E2E**: add or extend a Playwright spec in `e2e/` covering the feature's main user flow **and** an axe WCAG 2.1 AA scan of the page. Run `pnpm test:e2e`. Tests run on the `mobile` and `desktop` projects.
-3. **Lighthouse**: start the API and web (`pnpm --filter @brighte/api start:prod`, `pnpm build && pnpm start`), add the new route to `lighthouserc.js` → `ci.collect.url`, run `pnpm lighthouse`. Thresholds: Performance ≥ 90, Accessibility ≥ 95, Best Practices ≥ 90, SEO ≥ 90.
+2. **E2E**: add or extend a Playwright spec in `e2e/` covering the feature's main user flow **and** an axe WCAG 2.1 AA scan of the page. Run `pnpm test:e2e`. Tests run on the `mobile` and `desktop` projects. The suite starts its own servers (see the root `CLAUDE.md`); give each test its own visitor IP (`X-Forwarded-For`, as in `e2e/register.spec.ts`) and unique data, since tests run in parallel against one database.
+3. **Lighthouse**: start the API and web (`pnpm --filter @brighte/api start:prod`, `pnpm build && pnpm start`; if a dev server holds `WEB_PORT`, start on another port and run `WEB_PORT=<port> pnpm lighthouse`), add the new route to `lighthouserc.js` → `ci.collect.url`, run `pnpm lighthouse`. Thresholds: Performance ≥ 90, Accessibility ≥ 95, Best Practices ≥ 90, SEO ≥ 90.
 4. If any score is below its threshold, read the report in `.lighthouseci/`, fix the top issues, and re-run. Repeat until everything passes. Report the final scores.
 
 ## 7. Storybook — required for every component
