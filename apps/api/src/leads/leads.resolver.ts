@@ -3,7 +3,7 @@ import { Public, Role, Roles } from '../auth/index.js';
 import { RateLimits, ThrottlePerMinute, validate } from '../common/index.js';
 import { LeadPage, LeadSort } from './dto/lead-page.js';
 import { Lead } from './lead.model.js';
-import { leadIdSchema, leadsArgsSchema, MAX_LEADS_LIMIT, registerSchema } from './leads.schemas.js';
+import { leadIdSchema, leadsArgsSchema, MAX_LEADS_LIMIT, MAX_NAME_LENGTH, registerSchema } from './leads.schemas.js';
 import { LeadsService } from './leads.service.js';
 import { ServiceType } from './service-type.model.js';
 
@@ -21,7 +21,7 @@ export class LeadsResolver {
     ].join('\n\n'),
   })
   register(
-    @Args('name') name: string,
+    @Args('name', { description: `Full name, up to ${MAX_NAME_LENGTH} characters.` }) name: string,
     @Args('email') email: string,
     @Args('mobile', { description: 'Australian mobile, e.g. `0412 345 678` or `+61412345678`.' }) mobile: string,
     @Args('postcode', { description: '4 digits.' }) postcode: string,

@@ -87,6 +87,8 @@ type Mutation {
 
     """Australian mobile, e.g. `0412 345 678` or `+61412345678`."""
     mobile: String!
+
+    """Full name, up to 70 characters."""
     name: String!
 
     """4 digits."""

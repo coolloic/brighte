@@ -287,7 +287,7 @@ async function functional(base: string) {
     ['Postcode 0800 keeps its leading zero', { postcode: '0800' }, 'postcode', '0800'],
     ['Unicode name kept', { name: 'Zoë 李' }, 'name', 'Zoë 李'],
     ['SQL-looking name stored as text', { name: "Robert'); DROP TABLE leads;--" }, 'name', "Robert'); DROP TABLE leads;--"],
-    ['255-char name accepted', { name: 'x'.repeat(255) }, 'name', 'x'.repeat(255)],
+    ['70-char name accepted', { name: 'x'.repeat(70) }, 'name', 'x'.repeat(70)],
   ] as const) {
     await check(label, async () => {
       eq((await register(valid(label.replace(/\W/g, ''), over))).data?.register[field], expected);
@@ -319,7 +319,7 @@ async function functional(base: string) {
   group('register: validation (BAD_USER_INPUT + extensions.fields)');
   const invalid: [string, Partial<RegisterVars>, keyof RegisterVars][] = [
     ['blank name', { name: '   ' }, 'name'],
-    ['256-char name', { name: 'x'.repeat(256) }, 'name'],
+    ['71-char name', { name: 'x'.repeat(71) }, 'name'],
     ['empty email', { email: '' }, 'email'],
     ['email without @', { email: 'no-at.test.dev' }, 'email'],
     ['email without a domain dot', { email: 'a@b' }, 'email'],

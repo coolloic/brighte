@@ -123,6 +123,7 @@ export function RegistrationForm({
           required
           autoComplete="name"
           value={values.name}
+          maxLength={70}
           onChange={(event) => set("name", event.target.value)}
           error={fieldErrors.name}
         />
