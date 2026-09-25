@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "./errors";
-import { registrationFeedback } from "./registration-feedback";
+import { formatWait, registrationFeedback } from "./registration-feedback";
 
 describe("registrationFeedback", () => {
   it("puts each invalid field's message next to that field, without the example the hint already shows", () => {
@@ -29,19 +29,28 @@ describe("registrationFeedback", () => {
     });
   });
 
-  it.each([
-    [undefined, "Please wait a minute and try again."],
-    [1, "Please wait 1 second and try again."],
-    [42, "Please wait 42 seconds and try again."],
-    [60, "Please wait a minute and try again."],
-    [61, "Please wait 2 minutes and try again."],
-  ])("rate limited with retryAfter %s", (retryAfter, message) => {
-    expect(registrationFeedback(new ApiError("TOO_MANY_REQUESTS", "Too many requests", { retryAfter })).alert).toEqual({
+  it("rate limited: a warning with the seconds to count down", () => {
+    expect(registrationFeedback(new ApiError("TOO_MANY_REQUESTS", "Too many requests", { retryAfter: 120 })).alert).toEqual({
       tone: "warning",
       title: "Too many attempts",
-      message,
+      message: "Please wait 2 minutes and try again.",
       retryable: false,
+      retryAfter: 120,
     });
+    // Without retryAfter there's nothing to count down.
+    expect(registrationFeedback(new ApiError("TOO_MANY_REQUESTS", "Too many requests")).alert).not.toHaveProperty("retryAfter");
+  });
+
+  it.each([
+    [undefined, "a minute"],
+    [1, "1 second"],
+    [42, "42 seconds"],
+    [60, "1 minute"],
+    [61, "1 minute 1 second"],
+    [125, "2 minutes 5 seconds"],
+    [900, "15 minutes"],
+  ])("formatWait(%s)", (seconds, text) => {
+    expect(formatWait(seconds)).toBe(text);
   });
 
   it.each(["NETWORK_ERROR", "INTERNAL_SERVER_ERROR", "UNAUTHENTICATED"] as const)("%s: a retryable alert that hides the details", (code) => {

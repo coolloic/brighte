@@ -33,7 +33,7 @@ export const WithHint: Story = {
   },
 };
 
-/** Brighte's order: the error box right under the field, then the hint. Both are read with the field. */
+/** The hint stays right under the field and the error box appears below it. Screen readers read the error first. */
 export const WithError: Story = {
   args: {
     hint: "Australian mobile, e.g. 0412 345 678",
@@ -44,6 +44,10 @@ export const WithError: Story = {
     const input = canvas.getByRole("textbox", { name: "Mobile number" });
     await expect(input).toHaveAttribute("aria-invalid", "true");
     await expect(input).toHaveAccessibleDescription("Enter an Australian mobile number Australian mobile, e.g. 0412 345 678");
+    // On screen the hint comes first, the error below it.
+    const hint = canvas.getByText("Australian mobile, e.g. 0412 345 678");
+    const error = canvas.getByText("Enter an Australian mobile number");
+    await expect(hint.getBoundingClientRect().bottom).toBeLessThanOrEqual(error.getBoundingClientRect().top);
   },
 };
 

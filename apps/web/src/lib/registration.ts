@@ -14,7 +14,12 @@ export type RegistrationValues = {
 export type RegistrationState =
   | { status: "idle" }
   | { status: "success" }
-  | ({ status: "error"; values: RegistrationValues } & RegistrationFeedback);
+  | ({
+      status: "error";
+      /** New for every failed submit, so per-attempt UI (the retry countdown) starts over. */
+      id: string;
+      values: RegistrationValues;
+    } & RegistrationFeedback);
 
 /** Reads the form's fields. A Server Action is a public endpoint: anything that isn't a string is dropped. */
 export function registrationFromFormData(formData: FormData): RegistrationValues {

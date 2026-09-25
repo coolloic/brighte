@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { registerInterest } from "@/lib/api/registration";
 import { registrationFromFormData, type RegistrationState } from "@/lib/registration";
 
@@ -8,5 +9,5 @@ export async function registerAction(_previous: RegistrationState, formData: For
   const values = registrationFromFormData(formData);
   const result = await registerInterest(values);
   if (result.ok) return { status: "success" };
-  return { status: "error", values, fieldErrors: result.fieldErrors, alert: result.alert };
+  return { status: "error", id: randomUUID(), values, fieldErrors: result.fieldErrors, alert: result.alert };
 }

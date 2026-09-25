@@ -5,6 +5,7 @@ import { RegistrationForm, type FormAlert } from "@/components/organisms/Registr
 import type { ServiceOption } from "@/components/molecules/ServicePicker";
 import { registerAction } from "@/app/actions";
 import { registrationToFormData, type RegistrationState, type RegistrationValues } from "@/lib/registration";
+import { RetryCountdown } from "./RetryCountdown";
 
 const IDLE: RegistrationState = { status: "idle" };
 
@@ -22,7 +23,8 @@ export function RegisterInterest({ serviceOptions }: { serviceOptions: ServiceOp
   const formAlert: FormAlert | undefined = error?.alert && {
     tone: error.alert.tone,
     title: error.alert.title,
-    message: error.alert.message,
+    // Rate limited: count down in the browser (a new countdown for each attempt).
+    message: error.alert.retryAfter ? <RetryCountdown key={error.id} seconds={error.alert.retryAfter} /> : error.alert.message,
     onRetry: error.alert.retryable ? () => submit(error.values) : undefined,
   };
 

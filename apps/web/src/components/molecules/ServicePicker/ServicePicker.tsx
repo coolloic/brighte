@@ -34,6 +34,7 @@ export function ServicePicker({
 }: ServicePickerProps) {
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
+  // Error first: a screen reader announces the problem before the guidance (the hint shows first).
   const describedBy = [error && errorId, hint && hintId].filter(Boolean).join(" ") || undefined;
   const toggle = (code: string, checked: boolean) =>
     onChange(checked ? [...value, code] : value.filter((selected) => selected !== code));
@@ -64,12 +65,12 @@ export function ServicePicker({
           </label>
         ))}
       </div>
-      {error && <FieldError id={errorId}>{error}</FieldError>}
       {hint && (
         <p id={hintId} className="mt-1.5 text-sm text-fg-muted">
           {hint}
         </p>
       )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
     </fieldset>
   );
 }

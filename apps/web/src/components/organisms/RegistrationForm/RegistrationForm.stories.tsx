@@ -63,7 +63,7 @@ export const FieldErrors: Story = {
     await expect(email).toHaveFocus();
     await expect(email).toHaveAttribute("aria-invalid", "true");
     await expect(email).toHaveAccessibleDescription("Enter a valid email address");
-    // The error says what's wrong; the hint below already gives the example.
+    // The error says what's wrong; the hint above it already gives the example.
     await expect(canvas.getByRole("textbox", { name: "Mobile number" })).toHaveAccessibleDescription(
       "Enter an Australian mobile number e.g. 0412 345 678",
     );

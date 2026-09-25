@@ -88,7 +88,15 @@ test.describe("register page", () => {
       await expect(page.getByRole("button", { name: "Register interest" })).toBeEnabled();
     }
     await submit(page);
-    await expect(page.getByRole("status").filter({ hasText: "Too many attempts" })).toContainText("Please wait a minute and try again.");
+    const status = page.getByRole("status").filter({ hasText: "Too many attempts" });
+    // Screen readers get the wait once (the first block is 1 minute)...
+    await expect(status).toContainText("Please wait 1 minute and try again.");
+    // ...while the visible text counts down in the browser.
+    const countdown = status.locator("[data-countdown]");
+    await expect(countdown).toHaveText(/Please wait (1 minute|\d+ seconds) and try again\./);
+    const first = await countdown.textContent();
+    await expect(countdown).not.toHaveText(first!, { timeout: 3000 });
+    await expect(countdown).toHaveText(/Please wait 5\d seconds and try again\./);
   });
 });
 

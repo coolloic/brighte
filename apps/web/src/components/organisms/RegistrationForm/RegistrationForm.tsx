@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentProps, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/atoms/Button";
 import { Heading } from "@/components/atoms/Heading";
 import { Icon } from "@/components/atoms/Icon";
@@ -23,7 +23,7 @@ export type RegistrationField = keyof RegistrationValues;
 export type FormAlert = {
   tone: Extract<AlertTone, "error" | "warning" | "info">;
   title: string;
-  message?: string;
+  message?: ReactNode;
   /** Shows a "Try again" button that calls this. */
   onRetry?: () => void;
 };

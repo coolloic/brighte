@@ -77,5 +77,9 @@ export const WithError: Story = {
     await expect(canvas.getByRole("group", { name: "Which services are you interested in?" })).toHaveAccessibleDescription(
       "Choose at least one service Choose one or more.",
     );
+    // On screen the hint comes first, the error below it.
+    const hint = canvas.getByText("Choose one or more.");
+    const error = canvas.getByText("Choose at least one service");
+    await expect(hint.getBoundingClientRect().bottom).toBeLessThanOrEqual(error.getBoundingClientRect().top);
   },
 };
