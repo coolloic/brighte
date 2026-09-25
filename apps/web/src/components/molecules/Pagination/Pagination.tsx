@@ -14,7 +14,7 @@ export type PaginationProps = {
 };
 
 const pageLink =
-  "inline-flex min-h-11 items-center gap-1 rounded-control border border-border-strong px-4 text-base font-semibold text-fg-brand transition-[background-color] duration-150 hover:bg-surface-brand focus-visible:focus-ring";
+  "inline-flex min-h-11 items-center gap-1 rounded-control border border-border-strong px-4 text-body font-semibold text-fg-brand transition-[background-color] duration-150 hover:bg-surface-brand focus-visible:focus-ring";
 
 function PageLink({ href, disabled, rel, children }: { href: string; disabled: boolean; rel: "prev" | "next"; children: ReactNode }) {
   // At either end there is nowhere to go: show the control as inactive rather than a dead link.

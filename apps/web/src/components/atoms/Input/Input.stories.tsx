@@ -29,7 +29,10 @@ export const Default: Story = {
   play: async ({ canvas }) => {
     const input = canvas.getByLabelText("Email");
     await expect(input.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
-    await expect(getComputedStyle(input).fontSize).toBe("16px");
+    // Fluid body size (text-body): 16px on mobile up to 18px on desktop, never below 16px.
+    const fontSize = parseFloat(getComputedStyle(input).fontSize);
+    await expect(fontSize).toBeGreaterThanOrEqual(16);
+    await expect(fontSize).toBeLessThanOrEqual(18);
     await expect(getComputedStyle(input).borderColor).toBe(rgb("border-strong"));
 
     // Focus turns the edge green, as on Brighte's form, 2px in total (border + outline).

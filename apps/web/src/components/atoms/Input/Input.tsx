@@ -19,7 +19,7 @@ export function Input({ invalid = false, className, ...rest }: InputProps) {
       aria-invalid={invalid || undefined}
       className={cn(
         // Field: 44px tall, 16px text (stops iOS zooming), Brighte's 1px border and 4px corners.
-        "block min-h-11 w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-base text-fg",
+        "block min-h-11 w-full rounded-control border border-border-strong bg-surface px-3 py-2.5 text-body text-fg",
         "placeholder:text-fg-muted",
         // Focus: the border turns green and a 1px outline makes the edge 2px.
         "focus-visible:border-focus focus-visible:outline-1 focus-visible:outline-focus",

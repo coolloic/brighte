@@ -31,7 +31,7 @@ export function ServiceFilter({ options, selected, hrefFor, label = "Filter by s
                 href={hrefFor(chip.code)}
                 aria-current={current ? "page" : undefined}
                 className={cn(
-                  "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-base font-semibold transition-[background-color] duration-150 focus-visible:focus-ring",
+                  "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-body font-semibold transition-[background-color] duration-150 focus-visible:focus-ring",
                   current ? "border-action bg-surface-brand text-fg-brand" : "border-border-strong text-fg hover:bg-surface-muted",
                 )}
               >

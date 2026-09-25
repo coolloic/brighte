@@ -34,6 +34,8 @@ export const Hierarchy: Story = {
     const sizes = [1, 2, 3, 4].map((level) => parseFloat(getComputedStyle(canvas.getByRole("heading", { level })).fontSize));
     // Each level is smaller than the one above.
     await expect(sizes).toEqual([...sizes].sort((a, b) => b - a));
+    // Even the smallest heading stays above body text at every width (both are fluid).
+    await expect(sizes[3]).toBeGreaterThan(parseFloat(getComputedStyle(document.body).fontSize));
   },
 };
 

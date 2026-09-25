@@ -5,10 +5,11 @@ import { cn } from "@/lib/cn";
 const headingVariants = cva("font-bold tracking-tight text-fg", {
   variants: {
     size: {
-      xl: "text-3xl sm:text-4xl",
-      lg: "text-2xl sm:text-3xl",
-      md: "text-xl",
-      sm: "text-lg",
+      // Fluid sizes from globals.scss: mobile size up to 360px wide, desktop size from 1280px.
+      xl: "text-heading-xl",
+      lg: "text-heading-lg",
+      md: "text-heading-md",
+      sm: "text-heading-sm",
     },
   },
 });
