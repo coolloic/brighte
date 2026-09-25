@@ -114,6 +114,14 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 
 **Behind a proxy**, set `TRUST_PROXY` to the number of hops so the limiter sees the client's IP. Otherwise every client shares the proxy's IP and one noisy client throttles everyone.
 
+**The web app is such a proxy.** The browser never calls the API: pages and Server Actions call it from the Next server (`apps/web/src/lib/api`), which keeps the API URL and admin tokens off the client. So in production:
+
+- Run the API with `TRUST_PROXY=1` and make it reachable **only** from the web server (private network). Otherwise anyone could call it directly with a made-up `X-Forwarded-For`.
+- Set `WEB_TRUST_PROXY` on the web app to the number of proxies in front of **it** (e.g. `1` behind a load balancer). The web app reads the visitor's IP from those proxies' `X-Forwarded-For` entries and forwards just that IP to the API; entries a client wrote itself are ignored. Unset (local development), nothing is forwarded.
+- `API_URL` points the web app at the API (default `http://localhost:${API_PORT}/graphql`).
+
+Without this, every visitor shares the web server's IP, and five registrations a minute would be the limit for everyone.
+
 **What this does not cover.** App-level rate limiting slows abuse; it does not stop a real DDoS, which has to be absorbed before it reaches Node (a CDN or WAF, e.g. Cloudflare or AWS WAF, plus load balancer limits). Counters are in memory, so each instance counts separately; with several instances, move them to Redis (`@nest-lab/throttler-storage-redis`). A distributed password-guessing attack spreads across IPs, so per-account lockout or a CAPTCHA on repeated failures would be the next step, and a CAPTCHA (e.g. Turnstile) on `register` if bots get past the per-IP limit. Oversized bodies (413) are still logged at ERROR with a stack, which is noisy under attack.
 
 ## API collection (Bruno)
