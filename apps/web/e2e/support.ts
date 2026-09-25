@@ -7,6 +7,12 @@ import { expect, type Page } from "@playwright/test";
 export const ADMIN = { email: "admin@brighte.dev", password: process.env.SEED_ADMIN_PASSWORD ?? "admin-dev-password" };
 export const USER = { email: "user@brighte.dev", password: process.env.SEED_USER_PASSWORD ?? "user-dev-password" };
 
+/**
+ * A random token for test data a search must find alone. Not Date.now(): the mobile and desktop
+ * projects run the same test in parallel, and two starting in the same millisecond collide.
+ */
+export const uniqueToken = () => randomUUID().replaceAll("-", "").slice(0, 12);
+
 /** A random visitor IP for X-Forwarded-For, so tests don't share rate limits (see playwright.config.ts). */
 export const visitorIp = () => `198.${randomInt(18, 20)}.${randomInt(256)}.${randomInt(1, 255)}`;
 

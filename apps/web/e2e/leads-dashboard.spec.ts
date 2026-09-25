@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { registerLead, signInAsAdmin, visitorIp } from "./support";
+import { registerLead, signInAsAdmin, uniqueToken, visitorIp } from "./support";
 
 // Needs the seed admin (pnpm db:seed). Leads are created per test, straight through the API.
 
@@ -120,7 +120,7 @@ test.describe("leads dashboard", () => {
 
 test.describe("search, sort and page size", () => {
   test("searches after a pause in typing, keeping focus; Back returns to the full list", async ({ page }) => {
-    const token = `Srch${Date.now().toString(36)}`;
+    const token = `Srch${uniqueToken()}`;
     const lead = await registerLead({ name: `Ada ${token}` });
     await registerLead({ name: `Bea ${token}` });
     await signInAsAdmin(page);
@@ -143,7 +143,7 @@ test.describe("search, sort and page size", () => {
   });
 
   test("typing on while a search is loading keeps every letter", async ({ page }) => {
-    const token = `Keep${Date.now().toString(36)}`;
+    const token = `Keep${uniqueToken()}`;
     await registerLead({ name: `Ada ${token}` });
     await signInAsAdmin(page);
     const box = page.getByRole("searchbox", { name: "Search leads" });
@@ -240,7 +240,7 @@ test.describe("leads dashboard without JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
   test("searches with the Search button", async ({ page }) => {
-    const lead = await registerLead({ name: `NoJs ${Date.now().toString(36)}` });
+    const lead = await registerLead({ name: `NoJs ${uniqueToken()}` });
     await signInAsAdmin(page);
     await page.getByRole("searchbox", { name: "Search leads" }).fill(lead.name);
     await page.getByRole("button", { name: "Search" }).click();
