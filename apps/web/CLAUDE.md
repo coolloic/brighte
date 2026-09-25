@@ -67,7 +67,7 @@ A feature is not done until all of these pass. Show the output when reporting.
 
 ## 7. Storybook — required for every component
 
-- Every component in `src/components/` has a `<Name>.stories.tsx` next to it, with one story per state (default, focus, error, disabled, loading, empty…). Organisms get stories for each data state, using mock props.
+- Every component in `src/components/` has a `<Name>.stories.tsx` next to it (exception: `atoms/Icon` is documented and tested in **Foundations / Icons**, the icon catalogue), with one story per state (default, focus, error, disabled, loading, empty…). Organisms get stories for each data state, using mock props.
 - Put behaviour checks (typing, validation messages, keyboard use) in `play` functions.
 - Every story is a test: `pnpm --filter @brighte/web test` renders it in Chromium and fails on a thrown error, a failing `play` function, or any WCAG 2.1 AA violation. Don't turn the a11y check off for a story; fix the component.
 - Run it locally with `pnpm --filter @brighte/web storybook` (http://localhost:6006).

@@ -1,41 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { contrast, readToken, toHex, type Rgb } from "./color";
+import { CopyButton, DocsPage } from "./DocsPage";
 import { CONTRAST_PAIRS, PALETTE, paletteName, ROLE_GROUPS, type Source } from "./tokens";
-
-type Announce = (message: string) => void;
-
-function CopyButton({ text, kind, announce }: { text: string; kind: string; announce: Announce }) {
-  const copy = () => {
-    const clipboard = typeof navigator === "undefined" ? undefined : navigator.clipboard;
-    (clipboard ? clipboard.writeText(text) : Promise.reject(new Error("Clipboard unavailable"))).then(
-      () => announce(`Copied ${text}`),
-      () => announce(`Couldn't copy ${text}. Select it and copy it manually.`),
-    );
-  };
-  return (
-    <button
-      type="button"
-      aria-label={`Copy ${kind} ${text}`}
-      onClick={copy}
-      className="min-h-11 w-full cursor-pointer rounded-control border border-border bg-surface px-3 py-2 text-left font-mono text-sm break-all text-fg transition-[background-color] duration-150 hover:bg-surface-muted focus-visible:focus-ring"
-    >
-      {text}
-    </button>
-  );
-}
-
-function Page({ title, intro, status, children }: { title: string; intro: ReactNode; status: string; children: ReactNode }) {
-  return (
-    <main className="mx-auto max-w-6xl px-4 py-8 text-fg sm:px-6">
-      <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-      <div className="mt-2 max-w-3xl text-fg-muted">{intro}</div>
-      <p role="status" className="sticky top-0 z-10 mt-4 min-h-11 rounded-control bg-surface-brand px-4 py-3 text-sm text-fg shadow-card">
-        {status || "Click a token to copy it."}
-      </p>
-      {children}
-    </main>
-  );
-}
 
 function Swatch({ name }: { name: string }) {
   return (
@@ -75,7 +41,7 @@ const sourceLabel: Record<Source, string> = {
 export function PaletteColors() {
   const [status, setStatus] = useState("");
   return (
-    <Page
+    <DocsPage
       title="Color palette"
       status={status}
       intro={
@@ -111,14 +77,14 @@ export function PaletteColors() {
           </ul>
         </section>
       ))}
-    </Page>
+    </DocsPage>
   );
 }
 
 export function RoleColors() {
   const [status, setStatus] = useState("");
   return (
-    <Page
+    <DocsPage
       title="Color roles"
       status={status}
       intro={
@@ -151,7 +117,7 @@ export function RoleColors() {
           </ul>
         </section>
       ))}
-    </Page>
+    </DocsPage>
   );
 }
 
