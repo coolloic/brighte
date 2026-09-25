@@ -50,8 +50,15 @@ test.describe("leads dashboard", () => {
       await expect(page).toHaveURL("/admin?service=pick-up");
       await expect(page.getByRole("link", { name: lead.name })).toBeVisible();
     } else {
-      // Side by side: the selected lead is marked in the list.
+      // Side by side: the selected lead is marked in the list, and Close gives the list its full width back.
       await expect(page.getByRole("link", { name: lead.name })).toHaveAttribute("aria-current", "page");
+      const listWidth = () => page.locator("table").evaluate((table) => table.getBoundingClientRect().width);
+      const narrowed = await listWidth();
+      await detail.getByRole("link", { name: "Close lead details" }).click();
+      await expect(page).toHaveURL("/admin?service=pick-up");
+      await expect(detail).toBeHidden();
+      await expect(page.getByRole("link", { name: lead.name })).not.toHaveAttribute("aria-current");
+      expect(await listWidth()).toBeGreaterThan(narrowed);
     }
   });
 

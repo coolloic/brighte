@@ -26,6 +26,7 @@ const icons = {
     </>
   ),
   "chevron-down": <path d="M6 9l6 6 6-6" />,
+  x: <path d="M6 6l12 12M18 6L6 18" />,
   "arrow-up": (
     <>
       <path d="M12 19V5" />
