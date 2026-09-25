@@ -11,6 +11,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import {
+  databaseOptions,
   formatError,
   GqlThrottlerGuard,
   GraphqlExceptionFilter,
@@ -40,6 +41,8 @@ import { UsersModule } from './users/users.module.js';
         // Schema is owned by migrations (src/database/migrations), never synced from models.
         synchronize: false,
         logging: false,
+        // Pool size and timeouts (DB_POOL_MAX, DB_STATEMENT_TIMEOUT_MS): see common/database.ts.
+        ...databaseOptions(),
       }),
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({

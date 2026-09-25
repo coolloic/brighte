@@ -6,6 +6,12 @@ import { Public } from './auth/index.js';
 
 const logger = new Logger('Health');
 
+/**
+ * How long readiness waits for the database. The check goes through the connection pool, so with
+ * every connection busy it would otherwise wait for one (up to the pool's acquire timeout).
+ */
+export const READINESS_TIMEOUT_MS = 2_000;
+
 /** Probes for a load balancer or orchestrator. Public, not rate limited, and not in the request log. */
 @Public()
 @SkipThrottle()
@@ -19,14 +25,23 @@ export class HealthController {
     return { status: 'ok' };
   }
 
-  /** Readiness: the database answers. 503 otherwise, so traffic goes to other instances until it does. */
+  /**
+   * Readiness: the database answers within READINESS_TIMEOUT_MS. 503 otherwise, so traffic goes to
+   * other instances until it does.
+   */
   @Get('ready')
   async ready() {
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`No answer within ${READINESS_TIMEOUT_MS}ms`)), READINESS_TIMEOUT_MS);
+    });
     try {
-      await this.sequelize.authenticate();
+      await Promise.race([this.sequelize.authenticate(), timeout]);
     } catch (error) {
-      logger.warn({ msg: 'Readiness check failed: database unreachable', err: error });
+      logger.warn({ msg: 'Readiness check failed: database unreachable or too slow', err: error });
       throw new ServiceUnavailableException('Database unavailable');
+    } finally {
+      clearTimeout(timer);
     }
     return { status: 'ok' };
   }
