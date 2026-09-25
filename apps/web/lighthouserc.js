@@ -21,7 +21,8 @@ module.exports = {
     },
     assert: {
       assertMatrix: [
-        { matchingUrlPattern: "^(?!.*/admin).*$", assertions: { ...quality, "categories:seo": ["error", { minScore: 0.9 }] } },
+        // Public pages: SEO must stay at 100 (canonical, robots.txt, structured data, crawlable).
+        { matchingUrlPattern: "^(?!.*/admin).*$", assertions: { ...quality, "categories:seo": ["error", { minScore: 1 }] } },
         // Admin pages are noindex on purpose (they fail is-crawlable), so SEO doesn't apply to them.
         { matchingUrlPattern: "/admin", assertions: quality },
       ],

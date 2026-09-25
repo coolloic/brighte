@@ -50,7 +50,7 @@ export default defineConfig({
     {
       command: `node_modules/.bin/next build && exec node_modules/.bin/next start --port ${webPort}`,
       url: `http://localhost:${webPort}`,
-      env: { ...process.env, API_URL: `http://localhost:${apiPort}/graphql`, WEB_TRUST_PROXY: "1" },
+      env: { ...process.env, API_URL: `http://localhost:${apiPort}/graphql`, WEB_TRUST_PROXY: "1", SITE_URL: `http://localhost:${webPort}` },
       reuseExistingServer: false,
       timeout: 180_000,
     },
