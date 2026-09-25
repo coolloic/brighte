@@ -189,6 +189,16 @@ Without this, every visitor shares the web server's IP, and five registrations a
 
 **What this does not cover.** App-level rate limiting slows abuse; it does not stop a real DDoS, which has to be absorbed before it reaches Node (a CDN or WAF, e.g. Cloudflare or AWS WAF, plus load balancer limits). Counters are in memory, so each instance counts separately; with several instances, move them to Redis (`@nest-lab/throttler-storage-redis`). A distributed password-guessing attack spreads across IPs, so per-account lockout or a CAPTCHA on repeated failures would be the next step, and a CAPTCHA (e.g. Turnstile) on `register` if bots get past the per-IP limit. Oversized bodies (413) are still logged at ERROR with a stack, which is noisy under attack.
 
+## Observability (API)
+
+The API logs with [nestjs-pino](https://github.com/iamolegga/nestjs-pino): one JSON object per line on stdout, ready for any log collector. Running it in a terminal (`pnpm dev`) pretty-prints instead. `LOG_LEVEL` sets the level (default `info`; e2e tests are silent).
+
+- **Request id.** Every request gets an id, logged as `reqId` on each line written while handling it and returned in the `X-Request-Id` response header. A caller's own `X-Request-Id` is kept if it looks like an id (8 to 128 letters, digits, `-` or `_`), so the web server can pass its id along and both sides log the same one.
+- **One line per GraphQL operation.** An HTTP access log would read `POST /graphql 200` for everything, so a GraphQL plugin (`operationLogPlugin`) logs the operation name, root fields, duration, caller (`userId`, `role`) and client IP instead. Info when it succeeds; warn with its error codes (`errors: ["UNAUTHENTICATED"]`) when it fails. Unexpected errors are also logged with their stack by `formatError`. REST requests get pino-http's access line (method, URL, status, time).
+- **Security and audit events**, each with an `event` field to alert on: `auth.login`, `auth.login_failed` (`reason`: `unknown_email` or `wrong_password`, with `userId` when the account exists), `auth.session_ended` (renewal refused at the session limit), `rate_limit.blocked` (once per block, with the operation, client IP and how many blocks in a row), `user.created` (who created which account).
+- **Never logged:** GraphQL variables (passwords, personal details), request headers (the bearer token), and emails. The smoke test checks the production server's logs for these.
+- **Health checks**, public and not rate limited: `GET /health/live` (the process is up; doesn't touch the database, so an outage there doesn't get the API restarted) and `GET /health/ready` (the database answers; `503` otherwise, so a load balancer sends traffic elsewhere).
+
 ## Database migrations
 
 The schema is owned by [Umzug](https://github.com/sequelize/umzug) migrations in `apps/api/src/database/migrations/`. Sequelize `synchronize` is off, so changing a model does not change the database.
@@ -206,9 +216,9 @@ Tests are chosen to protect what would hurt most if it broke, not for coverage n
 
 | Layer | Command | What it covers |
 |---|---|---|
-| API unit | `pnpm --filter @brighte/api test` | Input schemas, error formatting, password hashing, rate-limit backoff, the API docs contract |
-| API end-to-end | `pnpm --filter @brighte/api test:e2e` | Every operation against real Postgres (Supertest): register, leads, lead, auth, session renewal, access rules, security limits, N+1 query count |
-| API smoke | `pnpm --filter @brighte/api test:smoke` | Builds and starts real servers (dev and production) and checks every operation, edge case and error code over HTTP |
+| API unit | `pnpm --filter @brighte/api test` | Input schemas, error formatting, password hashing, rate-limit backoff, request ids and the operation log, the API docs contract |
+| API end-to-end | `pnpm --filter @brighte/api test:e2e` | Every operation against real Postgres (Supertest): register, leads, lead, auth, session renewal, access rules, security limits, N+1 query count, health checks, request ids, security and audit log events |
+| API smoke | `pnpm --filter @brighte/api test:smoke` | Builds and starts real servers (dev and production) and checks every operation, edge case and error code over HTTP, plus the production logs: all JSON, and no passwords, emails or tokens |
 | Web unit | `pnpm --filter @brighte/web test` | API client, error-to-copy mapping, validation, URL and session helpers |
 | Component stories | same command | Every Storybook story renders in Chromium, runs its interaction test, and must pass axe (WCAG 2.1 AA) |
 | Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: register, sign-in, dashboard (search, sort, page size), sessions, offline, slow submits, API down, 404, SEO files, security headers and CSP, and each flow without JavaScript |
@@ -245,7 +255,7 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Sessions that can be revoked.** Tokens can't be cancelled before they expire (signing out only removes the cookie). Keep sessions or refresh tokens server-side (a table or Redis) so "sign out everywhere" and account lockout take effect at once.
 - **Database.** A connection pooler (PgBouncer), and a read replica for the dashboard so reads don't compete with registrations.
 - **Caching.** Service types change rarely but are fetched on every form load; cache them on the web server with a short revalidation.
-- **Observability.** Structured logs, tracing across web → API → database (OpenTelemetry), and alerts on error rates and rate-limit spikes.
+- **Observability.** The API already writes structured logs with request ids (see [Observability](#observability-api)). Next: the same on the web server, sending its request id to the API; tracing across web → API → database (OpenTelemetry); metrics; and alerts on error rates and `rate_limit.blocked` spikes.
 - **Search.** Trigram indexes serve substring search well into the millions of rows; beyond that, or for ranking and typo tolerance, move to Postgres full-text search or a search service.
 - **Dashboard features.** CSV export, and an audit trail of service-interest changes.
 - **Delivery.** CI running the full test suite on every pull request, against a dedicated test database, and deploying the API on a private network behind the web app.

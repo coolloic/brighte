@@ -33,6 +33,14 @@ describe('RateLimitBackoff', () => {
     expect(backoff.blockDuration('ip:register', BASE)).toBe(120_000);
   });
 
+  it('returns the block count when a block starts, and nothing during it', () => {
+    expect(backoff.recordBlock('ip:register', 60)).toBe(1);
+    now += 10_000;
+    expect(backoff.recordBlock('ip:register', 50)).toBeUndefined();
+    now += 50_001;
+    expect(backoff.recordBlock('ip:register', 120)).toBe(2);
+  });
+
   it('never blocks longer than the cap', () => {
     for (let i = 0; i < 10; i++) {
       const ms = block();

@@ -6,10 +6,20 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
-import { formatError, GqlThrottlerGuard, GraphqlExceptionFilter, RATE_LIMIT_WINDOW_MS, RateLimits } from './common/index.js';
+import {
+  formatError,
+  GqlThrottlerGuard,
+  GraphqlExceptionFilter,
+  loggerParams,
+  operationLogPlugin,
+  RATE_LIMIT_WINDOW_MS,
+  RateLimits,
+} from './common/index.js';
+import { HealthController } from './health.controller.js';
 import { LeadsModule } from './leads/leads.module.js';
 import { UsersModule } from './users/users.module.js';
 
@@ -17,6 +27,8 @@ import { UsersModule } from './users/users.module.js';
   imports: [
     // apps/api/.env first, then the root .env (shared ports); a variable already set wins.
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../../.env'] }),
+    // Structured request logs with a request id (see common/logging.ts); main.ts routes Nest's logger here.
+    LoggerModule.forRoot(loggerParams()),
     // Per client IP and per operation; stricter limits on login and register (see RateLimits).
     ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: RATE_LIMIT_WINDOW_MS, limit: RateLimits.default }] }),
     SequelizeModule.forRootAsync({
@@ -43,12 +55,13 @@ import { UsersModule } from './users/users.module.js';
       // would still reveal field names one guess at a time.
       hideSchemaDetailsFromClientErrors: process.env.NODE_ENV === 'production',
       formatError,
+      plugins: [operationLogPlugin],
     }),
     UsersModule,
     AuthModule,
     LeadsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [
     AppService,
     { provide: APP_FILTER, useClass: GraphqlExceptionFilter },

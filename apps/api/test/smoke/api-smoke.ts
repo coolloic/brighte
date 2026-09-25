@@ -63,11 +63,14 @@ function spawnApi(port: number, extraEnv: Record<string, string>) {
   procs.push(child);
   return { child, output: () => output };
 }
+// Each started server's stdout and stderr, by base URL, for the log checks.
+const serverOutput = new Map<string, () => string>();
 async function startServer(port: number, extraEnv: Record<string, string>): Promise<string> {
   const { output } = spawnApi(port, extraEnv);
   for (let i = 0; i < 60; i++) {
     try {
       await fetch(`http://localhost:${port}/`);
+      serverOutput.set(`http://localhost:${port}`, output);
       return `http://localhost:${port}`;
     } catch {
       await new Promise((r) => setTimeout(r, 250));
@@ -75,6 +78,22 @@ async function startServer(port: number, extraEnv: Record<string, string>): Prom
   }
   throw new Error(`API on :${port} did not start:\n${output()}`);
 }
+/** The server's log lines, parsed; throws on a line that isn't JSON. Waits a moment for pending writes. */
+async function logLines(base: string): Promise<Record<string, unknown>[]> {
+  await new Promise((r) => setTimeout(r, 200));
+  return serverOutput
+    .get(base)!()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line) as Record<string, unknown>;
+      } catch {
+        throw new Error(`Log line is not JSON: ${line.slice(0, 200)}`);
+      }
+    });
+}
+
 async function portFree(port: number) {
   try {
     await fetch(`http://localhost:${port}/`);
@@ -525,6 +544,12 @@ async function rateLimits(base: string) {
     for (let i = 0; i < 11; i++) codes.push((await gql(base, LOGIN, { e: mail('nobody'), p: 'wrong-password' })).code);
     eq(codes, [...Array<string>(10).fill('UNAUTHENTICATED'), 'TOO_MANY_REQUESTS']);
   });
+  await check('Each new block is logged once, with the operation and client', async () => {
+    const blocks = (await logLines(base)).filter((l) => l.event === 'rate_limit.blocked');
+    ok(blocks.some((l) => l.operation === 'register' && l.blocks === 1), JSON.stringify(blocks));
+    ok(blocks.some((l) => l.operation === 'login' && typeof l.ip === 'string'), JSON.stringify(blocks));
+    eq(blocks.filter((l) => l.operation === 'login').length, 1, 'login blocks');
+  });
   await check('Other operations keep their own counters', async () => {
     ok((await gql(base, '{ serviceTypes { code } }')).data?.serviceTypes, 'serviceTypes blocked');
   });
@@ -563,6 +588,27 @@ async function production(base: string) {
   });
 }
 
+async function logs(base: string) {
+  group('Logs & health (production)');
+  await check('Health: live and ready answer 200 without a token', async () => {
+    eq([(await fetch(`${base}/health/live`)).status, (await fetch(`${base}/health/ready`)).status], [200, 200]);
+  });
+  const requestId = `${P}-req`;
+  await check('X-Request-Id from the caller is sent back', async () => {
+    const failed = await gql(base, LOGIN, { e: mail('logs'), p: 'smoke-log-secret' }, { headers: { 'x-request-id': requestId } });
+    eq(failed.headers.get('x-request-id'), requestId);
+  });
+  await check('Every log line is JSON; the failed login is logged under the request id', async () => {
+    const lines = (await logLines(base)).filter((l) => l.reqId === requestId);
+    ok(lines.some((l) => l.event === 'auth.login_failed' && l.reason === 'unknown_email'), JSON.stringify(lines));
+    ok(lines.some((l) => l.msg === 'GraphQL operation failed' && JSON.stringify(l.errors) === '["UNAUTHENTICATED"]'), JSON.stringify(lines));
+  });
+  await check('Logs never contain a password, an email or a token', async () => {
+    const output = JSON.stringify(await logLines(base));
+    for (const secret of ['smoke-log-secret', mail('logs'), env.SEED_ADMIN_PASSWORD!, 'Bearer ']) ok(!output.includes(secret), `logs contain ${secret}`);
+  });
+}
+
 async function startupChecks(port: number) {
   group('Startup');
   await check('Production without WEB_ORIGIN refuses to start', async () => {
@@ -583,7 +629,9 @@ for (const port of ports) {
 try {
   await functional(await startServer(ports[0], { ...high, NODE_ENV: 'development', WEB_ORIGIN: 'http://localhost:3001' }));
   await rateLimits(await startServer(ports[1], { ...realLimits, NODE_ENV: 'development', WEB_ORIGIN: 'http://localhost:3001' }));
-  await production(await startServer(ports[2], { ...high, NODE_ENV: 'production', WEB_ORIGIN: 'https://app.brighte.test' }));
+  const prod = await startServer(ports[2], { ...high, NODE_ENV: 'production', WEB_ORIGIN: 'https://app.brighte.test' });
+  await production(prod);
+  await logs(prod);
   await startupChecks(ports[3]);
 } finally {
   for (const p of procs) if (p.exitCode === null) p.kill();
