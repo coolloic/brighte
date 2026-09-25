@@ -24,19 +24,48 @@ export function createMigrator(
   { glob, ext, logger = console }: { glob: string; ext: string; logger?: UmzugOptions['logger'] },
 ) {
   const load = (path: string) => import(pathToFileURL(path).href) as Promise<MigrationModule>;
+
+  // A migration's transaction stays open until Umzug has written (or deleted) its SequelizeMeta
+  // row, so the change and the record of it commit together.
+  let inTransaction = false;
+  const begin = async () => {
+    await sequelize.query('BEGIN');
+    inTransaction = true;
+  };
+  const commit = async () => {
+    if (!inTransaction) return;
+    inTransaction = false;
+    await sequelize.query('COMMIT');
+  };
+  /** Undoes the migration that failed: call it after a failed run. */
+  const rollback = async () => {
+    if (!inTransaction) return;
+    inTransaction = false;
+    await sequelize.query('ROLLBACK');
+  };
+
+  /** Runs one direction of a migration, in a transaction unless the module exports `transaction = false`. */
+  const run =
+    (path: string, direction: 'up' | 'down'): Migration =>
+    async (params) => {
+      const migration = await load(path);
+      // CREATE INDEX CONCURRENTLY (and a few other statements) can't run inside a transaction.
+      if (migration.transaction !== false) await begin();
+      return migration[direction](params);
+    };
+
   const umzug = new Umzug({
     migrations: {
       glob,
       // Record names without extension so dev (.ts) and prod (.js) runs match.
-      resolve: ({ name, path }) => ({
-        name: name.slice(0, -ext.length),
-        up: async (params) => (await load(path!)).up(params),
-        down: async (params) => (await load(path!)).down(params),
-      }),
+      resolve: ({ name, path }) => ({ name: name.slice(0, -ext.length), up: run(path!, 'up'), down: run(path!, 'down') }),
     },
     context: sequelize.getQueryInterface(),
     storage: new SequelizeStorage({ sequelize }),
     logger,
   });
-  return { umzug, rollback: async () => {} };
+  umzug.on('migrated', commit);
+  umzug.on('reverted', commit);
+
+  return { umzug, rollback };
 }

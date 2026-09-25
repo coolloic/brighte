@@ -13,10 +13,13 @@ if (!databaseUrl) {
 }
 
 const sequelize = migrationSequelize(databaseUrl);
-const { umzug } = createMigrator(sequelize, { glob: `${import.meta.dirname}/migrations/*${ext}`, ext });
+const { umzug, rollback } = createMigrator(sequelize, { glob: `${import.meta.dirname}/migrations/*${ext}`, ext });
 
+// runAsCLI reports a failure by resolving false (and setting process.exitCode), not by throwing.
+let succeeded = false;
 try {
-  await umzug.runAsCLI();
+  succeeded = await umzug.runAsCLI();
 } finally {
+  if (!succeeded) await rollback();
   await sequelize.close();
 }

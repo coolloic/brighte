@@ -25,7 +25,8 @@ export default tseslint.config(
   {
     files: ['src/**/*.ts', 'test/**/*.ts'],
     // Run uncompiled by Node type stripping, which cannot load barrels: their `.js` paths do not
-    // exist before a build, and strip-only mode rejects enums (Role).
+    // exist before a build, and strip-only mode rejects enums (Role). For the same reason
+    // src/database has no barrel, so tests import its files directly (`(?!database/)` below).
     ignores: ['src/database/**'],
     rules: {
       'no-restricted-imports': [
@@ -33,7 +34,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              regex: '^(\\./)?(\\.\\./)+(src/)?(?!src/)[\\w-]+/(?!index\\.js$)(?![\\w.-]+\\.module\\.js$).+',
+              regex: '^(\\./)?(\\.\\./)+(src/)?(?!src/)(?!database/)[\\w-]+/(?!index\\.js$)(?![\\w.-]+\\.module\\.js$).+',
               message: "Import another module through its barrel, e.g. '../auth/index.js'.",
             },
             {
