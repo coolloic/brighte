@@ -1,5 +1,5 @@
 import { extname } from 'node:path';
-import { createMigrator, migrationSequelize, withMigrationLock } from './migrator.ts';
+import { createMigrator, migrationSequelize, runLocked } from './migrator.ts';
 
 export type { Migration } from './migrator.ts';
 
@@ -13,13 +13,11 @@ if (!databaseUrl) {
 }
 
 const sequelize = migrationSequelize(databaseUrl);
-const { umzug, rollback } = createMigrator(sequelize, { glob: `${import.meta.dirname}/migrations/*${ext}`, ext });
+const migrator = createMigrator(sequelize, { glob: `${import.meta.dirname}/migrations/*${ext}`, ext });
 
-// runAsCLI reports a failure by resolving false (and setting process.exitCode), not by throwing.
-let succeeded = false;
 try {
-  succeeded = await withMigrationLock(sequelize, () => umzug.runAsCLI());
+  // runAsCLI reports a failure by resolving false (and setting process.exitCode), not by throwing.
+  await runLocked(sequelize, migrator, () => migrator.umzug.runAsCLI());
 } finally {
-  if (!succeeded) await rollback();
   await sequelize.close();
 }

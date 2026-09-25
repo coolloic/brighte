@@ -49,6 +49,32 @@ export async function withMigrationLock<T>(sequelize: Sequelize, fn: () => Promi
   }
 }
 
+/**
+ * Runs a migration command under the lock. When it fails, the open migration is rolled back while
+ * the lock is still held: after a SQL error the transaction is aborted and Postgres refuses every
+ * statement until ROLLBACK, the unlock included. Resolves to whether the command succeeded.
+ */
+export async function runLocked(
+  sequelize: Sequelize,
+  { rollback }: { rollback: () => Promise<void> },
+  command: () => Promise<boolean>,
+  log?: (message: string) => void,
+): Promise<boolean> {
+  return withMigrationLock(
+    sequelize,
+    async () => {
+      let succeeded = false;
+      try {
+        succeeded = await command();
+      } finally {
+        if (!succeeded) await rollback();
+      }
+      return succeeded;
+    },
+    log,
+  );
+}
+
 export function createMigrator(
   sequelize: Sequelize,
   { glob, ext, logger = console }: { glob: string; ext: string; logger?: UmzugOptions['logger'] },

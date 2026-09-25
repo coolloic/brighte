@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { QueryTypes, Sequelize } from 'sequelize';
-import { createMigrator, migrationSequelize, withMigrationLock } from '../src/database/migrator.js';
+import { createMigrator, migrationSequelize, runLocked, withMigrationLock } from '../src/database/migrator.js';
 
 // The e2e suites get DATABASE_URL from apps/api/.env through ConfigModule; this one never boots
 // the app, so it reads the file itself (CI sets the variable directly).
@@ -85,6 +85,20 @@ describe('Migration runner (e2e)', () => {
 
     expect(await tables(sequelize)).toEqual(['SequelizeMeta']);
     expect(await umzug.executed()).toEqual([]);
+  });
+
+  it('after a SQL error, rolls back before releasing the lock, and reports the failure', async () => {
+    const { sequelize } = await freshDatabase();
+    const migrator = migratorFor(sequelize, 'sql-failing');
+    const up = () => migrator.umzug.up().then(() => true, () => false);
+
+    await expect(runLocked(sequelize, migrator, up, () => {})).resolves.toBe(false);
+
+    expect(await tables(sequelize)).toEqual(['SequelizeMeta']);
+    const [{ held }] = await sequelize.query<{ held: string }>("SELECT count(*) AS held FROM pg_locks WHERE locktype = 'advisory'", {
+      type: QueryTypes.SELECT,
+    });
+    expect(Number(held)).toBe(0);
   });
 
   it('lets only one run migrate at a time; the other waits, then finds nothing to do', async () => {
