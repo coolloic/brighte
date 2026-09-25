@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/sequelize';
 import DataLoader from 'dataloader';
-import { UniqueConstraintError, type Includeable, type Order } from 'sequelize';
+import { Op, UniqueConstraintError, type Includeable, type Order, type WhereOptions } from 'sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { BadUserInputError, ConflictError } from '../common/index.js';
 import { LeadSort, type LeadPage } from './dto/lead-page.js';
@@ -24,9 +24,52 @@ const ORDER: Record<LeadSort, Order> = {
     ['name', 'ASC'],
     ['id', 'ASC'],
   ],
+  [LeadSort.NAME_DESC]: [
+    ['name', 'DESC'],
+    ['id', 'DESC'],
+  ],
+  [LeadSort.EMAIL_ASC]: [
+    ['email', 'ASC'],
+    ['id', 'ASC'],
+  ],
+  [LeadSort.EMAIL_DESC]: [
+    ['email', 'DESC'],
+    ['id', 'DESC'],
+  ],
+  [LeadSort.POSTCODE_ASC]: [
+    ['postcode', 'ASC'],
+    ['createdAt', 'DESC'],
+    ['id', 'DESC'],
+  ],
+  [LeadSort.POSTCODE_DESC]: [
+    ['postcode', 'DESC'],
+    ['createdAt', 'DESC'],
+    ['id', 'DESC'],
+  ],
 };
 
-export type ListLeadsArgs = { limit: number; offset: number; serviceType?: string; sort: LeadSort };
+export type ListLeadsArgs = { limit: number; offset: number; serviceType?: string; search?: string; sort: LeadSort };
+
+/** `text` for a LIKE pattern, matched literally: `%`, `_` and `\` lose their special meaning. */
+const likeLiteral = (text: string) => text.replace(/[\\%_]/g, (char) => `\\${char}`);
+
+/**
+ * Leads matching `search`: name or email containing it (any case), postcode starting with it, or,
+ * when it has 3+ digits, a mobile containing those digits ("0412 345" finds 0412345678). Name and
+ * email use trigram indexes (migration add-leads-search-indexes).
+ */
+function searchWhere(search: string): WhereOptions {
+  const text = likeLiteral(search);
+  const digits = search.replace(/\D/g, '');
+  return {
+    [Op.or]: [
+      { name: { [Op.iLike]: `%${text}%` } },
+      { email: { [Op.iLike]: `%${text}%` } },
+      { postcode: { [Op.like]: `${text}%` } },
+      ...(digits.length >= 3 ? [{ mobile: { [Op.like]: `%${digits}%` } }] : []),
+    ],
+  };
+}
 
 @Injectable()
 export class LeadsService {
@@ -72,7 +115,7 @@ export class LeadsService {
     }
   }
 
-  async list({ limit, offset, serviceType, sort }: ListLeadsArgs): Promise<LeadPage> {
+  async list({ limit, offset, serviceType, search, sort }: ListLeadsArgs): Promise<LeadPage> {
     let include: Includeable[] = [];
     if (serviceType) {
       // Retired types still filter, so old leads stay findable.
@@ -82,6 +125,7 @@ export class LeadsService {
     }
 
     const { rows, count } = await this.leadModel.findAndCountAll({
+      where: search ? searchWhere(search) : undefined,
       include,
       order: ORDER[sort],
       limit,

@@ -70,6 +70,20 @@ describe('registerSchema', () => {
   });
 });
 
+describe('leadsArgsSchema search', () => {
+  const args = { limit: 20, offset: 0 };
+
+  it.each([undefined, null, '', '   '])('treats search %j as no search', (search) => {
+    expect(leadsArgsSchema.parse({ ...args, search }).search).toBeUndefined();
+  });
+
+  it('trims the search and allows up to 100 characters', () => {
+    expect(leadsArgsSchema.parse({ ...args, search: '  ada  ' }).search).toBe('ada');
+    expect(leadsArgsSchema.parse({ ...args, search: 'x'.repeat(100) }).search).toHaveLength(100);
+    expect(leadsArgsSchema.safeParse({ ...args, search: 'x'.repeat(101) }).success).toBe(false);
+  });
+});
+
 describe('register in the published schema', () => {
   it('keeps every argument required', () => {
     const schema = buildSchema(readFileSync(join(import.meta.dirname, '../schema.gql'), 'utf8'));

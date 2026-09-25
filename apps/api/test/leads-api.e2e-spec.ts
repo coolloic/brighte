@@ -24,8 +24,8 @@ const LEAD_FIELDS = 'id name email mobile postcode services { code }';
 const REGISTER = `mutation($name: String!, $email: String!, $mobile: String!, $postcode: String!, $services: [String!]!) {
   register(name: $name, email: $email, mobile: $mobile, postcode: $postcode, services: $services) { ${LEAD_FIELDS} }
 }`;
-const LEADS = `query($limit: Int, $offset: Int, $serviceType: String, $sort: LeadSort) {
-  leads(limit: $limit, offset: $offset, serviceType: $serviceType, sort: $sort) { total limit offset items { ${LEAD_FIELDS} } }
+const LEADS = `query($limit: Int, $offset: Int, $serviceType: String, $search: String, $sort: LeadSort) {
+  leads(limit: $limit, offset: $offset, serviceType: $serviceType, search: $search, sort: $sort) { total limit offset items { ${LEAD_FIELDS} } }
 }`;
 
 describe('Leads API (e2e)', () => {
@@ -191,6 +191,57 @@ describe('Leads API (e2e)', () => {
 
       const byName = (await listLeads({ serviceType: TEST_TYPE, sort: 'NAME_ASC', limit: 100 })).data!.leads.items.map((l) => l.name);
       expect(byName).toEqual([...byName].sort());
+    });
+
+    describe('search and sorting by any column', () => {
+      // Three leads of this run only; every query is scoped to this run's service type.
+      const token = `q${Date.now().toString(36)}`;
+      const found: Record<'a' | 'b' | 'c', string> = { a: '', b: '', c: '' };
+      const ids = async (variables: Record<string, unknown>) =>
+        (await listLeads({ serviceType: TEST_TYPE, limit: 100, ...variables })).data!.leads.items.map((l) => l.id);
+
+      beforeAll(async () => {
+        const leads = [
+          ['a', `Anna ${token}`, '3000', '0411 111 222'],
+          ['b', `Bea ${token}`, '2600', '0422 333 444'],
+          ['c', `Cleo 50%_ ${token}`, '0800', '0433 555 666'],
+        ] as const;
+        for (const [key, name, postcode, mobile] of leads) {
+          found[key] = (await register(`search-${key}`, { name, postcode, mobile, services: [TEST_TYPE] })).data!.register.id;
+        }
+      });
+
+      it('finds a name containing the search, in any case', async () => {
+        expect(await ids({ search: token.toUpperCase() })).toEqual([found.c, found.b, found.a]);
+        expect(await ids({ search: `bea ${token}` })).toEqual([found.b]);
+      });
+
+      it('finds by email, postcode start and mobile digits (spaces ignored)', async () => {
+        expect(await ids({ search: `${PREFIX}-search-b@` })).toEqual([found.b]);
+        expect(await ids({ search: '260' })).toEqual([found.b]);
+        expect(await ids({ search: '600' })).toEqual([]); // postcode matches from the start only
+        expect(await ids({ search: '0422 333' })).toEqual([found.b]);
+      });
+
+      it('matches % and _ literally', async () => {
+        expect(await ids({ search: '50%_' })).toEqual([found.c]);
+        expect(await ids({ search: '%' })).toEqual([found.c]);
+      });
+
+      it('treats a blank search as none, and rejects one over 100 characters', async () => {
+        expect((await ids({ search: '   ' })).length).toBe((await ids({})).length);
+        expect(error(await listLeads({ search: 'x'.repeat(101) }))?.extensions?.fields).toHaveProperty('search');
+      });
+
+      it('sorts by name, email and postcode, both ways', async () => {
+        const search = token;
+        expect(await ids({ search, sort: 'NAME_ASC' })).toEqual([found.a, found.b, found.c]);
+        expect(await ids({ search, sort: 'NAME_DESC' })).toEqual([found.c, found.b, found.a]);
+        expect(await ids({ search, sort: 'EMAIL_ASC' })).toEqual([found.a, found.b, found.c]);
+        expect(await ids({ search, sort: 'EMAIL_DESC' })).toEqual([found.c, found.b, found.a]);
+        expect(await ids({ search, sort: 'POSTCODE_ASC' })).toEqual([found.c, found.b, found.a]);
+        expect(await ids({ search, sort: 'POSTCODE_DESC' })).toEqual([found.a, found.b, found.c]);
+      });
     });
 
     it('returns an empty page for an unknown service type', async () => {
