@@ -42,6 +42,9 @@ test.describe("admin session", () => {
     await signInAsAdmin(page);
     const sub = subjectOf((await sessionCookie(context))!.value);
     const now = Math.floor(Date.now() / 1000);
+    // Leave the dashboard first: its link prefetches renew the session, and a late response would
+    // overwrite the cookie set below.
+    await page.goto("about:blank");
     await context.clearCookies();
     await context.addCookies([
       { name: "brighte_session", value: signToken({ sub, role: "ADMIN", auth_time: now - 3600, iat: now - 1800, exp: now - 60 }), url: baseURL! },
@@ -57,6 +60,7 @@ test.describe("admin session", () => {
     const now = Math.floor(Date.now() / 1000);
     // Signed in 9 hours ago; the token itself has 5 minutes left.
     const old = signToken({ sub, role: "ADMIN", auth_time: now - 9 * 3600, iat: now - 60, exp: now + 300 });
+    await page.goto("about:blank"); // no dashboard requests still in flight (see above)
     await context.clearCookies();
     await context.addCookies([{ name: "brighte_session", value: old, url: baseURL! }]);
 

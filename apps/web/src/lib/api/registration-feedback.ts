@@ -20,6 +20,14 @@ export type RegistrationFeedback = {
   alert?: RegistrationAlert;
 };
 
+/** The browser couldn't reach this server (offline, or the request failed): the form keeps what was typed. */
+export const CONNECTION_PROBLEM: RegistrationAlert = {
+  tone: "error",
+  title: "We couldn't send your registration",
+  message: "Check your connection and try again. Your details are still here.",
+  retryable: true,
+};
+
 const FIELDS = new Set<string>(["name", "email", "mobile", "postcode", "services"]);
 
 /** Maps an API error from `register` to messages next to the fields, or one alert above the form. */

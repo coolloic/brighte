@@ -1,22 +1,49 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { startTransition, useActionState, useState } from "react";
 import { RegistrationForm, type FormAlert } from "@/components/organisms/RegistrationForm";
 import type { ServiceOption } from "@/components/molecules/ServicePicker";
 import { registerAction } from "@/app/actions";
-import { registrationToFormData, validateRegistration, type RegistrationState, type RegistrationValues } from "@/lib/registration";
+import { CONNECTION_PROBLEM } from "@/lib/api/registration-feedback";
+import {
+  registrationFromFormData,
+  registrationToFormData,
+  validateRegistration,
+  type RegistrationState,
+  type RegistrationValues,
+} from "@/lib/registration";
 import { RetryCountdown } from "./RetryCountdown";
 
 const IDLE: RegistrationState = { status: "idle" };
 
 /**
+ * With JavaScript: calls the Server Action, and if the browser can't reach this server (offline,
+ * or the request fails), returns an alert instead of throwing, so the form keeps what was typed.
+ * Next's own signals (e.g. redirect()) pass through.
+ */
+async function registerFromBrowser(previous: RegistrationState, formData: FormData): Promise<RegistrationState> {
+  try {
+    return await registerAction(previous, formData);
+  } catch (error) {
+    unstable_rethrow(error);
+    return { status: "error", id: crypto.randomUUID(), values: registrationFromFormData(formData), alert: CONNECTION_PROBLEM };
+  }
+}
+
+/**
  * Connects RegistrationForm to the register Server Action. With JavaScript the values are checked
  * in the browser first (validateRegistration), then the action runs in the background while the
- * form stays on the page. Without it, the browser posts the form to the same action, the API
- * validates, and the page comes back with the result.
+ * form stays on the page, and a lost connection keeps the form and what was typed. Without it, the
+ * browser posts the form to the same action, the API validates, and the page comes back with the
+ * result.
  */
 export function RegisterInterest({ serviceOptions, renderId }: { serviceOptions: ServiceOption[]; renderId: string }) {
-  const [actionState, formAction, submitting] = useActionState(registerAction, IDLE);
+  // Two paths to the same Server Action: `formAction` is the form's own POST (without JavaScript,
+  // and it renders that result); `send` is used once JavaScript runs, and survives a lost connection.
+  const [postedState, formAction] = useActionState(registerAction, IDLE);
+  const [browserState, sendFromBrowser, submitting] = useActionState(registerFromBrowser, IDLE);
+  const actionState = browserState.status === "idle" ? postedState : browserState;
 
   // Navigating to this page again renders it on the server with a new renderId: show a fresh form.
   // useActionState can't be reset, so the result from before the navigation is set aside instead.
@@ -33,7 +60,7 @@ export function RegisterInterest({ serviceOptions, renderId }: { serviceOptions:
   }
   const state = actionState === setAside ? IDLE : actionState;
 
-  const send = (values: RegistrationValues) => startTransition(() => formAction(registrationToFormData(values)));
+  const send = (values: RegistrationValues) => startTransition(() => sendFromBrowser(registrationToFormData(values)));
   const submit = (values: RegistrationValues) => {
     const errors = validateRegistration(values);
     if (Object.keys(errors).length > 0) {

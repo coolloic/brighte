@@ -17,6 +17,13 @@ export const NOT_ADMIN: SignInAlert = {
   message: "Sign in with an admin account.",
 };
 
+/** The browser couldn't reach this server (offline, or the request failed). */
+export const SIGN_IN_CONNECTION_PROBLEM: SignInAlert = {
+  tone: "error",
+  title: "We couldn't sign you in",
+  message: "Check your connection and try again.",
+};
+
 export function signInFeedback(error: ApiError): SignInAlert {
   switch (error.code) {
     case "UNAUTHENTICATED":
