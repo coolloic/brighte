@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { buttonVariants } from "@/components/atoms/Button";
+import { EmailAddress } from "@/components/atoms/EmailAddress";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Alert } from "@/components/molecules/Alert";
 import { EmptyState } from "@/components/molecules/EmptyState";
@@ -158,7 +159,9 @@ export function LeadsTable({
             </Link>
             <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
               <dt className="text-fg-muted">Email</dt>
-              <dd className="break-all text-fg">{lead.email}</dd>
+              <dd className="break-words text-fg">
+                <EmailAddress email={lead.email} />
+              </dd>
               <dt className="text-fg-muted">Mobile</dt>
               <dd className="text-fg">{formatMobile(lead.mobile)}</dd>
               <dt className="text-fg-muted">Postcode</dt>
@@ -195,7 +198,9 @@ export function LeadsTable({
                   {lead.name}
                 </Link>
               </th>
-              <td className="py-3 pr-4 break-all text-fg">{lead.email}</td>
+              <td className="py-3 pr-4 break-words text-fg">
+                <EmailAddress email={lead.email} />
+              </td>
               <td className="py-3 pr-4 whitespace-nowrap text-fg">{formatMobile(lead.mobile)}</td>
               <td className="py-3 pr-4 text-fg">{lead.postcode}</td>
               <td className="py-3 pr-4">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/atoms/Button";
+import { EmailAddress } from "@/components/atoms/EmailAddress";
 import { Heading } from "@/components/atoms/Heading";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Alert } from "@/components/molecules/Alert";
@@ -60,11 +61,12 @@ export function LeadDetail({ lead, status = "ready", retryHref }: LeadDetailProp
       </p>
 
       <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-        <div>
+        {/* Its own row: addresses are often longer than half the card. */}
+        <div className="sm:col-span-2">
           <dt className="text-sm text-fg-muted">Email</dt>
-          <dd className="break-all">
+          <dd className="break-words">
             <a href={`mailto:${lead.email}`} className={contactLink}>
-              {lead.email}
+              <EmailAddress email={lead.email} />
             </a>
           </dd>
         </div>
