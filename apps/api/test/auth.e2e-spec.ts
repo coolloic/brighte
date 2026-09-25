@@ -17,7 +17,8 @@ const email = (name: string) => `${PREFIX}-${name}@test.dev`;
 
 type GqlResponse<T> = { data?: T; errors?: { message: string; extensions?: { code?: string } }[] };
 type LoginResult = { login: { accessToken: string; user: { id: string; email: string; role: Role } } };
-type TokenPayload = { sub: number; role: Role; iat: number; exp: number };
+type TokenPayload = { sub: number; role: Role; auth_time: number; iat: number; exp: number };
+type RenewResult = { renewToken: { accessToken: string; user: { id: string; role: Role } } };
 
 describe('Auth (e2e)', () => {
   let app: INestApplication<App>;
@@ -84,6 +85,8 @@ describe('Auth (e2e)', () => {
       expect(payload.sub).toBe(Number(user.id));
       expect(payload.role).toBe(Role.ADMIN);
       expect(payload.exp - payload.iat).toBe(15 * 60);
+      // Signed in just now: the session's start, kept by renewals.
+      expect(Math.abs(payload.auth_time - Date.now() / 1000)).toBeLessThan(5);
     });
 
     it('matches email case-insensitively', async () => {
@@ -116,6 +119,59 @@ describe('Auth (e2e)', () => {
       const past = Math.floor(Date.now() / 1000) - 60;
       const expired = await verifier.signAsync({ sub: 1, role: Role.ADMIN, iat: past - 60, exp: past }, { secret });
       await expect(verifier.verifyAsync(expired, { secret, algorithms: ['HS256'] })).rejects.toThrow(/jwt expired/);
+    });
+  });
+
+  describe('renewToken', () => {
+    const renew = (token?: string) => gql<RenewResult>(`mutation { renewToken { accessToken user { id role } } }`, undefined, token);
+    const decode = (token: string) => verifier.verifyAsync<TokenPayload>(token, { secret, algorithms: ['HS256'] });
+    const now = () => Math.floor(Date.now() / 1000);
+    const adminId = async () => (await users.findOne({ where: { email: email('admin') } }))!.id;
+    /** A token as if signed in `ago` seconds ago, still valid for `left` seconds. */
+    const tokenSignedIn = async (ago: number, { left = 600, sub, role = Role.ADMIN }: { left?: number; sub?: number; role?: Role } = {}) =>
+      verifier.signAsync({ sub: sub ?? (await adminId()), role, auth_time: now() - ago, iat: now(), exp: now() + left }, { secret });
+
+    it('gives a fresh token that keeps the sign-in time', async () => {
+      const token = await tokenSignedIn(3600);
+      const { data, errors } = await renew(token);
+      expect(errors).toBeUndefined();
+      const [before, after] = await Promise.all([decode(token), decode(data!.renewToken.accessToken)]);
+      expect(after).toMatchObject({ sub: before.sub, role: Role.ADMIN, auth_time: before.auth_time });
+      expect(after.exp - after.iat).toBe(15 * 60);
+      expect(data!.renewToken.user.role).toBe(Role.ADMIN);
+    });
+
+    it('needs a valid token', async () => {
+      expect((await renew()).errors?.[0].extensions?.code).toBe('UNAUTHENTICATED');
+      const expired = await verifier.signAsync({ sub: await adminId(), role: Role.ADMIN, auth_time: now() - 120, iat: now() - 120, exp: now() - 60 }, { secret });
+      expect((await renew(expired)).errors?.[0].extensions?.code).toBe('UNAUTHENTICATED');
+    });
+
+    it('stops 8 hours after signing in, and never issues a token past that', async () => {
+      const tooOld = await renew(await tokenSignedIn(8 * 3600 + 1));
+      expect(tooOld.errors?.[0]).toMatchObject({ message: 'Session expired, sign in again', extensions: { code: 'UNAUTHENTICATED' } });
+
+      // Two minutes left of the 8 hours: the new token ends with the session, not 15 minutes later.
+      const nearTheEnd = await tokenSignedIn(8 * 3600 - 120);
+      const { accessToken } = (await renew(nearTheEnd)).data!.renewToken;
+      const payload = await decode(accessToken);
+      expect(payload.exp).toBeLessThanOrEqual(payload.auth_time + 8 * 3600);
+    });
+
+    it('refuses tokens from before sessions had a limit (no auth_time)', async () => {
+      const legacy = await verifier.signAsync({ sub: await adminId(), role: Role.ADMIN }, { secret, expiresIn: '10m' });
+      expect((await renew(legacy)).errors?.[0].message).toBe('Session expired, sign in again');
+    });
+
+    it('reads the account again: a new role applies, a deleted account is refused', async () => {
+      const user = await users.create({ email: email('renew'), name: 'Renew', role: Role.USER, passwordHash: await hashPassword('renew-password') });
+      const token = await tokenSignedIn(60, { sub: user.id, role: Role.USER });
+      await user.update({ role: Role.ADMIN });
+      const promoted = await decode((await renew(token)).data!.renewToken.accessToken);
+      expect(promoted.role).toBe(Role.ADMIN);
+
+      await user.destroy();
+      expect((await renew(token)).errors?.[0].extensions?.code).toBe('UNAUTHENTICATED');
     });
   });
 

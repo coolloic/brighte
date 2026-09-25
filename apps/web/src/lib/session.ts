@@ -4,21 +4,15 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { getUser, type SessionUser } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
+import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/session-cookie";
 import { safeNext } from "@/lib/sign-in";
 
 // The admin session is the API's access token in an httpOnly cookie: browser JavaScript can't read
-// it, and only this server sends it to the API. It lasts as long as the token (JWT_EXPIRES_IN).
-const SESSION_COOKIE = "brighte_session";
+// it, and only this server sends it to the API. It lasts as long as the token (JWT_EXPIRES_IN), and
+// src/proxy.ts renews it while the admin is active (up to the API's SESSION_MAX_HOURS).
 
 export async function startSession(accessToken: string) {
-  (await cookies()).set(SESSION_COOKIE, accessToken, {
-    httpOnly: true,
-    // Browsers also accept Secure cookies from http://localhost, so this holds for local production builds.
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    expires: tokenExpiry(accessToken),
-  });
+  (await cookies()).set(SESSION_COOKIE, accessToken, sessionCookieOptions(accessToken));
 }
 
 export async function endSession() {
@@ -48,14 +42,4 @@ export async function requireAdmin(returnTo = "/admin"): Promise<{ user: Session
   const session = await getSession();
   if (!session || session.user.role !== "ADMIN") redirect(`/admin/login?next=${encodeURIComponent(safeNext(returnTo))}`);
   return session;
-}
-
-/** When the token expires, from its `exp` claim (not verified here: the API does that). Undefined: a browser-session cookie. */
-function tokenExpiry(token: string): Date | undefined {
-  try {
-    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")) as { exp?: unknown };
-    return typeof payload.exp === "number" ? new Date(payload.exp * 1000) : undefined;
-  } catch {
-    return undefined;
-  }
 }

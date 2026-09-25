@@ -1,0 +1,38 @@
+meta {
+  name: Renew token
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  mutation RenewToken {
+    renewToken {
+      accessToken
+      user {
+        id
+        email
+        role
+      }
+    }
+  }
+}
+
+script:post-response {
+  // Carry on with the fresh token, like the web app does for an active admin.
+  const token = res.body?.data?.renewToken?.accessToken;
+  if (token) bru.setVar("token", token);
+}
+
+tests {
+  test("returns a fresh token for the same user", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.renewToken.user.role).to.equal("ADMIN");
+    expect(bru.getVar("token")).to.be.a("string");
+  });
+}
