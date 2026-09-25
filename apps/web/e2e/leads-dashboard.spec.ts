@@ -213,6 +213,17 @@ test.describe("search, sort and page size", () => {
     await expect(page).toHaveURL("/admin?sort=oldest");
   });
 
+  test("sorting while a search waits out its pause keeps both", async ({ page, isMobile }) => {
+    await signInAsAdmin(page);
+    await page.getByRole("searchbox", { name: "Search leads" }).pressSequentially("ada");
+    if (isMobile) await page.getByRole("combobox", { name: "Sort by" }).selectOption("oldest");
+    else await page.getByRole("columnheader", { name: "Registered" }).getByRole("link").click();
+    await expect(page).toHaveURL("/admin?q=ada&sort=oldest");
+    // Past the pause: the waiting search doesn't land afterwards and undo the sort.
+    await page.waitForTimeout(600);
+    await expect(page).toHaveURL("/admin?q=ada&sort=oldest");
+  });
+
   test("the page size changes how many leads a page shows", async ({ page }) => {
     await signInAsAdmin(page);
     const total = Number((await page.getByText(/^\d+ leads?$/).textContent())!.split(" ")[0]);
