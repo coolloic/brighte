@@ -78,6 +78,32 @@ export const WithSelection: Story = {
 };
 
 /** Skeletons in the same layout as the loaded list: cards on mobile, the table from md. */
+/**
+ * Sortable columns: each header is a link to its sort; the sorted one has aria-sort and an arrow.
+ * Mobile, Services have no sort.
+ */
+export const Sortable: Story = {
+  args: {
+    leads: LEADS,
+    sort: { column: "name", direction: "ascending" },
+    sortHrefFor: (column) => `?sort=${column}`,
+  },
+  play: async ({ canvasElement }) => {
+    const headers = [...canvasElement.querySelectorAll<HTMLTableCellElement>("table thead th")];
+    const header = (label: string) => headers.find((th) => th.textContent?.trim() === label)!;
+
+    await expect(header("Name")).toHaveAttribute("aria-sort", "ascending");
+    await expect(header("Name").querySelector("a")).toHaveAttribute("href", "?sort=name");
+    // Only the sorted column carries aria-sort.
+    await expect(header("Email")).not.toHaveAttribute("aria-sort");
+    await expect(header("Registered").querySelector("a")).toHaveAttribute("href", "?sort=registered");
+    await expect(header("Mobile").querySelector("a")).toBeNull();
+    await expect(header("Services").querySelector("a")).toBeNull();
+    // 44px targets.
+    await expect(header("Postcode").querySelector("a")!.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+  },
+};
+
 export const Loading: Story = {
   args: { status: "loading" },
   play: async ({ canvas, canvasElement }) => {

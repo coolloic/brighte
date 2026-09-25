@@ -48,6 +48,25 @@ export const NoResults: Story = {
   args: { page: 1, total: 0 },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("No leads")).toBeInTheDocument();
-    await expect(canvas.getByText("Page 1 of 1")).toBeInTheDocument();
+    // Nothing to page through: no page links.
+    await expect(canvas.queryByText("Prev")).toBeNull();
+  },
+};
+
+/** Everything fits on one page: no page links, just the count (and a page size control, if given). */
+export const SinglePage: Story = {
+  args: { page: 1, total: 3 },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("navigation", { name: "Pagination" })).toHaveTextContent("Showing 1–3 of 3 leads");
+    await expect(canvas.queryByText("Prev")).toBeNull();
+    await expect(canvas.queryByText("Next")).toBeNull();
+  },
+};
+
+/** With a page size control beside the page links. */
+export const WithPageSize: Story = {
+  args: { pageSizeControl: <span className="text-sm">[Per page control]</span> },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("navigation", { name: "Pagination" })).toHaveTextContent("[Per page control]");
   },
 };

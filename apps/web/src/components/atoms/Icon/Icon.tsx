@@ -25,6 +25,31 @@ const icons = {
       <circle cx="12" cy="7.5" r="1" fill="currentColor" stroke="none" />
     </>
   ),
+  "chevron-down": <path d="M6 9l6 6 6-6" />,
+  "arrow-up": (
+    <>
+      <path d="M12 19V5" />
+      <path d="M6 11l6-6 6 6" />
+    </>
+  ),
+  "arrow-down": (
+    <>
+      <path d="M12 5v14" />
+      <path d="M6 13l6 6 6-6" />
+    </>
+  ),
+  "chevrons-up-down": (
+    <>
+      <path d="M8 9l4-4 4 4" />
+      <path d="M8 15l4 4 4-4" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.5-3.5" />
+    </>
+  ),
   eye: (
     <>
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
