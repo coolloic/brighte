@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { buttonVariants } from "@/components/atoms/Button";
 import { Alert } from "@/components/molecules/Alert";
 import { FormPageTemplate } from "@/components/templates/FormPageTemplate";
@@ -38,6 +39,9 @@ function jsonLd() {
 }
 
 export default async function RegisterPage() {
+  // Rendered per request, for the CSP nonce (src/proxy.ts). Said explicitly: with the service types
+  // cached, a render may not touch any request data or make an uncached fetch of its own.
+  await connection();
   let serviceOptions: ServiceOption[] | undefined;
   try {
     serviceOptions = await getServiceOptions();

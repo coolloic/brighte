@@ -103,12 +103,14 @@ Not done:
 
 | Route | What |
 |---|---|
-| `/` | Registration form. Service options come from the API (`serviceTypes`), so a new service appears without a deploy |
+| `/` | Registration form. Service options come from the API (`serviceTypes`), so a new service appears without a deploy (within 5 minutes by default: see below) |
 | `/admin/login` | Admin sign-in (`noindex`) |
 | `/admin` | Leads dashboard: search as you type (name, email, mobile or postcode), filter by service, sortable columns (newest first by default), 10/20/50/100 per page, lead detail beside the list (closed with its × to give the list its full width back). State in the URL: `/admin?q=ada&service=delivery&sort=name_asc&size=50&page=2&lead=<id>` |
 | anything else | Branded 404; failures show a branded "Something went wrong" page |
 
 **How the web talks to the API** ([architecture diagram and request flows](docs/architecture.md#system-architecture)). Only through the Next server, via a server-only data access layer (`apps/web/src/lib/api`): `graphql()` adds the admin's token and the visitor's IP, times out after 10 seconds, and turns failures into an `ApiError` with the API's code. Admin pages and actions start with `requireAdmin()`, which asks the API (`me`) who the session belongs to; the cookie alone proves nothing. `apps/web/src/proxy.ts` renews an active admin's token when it has under 10 minutes left (a sliding session: 30 minutes idle, 8 hours at most; see [Authentication](#authentication)).
+
+**Service types are cached for 5 minutes** on each web server (`cachedFor` in `apps/web/src/lib/cached-for.ts`), so the home page and the dashboard don't ask the API on every render. Set `SERVICE_TYPES_CACHE_SECONDS` in the root `.env` to change it (`0` turns the cache off; read when the web server starts). A new type shows up within that time; a retired one can still be offered for as long, and `register` then rejects it with a message on the services field. Failures aren't cached: the next render asks again.
 
 **When the API is slow or fails**, the UI says what happened and what to do, and keeps what was typed:
 
