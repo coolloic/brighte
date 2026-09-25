@@ -70,6 +70,32 @@ describe('Security (e2e)', () => {
       const other = (await post({ query: '{ serviceTypes { code } }' })).body as GqlBody;
       expect(other.errors).toBeUndefined();
     });
+
+    it('doubles the block each time a client goes over the limit again, and resets after a quiet period', async () => {
+      // Fake only the clock: the throttler times blocks with Date.now(), while HTTP keeps real timers.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      try {
+        // Start clear of earlier tests' windows and blocks.
+        vi.setSystemTime(Date.now() + 60 * 60_000);
+        const goOverLimit = () =>
+          withEnv('RATE_LIMIT_PER_MINUTE', '2', async () => {
+            let body: GqlBody = {};
+            for (let i = 0; i < 3; i++) body = (await post({ query: '{ serviceTypes { code } }' })).body as GqlBody;
+            return body.errors?.[0].extensions;
+          });
+
+        expect(await goOverLimit()).toEqual({ code: 'TOO_MANY_REQUESTS', retryAfter: 60 });
+        vi.setSystemTime(Date.now() + 61_000);
+        expect(await goOverLimit()).toEqual({ code: 'TOO_MANY_REQUESTS', retryAfter: 120 });
+        vi.setSystemTime(Date.now() + 121_000);
+        expect(await goOverLimit()).toEqual({ code: 'TOO_MANY_REQUESTS', retryAfter: 240 });
+        // 15 quiet minutes after that block ends: back to the base block.
+        vi.setSystemTime(Date.now() + 241_000 + 15 * 60_000);
+        expect(await goOverLimit()).toEqual({ code: 'TOO_MANY_REQUESTS', retryAfter: 60 });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('CORS', () => {

@@ -13,8 +13,9 @@ export type PaginationProps = {
   itemLabel?: string;
 };
 
+// min-w-24 (96px, wider than either label at 18px) with centred content: Prev and Next are the same size.
 const pageLink =
-  "inline-flex min-h-11 items-center gap-1 rounded-control border border-border-strong px-4 text-body font-semibold text-fg-brand transition-[background-color] duration-150 hover:bg-surface-brand focus-visible:focus-ring";
+  "inline-flex min-h-11 min-w-24 items-center justify-center gap-1 rounded-control border border-border-strong px-4 text-body font-semibold text-fg-brand transition-[background-color] duration-150 hover:bg-surface-brand focus-visible:focus-ring";
 
 function PageLink({ href, disabled, rel, children }: { href: string; disabled: boolean; rel: "prev" | "next"; children: ReactNode }) {
   // At either end there is nowhere to go: show the control as inactive rather than a dead link.
@@ -39,10 +40,11 @@ export function Pagination({ page, pageSize, total, hrefFor, itemLabel = "items"
   return (
     <nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3">
       <p className="text-sm text-fg-muted">{total === 0 ? `No ${itemLabel}` : `Showing ${from}–${to} of ${total} ${itemLabel}`}</p>
-      <div className="flex items-center gap-2">
+      {/* ml-auto: right-aligned, also when it wraps below the count on narrow screens. */}
+      <div className="ml-auto flex items-center gap-2">
         <PageLink href={hrefFor(page - 1)} disabled={page <= 1} rel="prev">
           <Icon name="chevron-left" className="size-4" />
-          Previous
+          Prev
         </PageLink>
         <p className="px-1 text-sm text-fg">
           Page {page} of {pageCount}

@@ -12,12 +12,13 @@ export type FormFieldProps = Omit<InputProps, "id" | "invalid"> & {
 };
 
 /**
- * Label, input, error and hint wired together, in the order of Brighte's support form: the error box
- * sits right below the field, then the hint. Screen readers read the error and hint with the field.
+ * Label, input, hint and error wired together. The hint sits right below the field and stays put;
+ * the error box appears under it. Screen readers read the error first, then the hint.
  */
 export function FormField({ id, label, hint, error, required, className, ...inputProps }: FormFieldProps) {
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
+  // Error first: a screen reader announces the problem before the guidance.
   const describedBy = [error && errorId, hint && hintId].filter(Boolean).join(" ") || undefined;
   return (
     <div className={className}>
@@ -25,12 +26,12 @@ export function FormField({ id, label, hint, error, required, className, ...inpu
         {label}
       </Label>
       <Input id={id} required={required} invalid={Boolean(error)} aria-describedby={describedBy} {...inputProps} />
-      {error && <FieldError id={errorId}>{error}</FieldError>}
       {hint && (
         <p id={hintId} className="mt-1.5 text-sm text-fg-muted">
           {hint}
         </p>
       )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
     </div>
   );
 }

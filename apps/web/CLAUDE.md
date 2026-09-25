@@ -37,6 +37,7 @@ src/app/       # pages = routes. Fetch data here and pass it into templates/orga
 - Only the Next server calls the API. Server Components and Server Actions use the functions in `src/lib/api/` (server-only: they import `server-only`, so a Client Component importing them fails the build). The browser never calls the API, and `process.env` is read only there.
 - Add an operation as a function next to its feature (`registration.ts`), built on `graphql()` from `client.ts`. Return only the fields the UI needs.
 - `graphql()` throws `ApiError` with the API's `code`. Branch on `code`, never on `message`, and turn it into user-facing copy in `src/lib/api` (e.g. `registrationFeedback`) before it reaches a component. Don't show API messages or error details to users, except field messages from `BAD_USER_INPUT`.
+- Forms check their values in the browser first, with the API's rules and messages (e.g. `validateRegistration` in `src/lib/registration.ts`), and send nothing when that check fails. Mistakes show at once and never count against the API's rate limit, which counts every request it receives. The API still validates everything (the browser check is a convenience, not a security boundary), and a form without JavaScript relies on it.
 
 ## 3. Mobile-first responsive
 
@@ -67,8 +68,8 @@ src/app/       # pages = routes. Fetch data here and pass it into templates/orga
 A feature is not done until all of these pass. Show the output when reporting.
 
 1. `pnpm lint && pnpm lint:style && pnpm typecheck`
-2. **E2E**: add or extend a Playwright spec in `e2e/` covering the feature's main user flow **and** an axe WCAG 2.1 AA scan of the page. Run `pnpm test:e2e`. Tests run on the `mobile` and `desktop` projects.
-3. **Lighthouse**: start the API and web (`pnpm --filter @brighte/api start:prod`, `pnpm build && pnpm start`), add the new route to `lighthouserc.js` → `ci.collect.url`, run `pnpm lighthouse`. Thresholds: Performance ≥ 90, Accessibility ≥ 95, Best Practices ≥ 90, SEO ≥ 90.
+2. **E2E**: add or extend a Playwright spec in `e2e/` covering the feature's main user flow **and** an axe WCAG 2.1 AA scan of the page. Run `pnpm test:e2e`. Tests run on the `mobile` and `desktop` projects. The suite starts its own servers (see the root `CLAUDE.md`); give each test its own visitor IP (`X-Forwarded-For`, as in `e2e/register.spec.ts`) and unique data, since tests run in parallel against one database.
+3. **Lighthouse**: start the API and web (`pnpm --filter @brighte/api start:prod`, `pnpm build && pnpm start`; if a dev server holds `WEB_PORT`, start on another port and run `WEB_PORT=<port> pnpm lighthouse`), add the new route to `lighthouserc.js` → `ci.collect.url`, run `pnpm lighthouse`. Thresholds: Performance ≥ 90, Accessibility ≥ 95, Best Practices ≥ 90, SEO ≥ 90.
 4. If any score is below its threshold, read the report in `.lighthouseci/`, fix the top issues, and re-run. Repeat until everything passes. Report the final scores.
 
 ## 7. Storybook — required for every component

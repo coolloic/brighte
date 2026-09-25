@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/atoms/Button";
 import { Heading } from "@/components/atoms/Heading";
 import { Icon } from "@/components/atoms/Icon";
@@ -23,7 +23,7 @@ export type RegistrationField = keyof RegistrationValues;
 export type FormAlert = {
   tone: Extract<AlertTone, "error" | "warning" | "info">;
   title: string;
-  message?: string;
+  message?: ReactNode;
   /** Shows a "Try again" button that calls this. */
   onRetry?: () => void;
 };
@@ -32,6 +32,12 @@ export type RegistrationFormProps = {
   /** Active service types, e.g. from the serviceTypes query. */
   serviceOptions: ServiceOption[];
   onSubmit: (values: RegistrationValues) => void;
+  /**
+   * Where the form posts when JavaScript isn't running yet (or at all), e.g. a Server Action. Every
+   * field has a `name`, so a plain browser submit sends the same values. Once hydrated, onSubmit
+   * handles the submit instead.
+   */
+  action?: ComponentProps<"form">["action"];
   /** One message per invalid field. The first invalid field receives focus. */
   fieldErrors?: Partial<Record<RegistrationField, string>>;
   formAlert?: FormAlert;
@@ -54,6 +60,7 @@ const EMPTY: RegistrationValues = { name: "", email: "", mobile: "", postcode: "
 export function RegistrationForm({
   serviceOptions,
   onSubmit,
+  action,
   fieldErrors = {},
   formAlert,
   submitting = false,
@@ -104,10 +111,11 @@ export function RegistrationForm({
 
   return (
     // noValidate: errors show in Brighte's style below each field instead of browser bubbles.
-    <form ref={formRef} noValidate onSubmit={submit} aria-busy={submitting || undefined} className="space-y-5">
+    <form ref={formRef} noValidate action={action} onSubmit={submit} aria-busy={submitting || undefined} className="space-y-5">
       <fieldset disabled={submitting} className="space-y-5">
         <FormField
           id="name"
+          name="name"
           label="Full name"
           required
           autoComplete="name"
@@ -117,6 +125,7 @@ export function RegistrationForm({
         />
         <FormField
           id="email"
+          name="email"
           label="Email"
           required
           type="email"
@@ -129,6 +138,7 @@ export function RegistrationForm({
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField
             id="mobile"
+            name="mobile"
             label="Mobile number"
             required
             type="tel"
@@ -141,6 +151,7 @@ export function RegistrationForm({
           />
           <FormField
             id="postcode"
+            name="postcode"
             label="Postcode"
             required
             inputMode="numeric"

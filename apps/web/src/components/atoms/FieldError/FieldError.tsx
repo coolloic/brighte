@@ -18,7 +18,7 @@ export function FieldError({ id, children, className }: FieldErrorProps) {
     <p
       id={id}
       className={cn(
-        // Brighte's inline error box: tinted, red border, 4px corners, just below the field.
+        // Brighte's inline error box: tinted, red border, 4px corners, below the field (and its hint).
         "mt-1.5 flex items-start gap-1.5 rounded-control border border-danger bg-danger-surface px-2 py-1.5 text-sm text-danger",
         className,
       )}

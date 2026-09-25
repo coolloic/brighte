@@ -11,6 +11,8 @@ export type RegistrationAlert = {
   message: string;
   /** Show "Try again": resubmitting the same values may work (e.g. the API was briefly down). */
   retryable: boolean;
+  /** Rate limited: seconds until the visitor can try again. The page counts it down; `message` is the no-JavaScript fallback. */
+  retryAfter?: number;
 };
 
 export type RegistrationFeedback = {
@@ -44,8 +46,9 @@ export function registrationFeedback(error: ApiError): RegistrationFeedback {
         alert: {
           tone: "warning",
           title: "Too many attempts",
-          message: `Please wait ${waitTime(error.retryAfter)} and try again.`,
+          message: `Please wait ${formatWait(error.retryAfter)} and try again.`,
           retryable: false,
+          ...(error.retryAfter && error.retryAfter > 0 && { retryAfter: error.retryAfter }),
         },
       };
     default:
@@ -67,9 +70,12 @@ function withoutExample(message: string): string {
   return message.replace(/,?\s*e\.g\..*$/, "");
 }
 
-function waitTime(seconds: number | undefined): string {
+/** "45 seconds", "1 minute", "2 minutes 5 seconds". Unknown: "a minute" (the API's base block). */
+export function formatWait(seconds: number | undefined): string {
   if (!seconds || seconds <= 0) return "a minute";
-  if (seconds < 60) return seconds === 1 ? "1 second" : `${seconds} seconds`;
-  const minutes = Math.ceil(seconds / 60);
-  return minutes === 1 ? "a minute" : `${minutes} minutes`;
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  if (minutes === 0) return plural(rest, "second");
+  return rest === 0 ? plural(minutes, "minute") : `${plural(minutes, "minute")} ${plural(rest, "second")}`;
 }

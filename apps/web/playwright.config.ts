@@ -5,8 +5,12 @@ import { defineConfig, devices } from "@playwright/test";
 // Ports come from the root .env (see .env.example), falling back to the defaults.
 const rootEnv = path.join(__dirname, "../../.env");
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
-const webPort = process.env.WEB_PORT ?? "3001";
-const apiPort = process.env.API_PORT ?? "4001";
+// The suite starts its own production API and web servers, 100 above the dev ports, so it never
+// runs against (or disturbs) a dev setup. They trust X-Forwarded-For (TRUST_PROXY on the API,
+// WEB_TRUST_PROXY on the web), and each test sends its own visitor IP: tests don't share a rate
+// limit, and the whole forwarding chain is tested.
+const webPort = Number(process.env.WEB_PORT ?? 3001) + 100;
+const apiPort = Number(process.env.API_PORT ?? 4001) + 100;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -28,13 +32,15 @@ export default defineConfig({
       // Call binaries directly (not via pnpm) and `exec` so Playwright can stop the servers on teardown.
       command: "cd ../api && node_modules/.bin/nest build && exec node --env-file-if-exists=.env dist/main.js",
       url: `http://localhost:${apiPort}`,
-      reuseExistingServer: !process.env.CI,
+      env: { ...process.env, PORT: String(apiPort), TRUST_PROXY: "1" },
+      reuseExistingServer: false,
       timeout: 120_000,
     },
     {
       command: `node_modules/.bin/next build && exec node_modules/.bin/next start --port ${webPort}`,
       url: `http://localhost:${webPort}`,
-      reuseExistingServer: !process.env.CI,
+      env: { ...process.env, API_URL: `http://localhost:${apiPort}/graphql`, WEB_TRUST_PROXY: "1" },
+      reuseExistingServer: false,
       timeout: 180_000,
     },
   ],
