@@ -41,7 +41,9 @@ export default defineConfig({
       // Call binaries directly (not via pnpm) and `exec` so Playwright can stop the servers on teardown.
       command: "cd ../api && node_modules/.bin/nest build && exec node --env-file-if-exists=.env dist/main.js",
       url: `http://localhost:${apiPort}`,
-      env: { ...process.env, PORT: String(apiPort), TRUST_PROXY: "1" },
+      // 9-minute tokens are always inside the web's 10-minute renewal window, so admin requests
+      // exercise session renewal (e2e/admin-session.spec.ts).
+      env: { ...process.env, PORT: String(apiPort), TRUST_PROXY: "1", JWT_EXPIRES_IN: "9m" },
       reuseExistingServer: false,
       timeout: 120_000,
     },

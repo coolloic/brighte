@@ -31,7 +31,8 @@ pnpm dev          # web + api in parallel
 
 ## Authentication
 
-- `login(email, password)` returns `{ accessToken, user }`. The token is an HS256 JWT (`sub` = user id, `role`) that expires after `JWT_EXPIRES_IN` (default `15m`); send it as `Authorization: Bearer <token>`.
+- `login(email, password)` returns `{ accessToken, user }`. The token is an HS256 JWT (`sub` = user id, `role`, `auth_time` = when they signed in) that expires after `JWT_EXPIRES_IN` (default `30m`); send it as `Authorization: Bearer <token>`.
+- `renewToken` swaps a still-valid token for a fresh one with the same `auth_time`, re-reading the account (a new role applies; a deleted account is refused). It stops `SESSION_MAX_HOURS` (default `8`) after signing in, and a renewed token never lasts past that. So a session ends after `JWT_EXPIRES_IN` idle or `SESSION_MAX_HOURS` in total. The web app renews an admin's token from `apps/web/src/proxy.ts` when it has under 10 minutes left.
 - Deny by default: every GraphQL operation and REST route needs a valid token unless marked `@Public()`. Missing, invalid or expired token: `UNAUTHENTICATED` (401). Add `@Roles(Role.ADMIN, ...)` to restrict by role; a caller without a listed role gets `FORBIDDEN` (403). Design: `docs/superpowers/specs/2026-09-24-user-roles-auth-design.md`.
 
 | Operation | Access |

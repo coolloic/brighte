@@ -95,6 +95,15 @@ type Mutation {
     """At least one service type code."""
     services: [String!]!
   ): Lead!
+
+  """
+  Exchange a valid access token for a fresh one, keeping the sign-in time, so an active session goes on without signing in again. Renewals stop `SESSION_MAX_HOURS` (8 by default) after signing in, and a renewed token never lasts past that. The account is read again: a role change applies, and a deleted account can no longer renew.
+  
+  **Auth:** any signed-in user.
+  
+  **Errors:** `UNAUTHENTICATED` (missing, invalid or expired token; the account no longer exists; or the session has reached its limit).
+  """
+  renewToken: AuthPayload!
 }
 
 type Query {

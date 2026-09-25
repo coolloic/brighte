@@ -9,6 +9,8 @@ const TIMEOUT_MS = 10_000;
 export type GraphqlOptions = {
   /** Access token for ADMIN operations, sent as `Authorization: Bearer`. */
   token?: string;
+  /** The incoming request's headers, where next/headers isn't available (src/proxy.ts). */
+  requestHeaders?: Headers;
 };
 
 /**
@@ -19,12 +21,12 @@ export type GraphqlOptions = {
  * Forwards the visitor's IP in X-Forwarded-For, so the API (with TRUST_PROXY=1) rate-limits each
  * visitor rather than this server. Call it during a request: a Server Component or Server Action.
  */
-export async function graphql<T>(query: string, variables: Record<string, unknown> = {}, { token }: GraphqlOptions = {}): Promise<T> {
+export async function graphql<T>(query: string, variables: Record<string, unknown> = {}, { token, requestHeaders }: GraphqlOptions = {}): Promise<T> {
   // Only the Next server calls the API (the browser never does), so the URL and tokens stay here.
   const apiUrl = process.env.API_URL ?? `http://localhost:${process.env.API_PORT ?? 4001}/graphql`;
   // Proxies in front of this Next server whose X-Forwarded-For entries can be trusted (see client-ip.ts).
   const trustedHops = Number(process.env.WEB_TRUST_PROXY ?? 0);
-  const visitorIp = clientIp((await headers()).get("x-forwarded-for"), trustedHops);
+  const visitorIp = clientIp((requestHeaders ?? (await headers())).get("x-forwarded-for"), trustedHops);
 
   let response: Response;
   try {

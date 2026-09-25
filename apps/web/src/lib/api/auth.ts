@@ -33,6 +33,23 @@ export async function logIn(email: string, password: string): Promise<{ accessTo
   return data.login;
 }
 
+const RENEW_TOKEN = /* GraphQL */ `
+  mutation RenewToken {
+    renewToken {
+      accessToken
+    }
+  }
+`;
+
+/**
+ * A fresh token for a still-valid one, keeping the sign-in time. Throws ApiError UNAUTHENTICATED
+ * once the token has expired or the session has reached the API's limit (SESSION_MAX_HOURS).
+ */
+export async function renewToken(token: string, requestHeaders: Headers): Promise<string> {
+  const { renewToken } = await graphql<{ renewToken: { accessToken: string } }>(RENEW_TOKEN, {}, { token, requestHeaders });
+  return renewToken.accessToken;
+}
+
 /** The user a token belongs to. Throws ApiError UNAUTHENTICATED for a missing, invalid or expired token. */
 export async function getUser(token: string): Promise<SessionUser> {
   const { me } = await graphql<{ me: SessionUser }>(ME, {}, { token });

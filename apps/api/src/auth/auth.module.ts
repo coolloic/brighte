@@ -19,8 +19,9 @@ const MIN_SECRET_LENGTH = 32;
         if (!secret || secret.length < MIN_SECRET_LENGTH) {
           throw new Error(`JWT_SECRET must be set and at least ${MIN_SECRET_LENGTH} characters`);
         }
-        // e.g. `15m`, `1h`; validated by jsonwebtoken on first sign.
-        const expiresIn = (config.get<string>('JWT_EXPIRES_IN') ?? '15m') as JwtSignOptions['expiresIn'];
+        // e.g. `30m`, `1h`; validated by jsonwebtoken on first sign. It is also the idle timeout:
+        // renewToken extends a session only while its token is still valid.
+        const expiresIn = (config.get<string>('JWT_EXPIRES_IN') ?? '30m') as JwtSignOptions['expiresIn'];
         return {
           secret,
           signOptions: { algorithm: 'HS256', expiresIn },
