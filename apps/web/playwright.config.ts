@@ -14,6 +14,10 @@ if (existsSync(apiEnv)) process.loadEnvFile(apiEnv);
 // limit, and the whole forwarding chain is tested.
 const webPort = Number(process.env.WEB_PORT ?? 3001) + 100;
 const apiPort = Number(process.env.API_PORT ?? 4001) + 100;
+// A second web server on the same build whose API can't be reached (nothing listens on port 9), for
+// e2e/api-down.spec.ts. Set here so the test workers inherit it.
+const apiDownWebPort = webPort + 1;
+process.env.E2E_API_DOWN_URL = `http://localhost:${apiDownWebPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -45,6 +49,14 @@ export default defineConfig({
       env: { ...process.env, API_URL: `http://localhost:${apiPort}/graphql`, WEB_TRUST_PROXY: "1" },
       reuseExistingServer: false,
       timeout: 180_000,
+    },
+    {
+      // Servers start in order, so the build above already exists.
+      command: `exec node_modules/.bin/next start --port ${apiDownWebPort}`,
+      url: `http://localhost:${apiDownWebPort}`,
+      env: { ...process.env, API_URL: "http://localhost:9/graphql" },
+      reuseExistingServer: false,
+      timeout: 60_000,
     },
   ],
 });
