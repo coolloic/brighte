@@ -76,7 +76,14 @@ A feature is not done until all of these pass. Show the output when reporting.
 ## Styling
 
 - Tailwind first; SCSS modules (`*.module.scss`) only for what Tailwind cannot express. Never create `.css` files.
+- Keep class lists readable:
+  - **Repeated groups get a name**: when the same few classes appear in several components (e.g. the focus ring), make a Tailwind `@utility` in `globals.scss` and use that one class.
+  - **Variants** (size, tone, state): declare them with `cva` (class-variance-authority) and type the props with `VariantProps`. See `atoms/Button`.
+  - Simple components keep one class string, with a comment only where a class needs explaining.
+  - **Merging**: build `className` with `cn()` from `@/lib/cn` (clsx + tailwind-merge), the caller's `className` last. It doesn't shorten anything; it makes a caller's class replace a clashing one instead of both applying. A new `--radius-*` or `--shadow-*` token must be added to `cn.ts` too; `cn.test.ts` fails otherwise.
+- No CSS-in-JS (styled-components, Emotion): it needs Client Components and runtime styling, and would duplicate the tokens.
+- Import from `src/` with the `@/` alias (`@/lib/cn`, `@/components/atoms/Button`), not `../../` chains; ESLint rejects those. Same-folder and sibling imports (`./`, `../Spinner`) are fine.
 - Use system fonts only (no `next/font/google` or other external font loading).
 - Colors go through CSS custom properties in `globals.scss`. Never hardcode brand colors in components.
 - Use the **role** tokens (`bg-action`, `text-fg-muted`, `border-danger`…), not palette colors (`green-500`). The roles, their Tailwind classes and contrast are in Storybook under **Foundations / Colors**. Tailwind's default palette is switched off, so `bg-zinc-600` and similar don't exist.
-- Focus rings: `focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus`. Don't put `transition-colors` on focusable elements: in Tailwind 4 it also animates `outline-color`, so the ring fades in instead of appearing at once. Transition only what changes, e.g. `transition-[background-color]`.
+- Focus rings: `focus-visible:focus-ring` (a named utility in `globals.scss`). Don't put `transition-colors` on focusable elements: in Tailwind 4 it also animates `outline-color`, so the ring fades in instead of appearing at once. Transition only what changes, e.g. `transition-[background-color]`.

@@ -4,6 +4,9 @@ import nextTs from "eslint-config-next/typescript";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import storybook from "eslint-plugin-storybook";
 
+// Import from src/ through the @/ alias (tsconfig paths), not long ../../ chains.
+const noDeepRelative = { group: ["../../*"], message: "Use the @/ alias (src/) instead of ../../ paths." };
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -15,7 +18,9 @@ const eslintConfig = defineConfig([
       "jsx-a11y/label-has-associated-control": ["error", { controlComponents: ["Input", "Checkbox"], depth: 3 }],
     },
   },
-  // Atomic design: a layer may only import from layers below it.
+  { files: ["src/**"], rules: { "no-restricted-imports": ["error", { patterns: [noDeepRelative] }] } },
+  // Atomic design: a layer may only import from layers below it. These entries replace the rule
+  // above for their folders, so they repeat noDeepRelative.
   ...[
     ["atoms", ["molecules", "organisms", "templates"]],
     ["molecules", ["organisms", "templates"]],
@@ -26,10 +31,13 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": [
         "error",
         {
-          patterns: higher.map((h) => ({
-            group: [`@/components/${h}/*`, `**/${h}/*`],
-            message: `Atomic design: ${layer} must not import from ${h}.`,
-          })),
+          patterns: [
+            noDeepRelative,
+            ...higher.map((h) => ({
+              group: [`@/components/${h}/*`, `**/${h}/*`],
+              message: `Atomic design: ${layer} must not import from ${h}.`,
+            })),
+          ],
         },
       ],
     },

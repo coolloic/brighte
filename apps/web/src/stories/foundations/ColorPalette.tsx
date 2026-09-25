@@ -17,7 +17,7 @@ function CopyButton({ text, kind, announce }: { text: string; kind: string; anno
       type="button"
       aria-label={`Copy ${kind} ${text}`}
       onClick={copy}
-      className="min-h-11 w-full cursor-pointer rounded-control border border-border bg-surface px-3 py-2 text-left font-mono text-sm break-all text-fg transition-[background-color] duration-150 hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      className="min-h-11 w-full cursor-pointer rounded-control border border-border bg-surface px-3 py-2 text-left font-mono text-sm break-all text-fg transition-[background-color] duration-150 hover:bg-surface-muted focus-visible:focus-ring"
     >
       {text}
     </button>

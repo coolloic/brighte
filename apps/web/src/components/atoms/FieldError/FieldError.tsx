@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
 export type FieldErrorProps = {
   /** Referenced by the input's aria-describedby, so screen readers read the error with the field. */
@@ -11,11 +12,15 @@ export type FieldErrorProps = {
  * Error message shown below a field, styled after Brighte's support form: a tinted box with a red
  * border and a circled "!". The icon and the text, not just the color, say something is wrong.
  */
-export function FieldError({ id, children, className = "" }: FieldErrorProps) {
+export function FieldError({ id, children, className }: FieldErrorProps) {
   return (
     <p
       id={id}
-      className={`mt-1.5 flex items-start gap-1.5 rounded-control border border-danger bg-danger-surface px-2 py-1.5 text-sm text-danger ${className}`}
+      className={cn(
+        // Brighte's inline error box: tinted, red border, 4px corners, just below the field.
+        "mt-1.5 flex items-start gap-1.5 rounded-control border border-danger bg-danger-surface px-2 py-1.5 text-sm text-danger",
+        className,
+      )}
     >
       <svg aria-hidden="true" viewBox="0 0 16 16" className="mt-0.5 size-4 shrink-0" fill="none">
         <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />

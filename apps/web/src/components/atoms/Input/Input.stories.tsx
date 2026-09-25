@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent } from "storybook/test";
-import { readToken } from "../../../stories/foundations/color";
+import { readToken } from "@/stories/foundations/color";
 import { FieldError } from "../FieldError";
 import { Label } from "../Label";
 import { Input } from "./Input";

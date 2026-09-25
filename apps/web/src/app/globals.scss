@@ -120,6 +120,14 @@
   --color-info-surface: var(--color-blue-50);
 }
 
+// Named utilities for class groups that repeat across components.
+
+// Keyboard focus ring: 2px focus green with a 2px gap. Use as `focus-visible:focus-ring`.
+@utility focus-ring {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 body {
   background: var(--color-canvas);
   color: var(--color-fg);

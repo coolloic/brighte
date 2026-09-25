@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, fn, userEvent } from "storybook/test";
-import { contrast, readToken } from "../../../stories/foundations/color";
+import { contrast, readToken } from "@/stories/foundations/color";
 import { Button } from "./Button";
 
 const meta = {

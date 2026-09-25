@@ -1,4 +1,5 @@
 import type { LabelHTMLAttributes, ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
 export type LabelProps = Omit<LabelHTMLAttributes<HTMLLabelElement>, "htmlFor"> & {
   /** id of the input this label names. */
@@ -12,9 +13,9 @@ export type LabelProps = Omit<LabelHTMLAttributes<HTMLLabelElement>, "htmlFor"> 
 };
 
 /** Field label, styled after Brighte's support form: small, regular weight, required fields marked with *. */
-export function Label({ htmlFor, required = false, className = "", children, ...rest }: LabelProps) {
+export function Label({ htmlFor, required = false, className, children, ...rest }: LabelProps) {
   return (
-    <label htmlFor={htmlFor} className={`mb-1.5 block text-sm text-fg ${className}`} {...rest}>
+    <label htmlFor={htmlFor} className={cn("mb-1.5 block text-sm text-fg", className)} {...rest}>
       {children}
       {required && (
         <span aria-hidden="true" className="ml-0.5 text-danger">
