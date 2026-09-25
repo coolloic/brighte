@@ -1,4 +1,5 @@
 import "server-only";
+import { cachedFor } from "../cached-for";
 import { graphql } from "./client";
 import { ApiError } from "./errors";
 import { registrationFeedback, type RegistrationFeedback } from "./registration-feedback";
@@ -32,12 +33,23 @@ const REGISTER = /* GraphQL */ `
   }
 `;
 
-/** Service types a visitor can choose, in display order (the API leaves retired ones out). */
-export async function getServiceOptions(): Promise<ServiceOption[]> {
-  const data = await graphql<{ serviceTypes: ServiceOption[] }>(SERVICE_TYPES);
+/**
+ * How long the service types are kept. They change a few times a year: a new one shows up within
+ * this time, and a retired one can still be offered for as long (register then rejects it with a
+ * field message).
+ */
+export const SERVICE_OPTIONS_TTL_MS = 5 * 60_000;
+
+/**
+ * Service types a visitor can choose, in display order (the API leaves retired ones out). Kept for
+ * SERVICE_OPTIONS_TTL_MS per server instance (cachedFor), so pages don't ask the API on every render.
+ * Sent without the visitor's IP (empty request headers): the answer is shared by every visitor.
+ */
+export const getServiceOptions = cachedFor(SERVICE_OPTIONS_TTL_MS, async (): Promise<ServiceOption[]> => {
+  const data = await graphql<{ serviceTypes: ServiceOption[] }>(SERVICE_TYPES, {}, { requestHeaders: new Headers() });
   // Only what the form needs: nothing else from the API reaches the client.
   return data.serviceTypes.map(({ code, label }) => ({ code, label }));
-}
+});
 
 /** Registers interest. Expected failures come back as feedback for the form; nothing is thrown for them. */
 export async function registerInterest(input: RegistrationInput): Promise<RegistrationResult> {
