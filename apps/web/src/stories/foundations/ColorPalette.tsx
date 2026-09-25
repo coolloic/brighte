@@ -50,7 +50,8 @@ function Swatch({ name }: { name: string }) {
 const WHITE: Rgb = [255, 255, 255];
 
 function contrastLabel(ratio: number) {
-  if (ratio >= 4.5) return "text";
+  if (ratio >= 7) return "AAA text";
+  if (ratio >= 4.5) return "AA text";
   if (ratio >= 3) return "UI parts only";
   return "decorative only";
 }
@@ -154,13 +155,21 @@ export function RoleColors() {
   );
 }
 
+/** Highest WCAG 2.1 level the pair reaches. UI parts (3:1) have no AAA level. */
+function wcagLevel(ratio: number, min: number, large = false) {
+  if (ratio < min) return "Fail";
+  if (min === 3) return "AA";
+  return ratio >= (large ? 4.5 : 7) ? "AAA" : "AA";
+}
+
 export function ContrastTable() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 text-fg sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">Contrast</h1>
       <p className="mt-2 max-w-3xl text-fg-muted">
         Every role pairing components rely on, measured from the live CSS. WCAG 2.1 AA needs 4.5:1 for text and 3:1 for UI parts
-        such as input outlines and focus rings. The story test fails if any pair drops below its minimum.
+        such as input outlines and focus rings. Our text roles target AAA: 7:1, or 4.5:1 for large text (at least 18.66px bold,
+        like button labels). The story test fails if any pair drops below its minimum.
       </p>
       <div className="mt-6 overflow-x-auto">
         <table className="w-full min-w-xl border-collapse text-left text-sm">
@@ -171,7 +180,7 @@ export function ContrastTable() {
               <th scope="col" className="py-2 pr-4">Sample</th>
               <th scope="col" className="py-2 pr-4">Color on background</th>
               <th scope="col" className="py-2 pr-4">Ratio</th>
-              <th scope="col" className="py-2">Result</th>
+              <th scope="col" className="py-2">WCAG level</th>
             </tr>
           </thead>
           <tbody>
@@ -183,7 +192,7 @@ export function ContrastTable() {
                 <tr key={`${pair.fg}/${pair.bg}`} className="border-b border-border" data-ratio={ratio} data-min={pair.min}>
                   <td className="py-2 pr-4">{pair.use}</td>
                   <td className="py-2 pr-4">
-                    {pair.min === 4.5 ? (
+                    {pair.min !== 3 ? (
                       <span
                         className="inline-block rounded-control px-3 py-1 font-semibold"
                         style={{ color: `var(--color-${pair.fg})`, background: `var(--color-${pair.bg})` }}
@@ -205,7 +214,7 @@ export function ContrastTable() {
                   <td className="py-2 pr-4">
                     {ratio.toFixed(2)}:1 (min {pair.min}:1)
                   </td>
-                  <td className="py-2 font-semibold">{ratio >= pair.min ? "Pass" : "Fail"}</td>
+                  <td className="py-2 font-semibold">{wcagLevel(ratio, pair.min, pair.large)}</td>
                 </tr>
               );
             })}

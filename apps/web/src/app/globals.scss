@@ -2,7 +2,7 @@
 
 // Design tokens. Light mode only. Two layers:
 // 1. Palette: Brighte's brand colors, taken from the CSS custom properties on brighte.com.au,
-//    plus a few darker "text-safe" shades (marked) derived so text meets WCAG AA contrast.
+//    plus darker shades (marked "derived") so text meets WCAG AAA: 7:1, or 4.5:1 for large text.
 // 2. Roles: what components use (bg-action, text-fg-muted, border-danger...). A role points at a
 //    palette color, so the palette can change without touching components.
 // Every role pairing is checked for contrast by the Foundations/Colors stories (pnpm test).
@@ -38,13 +38,15 @@
   --color-green-600: #00a87b;
   --color-green-700: #00986e;
   --color-green-800: #00805c; // text-safe (derived)
+  --color-green-900: #006b4d; // derived: button hover, white text 6.54:1
+  --color-green-950: #006045; // derived: AAA text, 7:1 on white and on green-50
 
   // Supporting colors: blue
   --color-blue-50: #f3f8fc;
   --color-blue-400: #70aaff;
   --color-blue-500: #599cff;
   --color-blue-600: #3d8cff;
-  --color-blue-700: #0065f7; // text-safe (derived)
+  --color-blue-800: #004cbb; // derived: AAA text, 7:1 on white and on blue-50
   // Lavender
   --color-lavender-50: #f1f4ff;
   --color-lavender-100: #ccd8ff;
@@ -57,21 +59,21 @@
   --color-yellow-400: #fb6;
   --color-yellow-500: #fa4;
   --color-yellow-600: #e58f27;
-  --color-yellow-800: #9d5f13; // text-safe (derived)
+  --color-yellow-900: #75470e; // derived: AAA text, 7:1 on white and on yellow-50
   // Red
   --color-red-50: #fff4f4;
   --color-red-300: #ff9595;
   --color-red-400: #ff8181;
   --color-red-500: #ff6d6d;
   --color-red-600: #dd5858;
-  --color-red-700: #d42e2e; // text-safe (derived)
+  --color-red-800: #a12121; // derived: AAA text, 7:1 on white and on red-50
 
   // System fonts only: no web font download.
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", roboto, "Helvetica Neue", arial, sans-serif;
 
-  // Corners
-  --radius-control: 0.75rem;
-  --radius-card: 1rem;
+  // Corners: Brighte's --radius-small (buttons, inputs) and --radius-medium (cards).
+  --radius-control: 0.25rem;
+  --radius-card: 0.5rem;
 
   // Elevation
   --shadow-card: 0 1px 2px rgb(30 32 40 / 6%), 0 8px 24px rgb(30 32 40 / 8%);
@@ -87,30 +89,34 @@
 
   // Text and icons
   --color-fg: var(--color-neutral-900);
-  --color-fg-muted: var(--color-neutral-600);
+  --color-fg-muted: var(--color-neutral-700);
   --color-fg-inverse: var(--color-white);
-  --color-fg-brand: var(--color-green-800);
+  --color-fg-brand: var(--color-green-950);
 
   // Lines
   --color-border: var(--color-neutral-200);
   --color-border-strong: var(--color-neutral-500);
 
-  // Call to action: brand green with dark text (white on green fails contrast).
-  --color-action: var(--color-green-500);
-  --color-action-hover: var(--color-green-600);
-  --color-on-action: var(--color-neutral-900);
+  // Call to action: white label like brighte.com.au, on a deeper brand green so it passes. White on
+  // Brighte's #00c28c is 2.31:1; on #00805c it is 4.95:1, AA at any size and AAA for the 20px bold label.
+  --color-action: var(--color-green-800);
+  --color-action-hover: var(--color-green-900);
+  --color-on-action: var(--color-white);
 
   // Keyboard focus ring
   --color-focus: var(--color-green-700);
 
-  // Status: text/icon/border color, and a tinted background.
-  --color-success: var(--color-green-800);
+  // Checked checkbox/radio fill: needs 3:1 against the page (WCAG 1.4.11); brand green is 2.31:1.
+  --color-control-checked: var(--color-green-700);
+
+  // Status: text/icon/border color (AAA on white and on its tint), and a tinted background.
+  --color-success: var(--color-green-950);
   --color-success-surface: var(--color-green-50);
-  --color-danger: var(--color-red-700);
+  --color-danger: var(--color-red-800);
   --color-danger-surface: var(--color-red-50);
-  --color-warning: var(--color-yellow-800);
+  --color-warning: var(--color-yellow-900);
   --color-warning-surface: var(--color-yellow-50);
-  --color-info: var(--color-blue-700);
+  --color-info: var(--color-blue-800);
   --color-info-surface: var(--color-blue-50);
 }
 

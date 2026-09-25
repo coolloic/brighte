@@ -45,7 +45,7 @@ src/app/       # pages = routes. Fetch data here and pass it into templates/orga
 - Each page has exactly one `<h1>`, and heading levels go in order without skipping.
 - Every input has a `<label htmlFor>`. Every image has meaningful `alt`, or `alt=""` if decorative.
 - Everything works by keyboard, with a visible focus ring (≥2px, ≥3:1 contrast). Never use a positive `tabIndex`.
-- Text contrast is at least 4.5:1 (3:1 for large text and UI parts). Never use color alone to convey meaning.
+- Text contrast is WCAG **AAA**: at least 7:1, or 4.5:1 for large text (≥18.66px bold or ≥24px). UI parts (borders, focus rings, checked controls) at least 3:1. Use the role tokens: their pairings are enforced by the Foundations/Colors Contrast story. Never use color alone to convey meaning.
 - Use `aria-live="polite"` for dynamic updates and `aria-busy` for loading states.
 - ESLint runs `jsx-a11y` in strict mode, and the e2e suite runs axe. Both must pass.
 

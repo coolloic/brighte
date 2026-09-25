@@ -9,6 +9,12 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // eslint-config-next already registers the jsx-a11y plugin; enable its strict rule set.
   { rules: jsxA11y.flatConfigs.strict.rules },
+  // Our atoms render native controls; tell jsx-a11y so <label><Checkbox /> Delivery</label> counts as labelled.
+  {
+    rules: {
+      "jsx-a11y/label-has-associated-control": ["error", { controlComponents: ["Input", "Checkbox"], depth: 3 }],
+    },
+  },
   // Atomic design: a layer may only import from layers below it.
   ...[
     ["atoms", ["molecules", "organisms", "templates"]],
