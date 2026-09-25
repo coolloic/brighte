@@ -58,6 +58,7 @@ export const ROLE_GROUPS: { group: string; roles: Role[] }[] = [
       { name: "fg-muted", maps: "neutral-700", utility: "text-fg-muted", use: "Hints, secondary text" },
       { name: "fg-inverse", maps: "white", utility: "text-fg-inverse", use: "Text on dark backgrounds" },
       { name: "fg-brand", maps: "green-950", utility: "text-fg-brand", use: "Links, secondary and ghost button labels" },
+      { name: "logo", maps: "green-500", utility: "text-logo", use: "The Brighte logo only (logos are exempt from contrast rules)" },
     ],
   },
   {
@@ -107,7 +108,7 @@ export const CONTRAST_PAIRS: { fg: string; bg: string; min: 3 | 4.5 | 7; large?:
   { fg: "fg-brand", bg: "canvas", min: 7, use: "Links" },
   { fg: "fg-brand", bg: "surface-brand", min: 7, use: "Links on brand sections" },
   { fg: "fg-inverse", bg: "fg", min: 7, use: "Inverse text (tooltips)" },
-  { fg: "on-action", bg: "action", min: 4.5, large: true, use: "Primary button label (20px bold)" },
+  { fg: "on-action", bg: "action", min: 4.5, large: true, use: "Primary button label (20-22px bold)" },
   { fg: "on-action", bg: "action-hover", min: 4.5, large: true, use: "Primary button label on hover" },
   { fg: "border-strong", bg: "canvas", min: 3, use: "Input outline" },
   { fg: "focus", bg: "canvas", min: 3, use: "Focus ring on the page" },

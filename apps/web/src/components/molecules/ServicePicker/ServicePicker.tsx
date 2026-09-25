@@ -52,7 +52,7 @@ export function ServicePicker({
         {options.map((option) => (
           <label
             key={option.code}
-            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control border border-border-strong px-4 py-3 text-base text-fg transition-[background-color,border-color] duration-150 hover:bg-surface-muted has-checked:border-action has-checked:bg-surface-brand"
+            className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control border border-border-strong px-4 py-3 text-body text-fg transition-[background-color,border-color] duration-150 hover:bg-surface-muted has-checked:border-action has-checked:bg-surface-brand"
           >
             <Checkbox
               name={name}

@@ -71,6 +71,32 @@
   // System fonts only: no web font download.
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", roboto, "Helvetica Neue", arial, sans-serif;
 
+  // Fluid type: the mobile size up to 360px wide, the desktop size from 1280px, growing with the
+  // viewport in between. The rem part keeps it scaling with the reader's browser font size.
+  // slope = (max - min) / (80rem - 22.5rem); intercept = min - 22.5rem * slope.
+  // Body: 16px (never smaller, or iOS zooms into inputs) to 18px.
+  --text-body: clamp(1rem, 0.9511rem + 0.2174vw, 1.125rem);
+  --text-body--line-height: 1.5;
+
+  // Button labels: 20px to 22px bold. Must stay at least 18.66px bold (WCAG "large text"): the white
+  // label on action green is AAA only as large text.
+  --text-button: clamp(1.25rem, 1.2011rem + 0.2174vw, 1.375rem);
+  --text-button--line-height: 1.3;
+
+  // Intro paragraph under a page title: 18px to 20px, always a step above body.
+  --text-lead: clamp(1.125rem, 1.0761rem + 0.2174vw, 1.25rem);
+  --text-lead--line-height: 1.5;
+
+  // Headings (the Heading atom's sizes). Each stays above the next one down, and heading-sm above body.
+  --text-heading-xl: clamp(1.875rem, 1.6304rem + 1.087vw, 2.5rem); // 30px to 40px (page title)
+  --text-heading-xl--line-height: 1.15;
+  --text-heading-lg: clamp(1.5rem, 1.3533rem + 0.6522vw, 1.875rem); // 24px to 30px
+  --text-heading-lg--line-height: 1.2;
+  --text-heading-md: clamp(1.25rem, 1.2011rem + 0.2174vw, 1.375rem); // 20px to 22px
+  --text-heading-md--line-height: 1.3;
+  --text-heading-sm: clamp(1.125rem, 1.0761rem + 0.2174vw, 1.25rem); // 18px to 20px
+  --text-heading-sm--line-height: 1.3;
+
   // Corners: Brighte's --radius-small (buttons, inputs) and --radius-medium (cards).
   --radius-control: 0.25rem;
   --radius-card: 0.5rem;
@@ -93,12 +119,16 @@
   --color-fg-inverse: var(--color-white);
   --color-fg-brand: var(--color-green-950);
 
+  // Brighte's logo green, as on brighte.com.au. Logos are exempt from contrast minimums (WCAG 1.4.3,
+  // 1.4.11), so it is for the logo only: never for text or controls.
+  --color-logo: var(--color-green-500);
+
   // Lines
   --color-border: var(--color-neutral-200);
   --color-border-strong: var(--color-neutral-500);
 
   // Call to action: white label like brighte.com.au, on a deeper brand green so it passes. White on
-  // Brighte's #00c28c is 2.31:1; on #00805c it is 4.95:1, AA at any size and AAA for the 20px bold label.
+  // Brighte's #00c28c is 2.31:1; on #00805c it is 4.95:1, AA at any size and AAA for the 20-22px bold label.
   --color-action: var(--color-green-800);
   --color-action-hover: var(--color-green-900);
   --color-on-action: var(--color-white);
@@ -131,4 +161,6 @@
 body {
   background: var(--color-canvas);
   color: var(--color-fg);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }

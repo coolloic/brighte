@@ -23,7 +23,10 @@ export const Default: Story = {
   play: async ({ canvas }) => {
     const text = canvas.getByText(/Tell us which services/);
     await expect(text.tagName).toBe("P");
-    await expect(getComputedStyle(text).fontSize).toBe("16px");
+    // Fluid body size (text-body): 16px on mobile up to 18px on desktop, never below 16px.
+    const fontSize = parseFloat(getComputedStyle(text).fontSize);
+    await expect(fontSize).toBeGreaterThanOrEqual(16);
+    await expect(fontSize).toBeLessThanOrEqual(18);
     await expect(getComputedStyle(text).color).toBe(rgb("fg"));
   },
 };
