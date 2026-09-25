@@ -26,25 +26,33 @@ export class ApiError extends Error {
   readonly fields?: Record<string, string>;
   /** TOO_MANY_REQUESTS: seconds until the limit resets. */
   readonly retryAfter?: number;
+  /** The X-Request-Id the call was sent with: the API's logs for it carry the same `reqId`. */
+  readonly requestId?: string;
 
-  constructor(code: ApiErrorCode, message: string, details: { fields?: Record<string, string>; retryAfter?: number } = {}) {
+  constructor(
+    code: ApiErrorCode,
+    message: string,
+    details: { fields?: Record<string, string>; retryAfter?: number; requestId?: string } = {},
+  ) {
     super(message);
     this.name = "ApiError";
     this.code = code;
     this.fields = details.fields;
     this.retryAfter = details.retryAfter;
+    this.requestId = details.requestId;
   }
 }
 
 type GraphQLErrorJson = { message?: unknown; extensions?: { code?: unknown; fields?: unknown; retryAfter?: unknown } };
 
 /** Turns the first error of a GraphQL response into an ApiError. Unknown codes count as INTERNAL_SERVER_ERROR. */
-export function toApiError(error: GraphQLErrorJson): ApiError {
+export function toApiError(error: GraphQLErrorJson, requestId?: string): ApiError {
   const { code, fields, retryAfter } = error.extensions ?? {};
   const message = typeof error.message === "string" ? error.message : "Unknown API error";
   return new ApiError(typeof code === "string" && KNOWN_CODES.has(code) ? (code as ApiErrorCode) : "INTERNAL_SERVER_ERROR", message, {
     fields: isStringRecord(fields) ? fields : undefined,
     retryAfter: typeof retryAfter === "number" ? retryAfter : undefined,
+    requestId,
   });
 }
 

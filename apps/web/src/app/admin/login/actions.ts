@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { logIn } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/errors";
 import { NOT_ADMIN, signInFeedback } from "@/lib/api/sign-in-feedback";
+import { errorFields, log } from "@/lib/log";
 import { startSession } from "@/lib/session";
 import { safeNext, signInFromFormData, validateSignIn, type SignInState } from "@/lib/sign-in";
 
@@ -31,7 +32,9 @@ export async function signInAction(next: string, _previous: SignInState, formDat
     session = await logIn(email.trim(), password);
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
-    if (error.code === "NETWORK_ERROR" || error.code === "INTERNAL_SERVER_ERROR") console.error("login failed:", error.message);
+    if (error.code === "NETWORK_ERROR" || error.code === "INTERNAL_SERVER_ERROR") {
+      log.error("login failed", errorFields(error));
+    }
     return fail({ alert: signInFeedback(error) });
   }
   if (session.user.role !== "ADMIN") return fail({ alert: NOT_ADMIN });

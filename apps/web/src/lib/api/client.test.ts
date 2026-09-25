@@ -20,6 +20,7 @@ beforeEach(() => {
   vi.stubEnv("API_URL", "http://api.test/graphql");
   vi.stubEnv("WEB_TRUST_PROXY", "");
   requestHeaders.delete("x-forwarded-for");
+  requestHeaders.delete("x-request-id");
 });
 
 afterEach(() => {
@@ -68,6 +69,26 @@ describe("graphql", () => {
       code: "BAD_USER_INPUT",
       fields: { postcode: "Enter a 4-digit postcode" },
     });
+  });
+
+  it("sends the page request's id, so the API logs the call under it", async () => {
+    requestHeaders.set("x-request-id", "page-req-1234");
+    respond({ data: {} });
+    await graphql("query { a }");
+    expect(sent().headers.get("x-request-id")).toBe("page-req-1234");
+  });
+
+  it("gives a request without an id its own, and puts the id on the ApiError", async () => {
+    respond({ data: null, errors: [{ message: "Nope", extensions: { code: "FORBIDDEN" } }] });
+    const error = (await graphql("query { a }").catch((e: unknown) => e)) as ApiError;
+    expect(error.code).toBe("FORBIDDEN");
+    expect(error.requestId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(sent().headers.get("x-request-id")).toBe(error.requestId);
+
+    fetchMock.mockReset();
+    requestHeaders.set("x-request-id", "page-req-1234");
+    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+    await expect(graphql("query { a }")).rejects.toMatchObject({ code: "NETWORK_ERROR", requestId: "page-req-1234" });
   });
 
   it("reports an unreachable API as NETWORK_ERROR", async () => {

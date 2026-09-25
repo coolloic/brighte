@@ -1,4 +1,5 @@
 import "server-only";
+import { errorFields, log } from "../log";
 import { graphql } from "./client";
 import { ApiError } from "./errors";
 import { registrationFeedback, type RegistrationFeedback } from "./registration-feedback";
@@ -46,7 +47,9 @@ export async function registerInterest(input: RegistrationInput): Promise<Regist
     return { ok: true };
   } catch (error) {
     if (!(error instanceof ApiError)) throw error;
-    if (error.code === "INTERNAL_SERVER_ERROR" || error.code === "NETWORK_ERROR") console.error("register failed:", error.message);
+    if (error.code === "INTERNAL_SERVER_ERROR" || error.code === "NETWORK_ERROR") {
+      log.error("register failed", errorFields(error));
+    }
     return { ok: false, ...registrationFeedback(error) };
   }
 }

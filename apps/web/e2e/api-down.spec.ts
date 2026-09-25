@@ -20,11 +20,15 @@ test.describe("when the API is down", () => {
     await context.addCookies([{ name: "brighte_session", value: "any-token", url: baseURL }]);
     const response = await page.goto("/admin");
     expect(response?.status()).toBe(500);
+    // Every page gets a request id, which the web server's log lines for it carry.
+    expect(response?.headers()["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
 
     const heading = page.getByRole("heading", { level: 1, name: "Something went wrong, please try again later" });
     await expect(heading).toBeVisible();
     await expect(page.getByRole("banner")).toBeVisible();
     await expect(page.getByText(/ECONNREFUSED|localhost:9|NETWORK_ERROR/)).toHaveCount(0);
+    // The error's digest, logged with the details by src/instrumentation.ts, to quote to support.
+    await expect(page.getByText(/^Reference: \S+$/)).toBeVisible();
     await expectNoA11yViolations(page);
 
     // Try again asks the server for the page again; the API is still down, so the error stays.

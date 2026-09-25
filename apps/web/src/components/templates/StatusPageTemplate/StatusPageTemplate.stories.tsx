@@ -55,3 +55,13 @@ export const SomethingWentWrong: Story = {
     ),
   },
 };
+
+/** app/error.tsx after a server error: the digest to quote to support, readable on the dark panel. */
+export const WithReference: Story = {
+  args: { ...SomethingWentWrong.args, reference: "2785329176" },
+  play: async ({ canvas }) => {
+    const reference = canvas.getByText(/^Reference:/);
+    await expect(reference).toHaveTextContent("Reference: 2785329176");
+    await expect(getComputedStyle(reference).color).toBe(rgb("fg-inverse"));
+  },
+};
