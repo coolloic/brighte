@@ -1,5 +1,5 @@
 import { extname } from 'node:path';
-import { createMigrator, migrationSequelize } from './migrator.ts';
+import { createMigrator, migrationSequelize, withMigrationLock } from './migrator.ts';
 
 export type { Migration } from './migrator.ts';
 
@@ -18,7 +18,7 @@ const { umzug, rollback } = createMigrator(sequelize, { glob: `${import.meta.dir
 // runAsCLI reports a failure by resolving false (and setting process.exitCode), not by throwing.
 let succeeded = false;
 try {
-  succeeded = await umzug.runAsCLI();
+  succeeded = await withMigrationLock(sequelize, () => umzug.runAsCLI());
 } finally {
   if (!succeeded) await rollback();
   await sequelize.close();

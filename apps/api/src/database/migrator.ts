@@ -1,5 +1,5 @@
 import { pathToFileURL } from 'node:url';
-import { Sequelize, type QueryInterface } from 'sequelize';
+import { QueryTypes, Sequelize, type QueryInterface } from 'sequelize';
 import { SequelizeStorage, Umzug, type MigrationFn, type UmzugOptions } from 'umzug';
 
 // Also imported by migrate.ts under Node type stripping: keep it free of TS-only syntax
@@ -17,6 +17,36 @@ type MigrationModule = { up: Migration; down: Migration; transaction?: boolean }
 export function migrationSequelize(databaseUrl: string): Sequelize {
   const forever = 2_147_483_647;
   return new Sequelize(databaseUrl, { logging: false, pool: { max: 1, min: 1, idle: forever, evict: forever } });
+}
+
+/** pg_advisory_lock key shared by every migration run against a database. Any constant works. */
+export const MIGRATION_LOCK_KEY = 4_242_001;
+const LOCK_POLL_MS = 500;
+
+/**
+ * Runs `fn` while holding the migration lock, waiting for any other run to finish first.
+ * Polls pg_try_advisory_lock rather than blocking in pg_advisory_lock: a session blocked inside
+ * pg_advisory_lock holds a snapshot, and CREATE INDEX CONCURRENTLY in the run that owns the lock
+ * waits for every older snapshot, so the two would deadlock.
+ */
+export async function withMigrationLock<T>(sequelize: Sequelize, fn: () => Promise<T>, log: (message: string) => void = console.log): Promise<T> {
+  const replacements = { key: MIGRATION_LOCK_KEY };
+  let announced = false;
+  for (;;) {
+    const [{ locked }] = await sequelize.query<{ locked: boolean }>('SELECT pg_try_advisory_lock(:key) AS locked', {
+      replacements,
+      type: QueryTypes.SELECT,
+    });
+    if (locked) break;
+    if (!announced) log('Another migration run holds the lock; waiting for it to finish');
+    announced = true;
+    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+  }
+  try {
+    return await fn();
+  } finally {
+    await sequelize.query('SELECT pg_advisory_unlock(:key)', { replacements });
+  }
 }
 
 export function createMigrator(

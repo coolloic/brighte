@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { QueryTypes, Sequelize } from 'sequelize';
-import { createMigrator, migrationSequelize } from '../src/database/migrator.js';
+import { createMigrator, migrationSequelize, withMigrationLock } from '../src/database/migrator.js';
 
 // The e2e suites get DATABASE_URL from apps/api/.env through ConfigModule; this one never boots
 // the app, so it reads the file itself (CI sets the variable directly).
@@ -86,4 +86,20 @@ describe('Migration runner (e2e)', () => {
     expect(await tables(sequelize)).toEqual(['SequelizeMeta']);
     expect(await umzug.executed()).toEqual([]);
   });
+
+  it('lets only one run migrate at a time; the other waits, then finds nothing to do', async () => {
+    const { url, sequelize: first } = await freshDatabase();
+    const second = migrationSequelize(url);
+    open.push(second);
+    const runner = (sequelize: Sequelize) => {
+      const { umzug } = migratorFor(sequelize, 'slow');
+      return withMigrationLock(sequelize, () => umzug.up(), () => {});
+    };
+
+    const [a, b] = await Promise.all([runner(first), runner(second)]);
+
+    expect([a.length, b.length].sort()).toEqual([0, 2]);
+    const rows = await first.query<{ name: string }>('SELECT name FROM "SequelizeMeta" ORDER BY name', { type: QueryTypes.SELECT });
+    expect(rows.map((row) => row.name)).toEqual(['01.create-s', '02.index-s']);
+  }, 20_000);
 });
