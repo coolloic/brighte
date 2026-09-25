@@ -1,31 +1,18 @@
-import { randomInt } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { ADMIN, alertWith, signIn, USER, visitorIp } from "./support";
 
-// Needs the seed accounts: pnpm db:seed (passwords from apps/api/.env, loaded by playwright.config.ts).
-const ADMIN = { email: "admin@brighte.dev", password: process.env.SEED_ADMIN_PASSWORD ?? "admin-dev-password" };
-const USER = { email: "user@brighte.dev", password: process.env.SEED_USER_PASSWORD ?? "user-dev-password" };
+// Needs the seed accounts: pnpm db:seed.
 
 // Every test is a different visitor, so the login rate limit doesn't carry over.
 test.beforeEach(async ({ page }) => {
-  await page.setExtraHTTPHeaders({ "x-forwarded-for": `198.19.${randomInt(256)}.${randomInt(1, 255)}` });
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": visitorIp() });
 });
-
-// The password field is found by a label starting with "Password": plain "Password" would also
-// match its "Show password" button, and the label's text ends with the required "*".
-// Filtered by text: Next's route announcer is a role="alert" element too.
-const alertWith = (page: Page, text: string) => page.getByRole("alert").filter({ hasText: text });
 
 /** Sign out from the account menu (the avatar in the header). */
 async function signOut(page: Page) {
   await page.locator("header summary").click();
   await page.getByRole("button", { name: "Sign out" }).click();
-}
-
-async function signIn(page: Page, { email, password }: { email: string; password: string }) {
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel(/^Password/).fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
 }
 
 test.describe("admin sign-in", () => {

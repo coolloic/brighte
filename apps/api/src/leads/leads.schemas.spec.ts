@@ -72,7 +72,7 @@ describe('register in the published schema', () => {
 });
 
 describe('leadsArgsSchema', () => {
-  it.each([undefined, '', '   '])('treats serviceType %j as no filter', (serviceType) => {
+  it.each([undefined, null, '', '   '])('treats serviceType %j as no filter', (serviceType) => {
     expect(leadsArgsSchema.parse({ limit: 20, offset: 0, serviceType }).serviceType).toBeUndefined();
   });
 
