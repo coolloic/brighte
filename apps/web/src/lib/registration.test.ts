@@ -23,6 +23,8 @@ describe("validateRegistration (mirrors the API's rules)", () => {
     expect(validateRegistration({ ...values, mobile: "+61412345678" })).toEqual({});
     expect(validateRegistration({ ...values, mobile: "(04) 1234-5678" })).toEqual({});
     expect(validateRegistration({ ...values, email: "  Ada.Lovelace+eats@Example.com.au ", postcode: " 0800 " })).toEqual({});
+    // The longest name the API accepts: 70 characters, counted after trimming.
+    expect(validateRegistration({ ...values, name: ` ${"x".repeat(70)} ` })).toEqual({});
   });
 
   it("reports every problem at once, with the API's messages", () => {
@@ -36,7 +38,7 @@ describe("validateRegistration (mirrors the API's rules)", () => {
   });
 
   it.each([
-    ["name", { name: "x".repeat(256) }, "Name is too long"],
+    ["name", { name: "x".repeat(71) }, "Name must be 70 characters or fewer"],
     ["email", { email: `${"a".repeat(250)}@example.com` }, "Email is too long"],
     ["email", { email: "ada@example" }, "Enter a valid email address"],
     ["mobile", { mobile: "0412 345 67" }, "Enter an Australian mobile number"],

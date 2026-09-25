@@ -52,6 +52,8 @@ export function registrationToFormData(values: RegistrationValues): FormData {
 // boundary: the API validates every request again and stays the source of truth. Messages match
 // the API's, without the examples the field hints already show.
 const AU_MOBILE = /^(?:\+?61|0)4\d{8}$/;
+// The API's MAX_NAME_LENGTH.
+const MAX_NAME_LENGTH = 70;
 // zod's default email pattern, which the API uses.
 const EMAIL = /^(?:[A-Za-z0-9_'+\-]+\.)*[A-Za-z0-9_'+\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\-]*\.)+[A-Za-z]{2,}$/;
 
@@ -60,7 +62,7 @@ export function validateRegistration(values: RegistrationValues): Partial<Record
   const errors: Partial<Record<RegistrationFieldName, string>> = {};
   const name = values.name.trim();
   if (!name) errors.name = "Name is required";
-  else if (name.length > 255) errors.name = "Name is too long";
+  else if (name.length > MAX_NAME_LENGTH) errors.name = `Name must be ${MAX_NAME_LENGTH} characters or fewer`;
 
   const email = values.email.trim();
   if (email.length > 255) errors.email = "Email is too long";

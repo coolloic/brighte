@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildSchema, isNonNullType } from 'graphql';
-import { leadsArgsSchema, registerSchema } from './leads.schemas.js';
+import { leadsArgsSchema, MAX_NAME_LENGTH, registerSchema } from './leads.schemas.js';
 
 const valid = {
   name: 'Ada Lovelace',
@@ -55,6 +55,14 @@ describe('registerSchema', () => {
     ['postcode', 'ABCD'],
   ])('rejects %s %s', (field, value) => {
     expect(fieldErrors({ ...valid, [field]: value })).toHaveProperty(field);
+  });
+
+  it('accepts a full name of up to 70 characters, and rejects a longer one', () => {
+    expect(MAX_NAME_LENGTH).toBe(70);
+    expect(fieldErrors({ ...valid, name: 'x'.repeat(70) })).toEqual({});
+    // Counted after trimming: surrounding spaces don't count.
+    expect(fieldErrors({ ...valid, name: `  ${'x'.repeat(70)}  ` })).toEqual({});
+    expect(fieldErrors({ ...valid, name: 'x'.repeat(71) })).toEqual({ name: 'Name must be 70 characters or fewer' });
   });
 
   it('leaves service codes to the database: an unseen code passes schema validation', () => {

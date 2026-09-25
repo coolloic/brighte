@@ -5,8 +5,15 @@ import { z } from 'zod';
 
 const AU_MOBILE = /^(?:\+?61|0)4\d{8}$/;
 
+/** Longest full name accepted, after trimming. The web form checks the same limit. */
+export const MAX_NAME_LENGTH = 70;
+
 export const registerSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(255, 'Name is too long'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(MAX_NAME_LENGTH, `Name must be ${MAX_NAME_LENGTH} characters or fewer`),
   email: z
     .string()
     .trim()
