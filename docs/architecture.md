@@ -136,23 +136,28 @@ sequenceDiagram
     participant A as API (apps/api)
     participant D as Postgres
 
-    V->>B: Fills in the form, presses Register
+    V->>B: Fills in the form (each change saved to sessionStorage), presses Register
     B->>B: validateRegistration(): mistakes shown at once, nothing sent
+    B->>V: "Thanks, you're registered" at once (useOptimistic)
     B->>W: Server Action registerAction (POST /)
     W->>A: mutation register(…) with X-Forwarded-For
     A->>A: Throttler (5/min per visitor, backoff) · Zod validation
     A->>D: INSERT lead + lead_service_types (one transaction)
-    alt email already registered
-        D-->>A: unique violation
-        A-->>W: CONFLICT
-        W-->>B: "This email has already registered interest" on the email field
-    else saved
+    alt saved
         D-->>A: ok
         A-->>W: Lead
         W-->>B: success
-        B->>V: Confirmation, focused for screen readers
+        B->>B: Draft cleared, the confirmation stays
+    else email already registered, rate limited, API down, connection lost
+        A-->>W: CONFLICT / TOO_MANY_REQUESTS / error (or no answer)
+        W-->>B: error with the typed values
+        B->>V: Confirmation withdrawn: the form with the reason, focus on the problem
     end
 ```
+
+- **Only the screen is fire and forget.** "Thanks" shows before the server answers, but it stays only when Postgres has committed the lead; anything else withdraws it and shows why, with what was typed. A form with mistakes never shows it.
+- **A reload keeps what was typed**: the draft lives in `sessionStorage` (this tab only) until the server confirms, and is restored after hydration.
+- Without JavaScript, the browser posts the form to the same Server Action and the page comes back with the result.
 
 ### An admin opens the dashboard
 
@@ -189,3 +194,19 @@ sequenceDiagram
         W-->>B: HTML with the nonce on every script
     end
 ```
+
+## Reliability: known gaps (TODO)
+
+Registration is saved when Postgres commits, and the visitor sees "Thanks" for good only after that. A registration the server accepted is never lost. These three gaps remain, where the visitor is misled or has to act. Gap 3 matters most; they're numbered in the order to build them, since 2 and 3 both need 1.
+
+| # | Gap | What happens today | Why it matters |
+|---|---|---|---|
+| 1 | **Saved, but the answer is lost**: the API commits, then the web's call times out (`TIMEOUT_MS` in `src/lib/api/client.ts`), the network drops or Next restarts | The visitor sees "We couldn't send your registration" and presses Try again; the API answers `CONFLICT`, and the form says the email "has already registered interest" | The visitor is told two wrong things in a row, and retries can never be automatic, since a retry of a saved registration fails |
+| 2 | **The browser never delivers it**: the tab is closed, or the connection drops, in the second after "Thanks" shows | Lost. The draft is in `sessionStorage`, which goes when the tab closes | The visitor saw a confirmation for a registration that doesn't exist, and nobody knows |
+| 3 | **The API or Postgres is briefly down** | The visitor sees "couldn't send" with their details kept, and must try again later | Registrations during an outage depend on each visitor coming back; some won't |
+
+- [ ] **1. Make register safe to retry (idempotency key).** The browser creates a `submissionId` (UUID) for each set of values it submits, keeps it with the draft and sends the same one on every retry. The API stores it on the lead (unique `submission_id` column, one migration) and answers a repeat with the existing lead as success; `CONFLICT` still covers different submissions with the same email. The web then retries network and server errors automatically (a couple of times, short backoff) before showing "couldn't send".
+- [ ] **2. Resend what the browser didn't deliver.** Keep a submission in `localStorage` (which outlives the tab) from submit until the server confirms, and send it again on the next visit. Needs 1, so a resend of a saved registration isn't a `CONFLICT`. Only helps when the visitor comes back in the same browser.
+- [ ] **3. Accept registrations while the API or Postgres is down.** A second durable store the Next server can reach on its own: Postgres can't cover its own outage, and neither can the API. Kafka (or a Kafka-compatible broker such as Redpanda, or a managed queue) fits: when the API is unreachable, errors or times out, the Next server publishes the registration (`acks=all`, idempotent producer) and answers success; an API consumer writes it to Postgres once it's back (at-least-once; commit the offset after the database commit; a replay that hits `CONFLICT` is done; validation failures go to a dead-letter topic). Decisions to make first: queue only as a fallback (keeps duplicate-email, rate-limit and field feedback) or every registration (one path, but that feedback moves or disappears); which broker; rate limiting on the queued path. Needs 1, so a registration that was saved before the timeout isn't queued twice.
+
+For side effects of a registration later (confirmation email, CRM sync), use a transactional outbox rather than publishing from the API: an `outbox` row written in the lead's transaction, processed by a worker with retries. It can feed Kafka too.

@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brighte Eats Solution</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400..700&amp;display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+  html, body { margin: 0; height: 100%; background: #111217; overflow: hidden; }
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; }
+  .slide { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; box-sizing: border-box;
+    overflow: hidden; transform-origin: center; visibility: hidden; opacity: 0; transition: opacity .25s; }
+  .slide.current { visibility: visible; opacity: 1; }
+  .slide *, .slide *::before, .slide *::after { box-sizing: border-box; }
+  .slide h1, .slide h2, .slide h3, .slide p, .slide ul, .slide ol, .slide table { margin: 0; }
+  .slide ul, .slide ol { padding-left: 1.2em; }
+  .slide img { display: block; max-width: none; }
+  .slide table { width: 100%; border-collapse: collapse; }
+  .slide th { text-align: left; font-weight: 700; padding: 0 32px 20px 0; border-bottom: 2px solid #1e2028; }
+  .slide td { padding: 20px 32px 20px 0; border-bottom: 1px solid #dddedf; vertical-align: top; }
+  .slide .connectors { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-events: none; }
+  .slide .notes { display: none; }
+  .bar { position: fixed; right: 16px; bottom: 12px; display: flex; gap: 12px; align-items: center;
+    padding: 6px 8px; background: rgba(17,18,23,.88); border-radius: 10px;
+    font: 14px system-ui, sans-serif; color: #e4e5e7; }
+  .bar button { font: inherit; color: inherit; background: #2a2c35; border: 1px solid #44464f; border-radius: 6px;
+    padding: 6px 12px; cursor: pointer; }
+  .bar button:focus-visible { outline: 2px solid #00e2a2; outline-offset: 2px; }
+  #notes { position: fixed; left: 16px; right: 16px; bottom: 56px; max-height: 30vh; overflow: auto; padding: 16px 20px;
+    background: rgba(17,18,23,.94); color: #f7f7f5; border: 1px solid #44464f; border-radius: 8px;
+    font: 16px/1.5 system-ui, sans-serif; }
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    html, body { height: auto; overflow: visible; background: none; }
+    .stage { position: static; display: block; }
+    .slide { position: relative; left: 0; top: 0; transform: none !important; visibility: visible; opacity: 1;
+      break-after: page; }
+    .bar, #notes { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="stage" aria-live="polite">
+<section class="slide" id="cover" data-transition="fade" style="background:#1e2028; color:#f7f7f5; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:space-between">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00e2a2">Solution review</p>
+<div style="display:flex; flex-direction:column; gap:32px">
+<h1 style="font-size:120px; font-weight:700; line-height:1.05; letter-spacing:-2px">Brighte Eats</h1>
+<p style="font-size:44px; line-height:1.3; color:#c4c5c7; max-width:1300px">How it was built, why, and how it moves to AWS.</p>
+</div>
+<p style="font-size:24px; color:#9a9b9e">Roadmap · Tech stack · Non-functional design · Improvements · AWS</p>
+<aside class="notes">A walk through the Brighte Eats solution: the order it was built in and why, the stack, the non-functional decisions, what to improve, and a plan for running it cloud-native on AWS.</aside>
+</section>
+<section class="slide" id="shipped" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:space-between">
+<div style="display:flex; flex-direction:column; gap:24px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">What shipped</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">A working end-to-end flow</h2>
+</div>
+<p style="font-size:32px; line-height:1.4; color:#404148; max-width:1500px">A public registration form and an admin leads dashboard on a real GraphQL API. Stretch goal: the admin boundary, with rate limiting alongside.</p>
+</div>
+<div style="display:flex; gap:32px">
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
+<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">44</p>
+<p style="font-size:24px; color:#404148">merged pull requests</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
+<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">3</p>
+<p style="font-size:24px; color:#404148">days, 24 to 26 Sep</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
+<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">6</p>
+<p style="font-size:24px; color:#404148">test layers, unit to browser</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
+<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">AA</p>
+<p style="font-size:24px; color:#404148">WCAG 2.1, with AAA text contrast</p>
+</div>
+</div>
+<aside class="notes">Test layers: API unit, API end-to-end against real Postgres, API smoke over HTTP, web unit, Storybook story tests with axe, and Playwright end-to-end on mobile and desktop.</aside>
+</section>
+<section class="slide" id="roadmap" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Roadmap</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Safety rails first, screens last</h2>
+</div>
+<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:24px">
+<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">1 · Day 1</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">Foundations</h3>
+<ul style="font-size:24px; line-height:1.4; color:#404148">
+<li>Monorepo, Umzug migrations</li>
+<li>Deny-by-default auth, roles</li>
+<li>Typed GraphQL errors</li>
+</ul>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Why:</b> security and schema discipline before any personal data exists.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">2 · Day 2</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">API and data</h3>
+<ul style="font-size:24px; line-height:1.4; color:#404148">
+<li>Join table, UUID v7 ids</li>
+<li>register, leads, lead</li>
+<li>Rate limits, smoke test</li>
+<li>Bruno API collection</li>
+</ul>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Why:</b> a real, hardened contract for the UI to build on.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">3 · Day 2, later</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">Web</h3>
+<ul style="font-size:24px; line-height:1.4; color:#404148">
+<li>Tokens, atoms to organisms</li>
+<li>Register page, admin sign-in</li>
+<li>Dashboard search and sort</li>
+</ul>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Why:</b> components proven in Storybook, with a11y checks, before pages.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">4 · Day 3</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">Operability</h3>
+<ul style="font-size:24px; line-height:1.4; color:#404148">
+<li>JSON logs, request ids</li>
+<li>Health checks, pool bounds</li>
+<li>Service-type cache</li>
+</ul>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Why:</b> what production needs to run it and debug it.</p>
+</div>
+</div>
+<aside class="notes">Each step shipped as small reviewed pull requests. The API contract came before the UI so the dashboard never used mocked data. The Bruno collection in apps/api/bruno covers every GraphQL operation, so anyone can try the API by hand without the UI.</aside>
+</section>
+<section class="slide" id="stack" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Tech stack</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">TypeScript end to end</h2>
+</div>
+<table style="font-size:32px; color:#404148">
+<tr><th style="width:18%; color:#1e2028">Layer</th><th style="width:32%; color:#1e2028">Choice</th><th style="width:50%; color:#1e2028">Why</th></tr>
+<tr><td style="color:#1e2028">Database</td><td>PostgreSQL 17</td><td>Foreign keys, unique email, transactions</td></tr>
+<tr><td style="color:#1e2028">API</td><td>NestJS, Apollo code-first</td><td>Schema from code; guards for auth, limits</td></tr>
+<tr><td style="color:#1e2028">Data access</td><td>Sequelize + Umzug</td><td>Reviewable migrations; no auto-sync</td></tr>
+<tr><td style="color:#1e2028">Web</td><td>Next.js 16, React 19</td><td>Server-side API calls; works without JS</td></tr>
+<tr><td style="color:#1e2028">UI</td><td>Tailwind 4, Storybook</td><td>Brand tokens; every story an a11y test</td></tr>
+<tr><td style="color:#1e2028">Validation</td><td>Zod mini, shared</td><td>One rule set for browser and API</td></tr>
+<tr><td style="color:#1e2028">Tooling</td><td>pnpm, Turborepo</td><td>One repo, cached lint, type and test gates</td></tr>
+</table>
+<aside class="notes">Prisma or Drizzle would fit as well as Sequelize; the migrations-first discipline matters more than the ORM. Next.js Server Components and Server Actions mean the browser never calls the API, so the API URL and admin token stay on the server.</aside>
+</section>
+<section class="slide" id="architecture" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Architecture</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">The browser never calls the API</h2>
+</div>
+<div style="display:flex; gap:16px; align-items:stretch">
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:28px">
+<h3 style="font-size:32px; font-weight:700">Browser</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Visitor and admin</p>
+<p style="font-size:24px; line-height:1.4; color:#404148">Pages and form posts only; no token in JavaScript</p>
+</div>
+<svg aria-hidden="true" viewBox="0 0 56 28" style="width:56px; height:28px; align-self:center; flex:none"><polygon points="0,8.96 37.8,8.96 37.8,0 56,14 37.8,28 37.8,19.04 0,19.04" fill="#00805c"/></svg>
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:28px">
+<h3 style="font-size:32px; font-weight:700">Next.js web</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">proxy.ts: CSP nonce, session renewal</p>
+<p style="font-size:24px; line-height:1.4; color:#404148">Server Components and Actions</p>
+<p style="font-size:24px; line-height:1.4; color:#404148">Forwards the visitor's IP</p>
+</div>
+<svg aria-hidden="true" viewBox="0 0 56 28" style="width:56px; height:28px; align-self:center; flex:none"><polygon points="0,8.96 37.8,8.96 37.8,0 56,14 37.8,28 37.8,19.04 0,19.04" fill="#00805c"/></svg>
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#1e2028; border-radius:16px; padding:28px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">NestJS API</h3>
+<p style="font-size:24px; line-height:1.4; color:#c4c5c7">Guards: JWT, roles, rate limits</p>
+<p style="font-size:24px; line-height:1.4; color:#c4c5c7">Resolvers, Zod validation</p>
+<p style="font-size:24px; line-height:1.4; color:#c4c5c7">DataLoader, Sequelize</p>
+</div>
+<svg aria-hidden="true" viewBox="0 0 56 28" style="width:56px; height:28px; align-self:center; flex:none"><polygon points="0,8.96 37.8,8.96 37.8,0 56,14 37.8,28 37.8,19.04 0,19.04" fill="#00805c"/></svg>
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:28px">
+<h3 style="font-size:32px; font-weight:700">Postgres 17</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">leads, service_types, lead_service_types, users</p>
+<p style="font-size:24px; line-height:1.4; color:#404148">Umzug migrations</p>
+</div>
+</div>
+<p style="font-size:32px; line-height:1.4; color:#404148">The API sits on a <b style="color:#1e2028">private network</b>, reachable only from the web server. The admin's token stays in an httpOnly cookie, and rate limits see the real visitor.</p>
+<aside class="notes">Every admin page and action calls requireAdmin(), which asks the API who the token belongs to; the cookie alone proves nothing. Validation runs twice: in the browser for instant feedback, and in the API as the source of truth.</aside>
+</section>
+<section class="slide" id="datamodel" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Non-functional · Data model</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Service types live in a table</h2>
+</div>
+<div style="display:flex; gap:32px">
+<div style="flex:1; display:flex; flex-direction:column; gap:20px; background:#ffffff; border-radius:16px; padding:40px">
+<p style="font-size:24px; font-weight:600; color:#a12121">Rejected</p>
+<h3 style="font-size:44px; font-weight:700">Enum</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">A new type needs a migration and a deploy. Postgres can't drop an enum value, and there's nowhere for a label or active flag.</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:20px; background:#1e2028; border-radius:16px; padding:40px">
+<p style="font-size:24px; font-weight:600; color:#00e2a2">Chosen</p>
+<h3 style="font-size:44px; font-weight:700; color:#f7f7f5">Join table</h3>
+<p style="font-size:24px; line-height:1.4; color:#c4c5c7">Foreign keys protect every interest. The service filter is a plain indexed join, and a DataLoader avoids N+1.</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:20px; background:#ffffff; border-radius:16px; padding:40px">
+<p style="font-size:24px; font-weight:600; color:#a12121">Rejected</p>
+<h3 style="font-size:44px; font-weight:700">JSON column</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Quickest to write, but no foreign key: nothing stops "delivry". Filtering needs a GIN index.</p>
+</div>
+</div>
+<p style="font-size:32px; line-height:1.4; color:#404148">A new service is an <b style="color:#1e2028">INSERT</b>; a retired one is <b style="color:#1e2028">active = false</b>. Existing leads keep their history.</p>
+<aside class="notes">Lead ids are UUID v7: not guessable, don't reveal sign-up volume, and time-ordered so inserts append to the index. The cost of the join table: register writes two tables in one transaction.</aside>
+</section>
+<section class="slide" id="nfr" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Non-functional considerations</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Decided, and covered by tests</h2>
+</div>
+<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:24px">
+<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700">Idempotency</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Unique email in the database; a duplicate gets CONFLICT, never a merge.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700">Validation</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Shared Zod rules: the browser checks first, the API decides.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700">Security</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Deny by default, per-IP limits with backoff, nonce CSP.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700">Performance</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">No N+1, trigram search indexes, a bounded DB pool.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700">Resilience</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Instant confirmation, reconciled; input kept through errors and reloads; works without JavaScript.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700">Observability</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">JSON logs with request ids, audit events, live and ready checks.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700">Accessibility</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">WCAG 2.1 AA, AAA text contrast, axe on every story.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700">Migrations</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Umzug steps with up and down; the ORM never alters the schema.</p>
+</div>
+</div>
+<aside class="notes">Register doesn't merge into or return an existing lead: that would hand anyone who knows an email that person's details. Rate limits: register 5 a minute, login 10, doubling backoff up to 15 minutes. Statements time out after 5 seconds.</aside>
+</section>
+<section class="slide" id="improve" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Improvements</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">What to improve next</h2>
+</div>
+<table style="font-size:32px; color:#404148">
+<tr><th style="width:40%; color:#1e2028">Improvement</th><th style="width:60%; color:#1e2028">Why</th></tr>
+<tr><td style="color:#1e2028">CI on every pull request</td><td>Quality gates only run locally today</td></tr>
+<tr><td style="color:#1e2028">Keyset pagination</td><td>Deep offsets slow down; rows shift pages</td></tr>
+<tr><td style="color:#1e2028">Rate limits in Redis</td><td>In-memory counters are per instance</td></tr>
+<tr><td style="color:#1e2028">Revocable sessions</td><td>Sign-out only drops the cookie today</td></tr>
+<tr><td style="color:#1e2028">Pooler, read replica</td><td>Dashboard reads off the write path</td></tr>
+<tr><td style="color:#1e2028">OpenTelemetry tracing</td><td>Follow one request web → API → DB</td></tr>
+<tr><td style="color:#1e2028">One-command Docker run</td><td>docker compose up starts everything</td></tr>
+</table>
+<aside class="notes">Also worth doing: Postgres full-text search or a search service past millions of rows, CSV export and an audit trail of service-interest changes, and keeping Storybook-only Tailwind classes out of the production CSS.</aside>
+</section>
+<section class="slide" id="reliability" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Reliability · TODO</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Only the screen is fire and forget</h2>
+</div>
+<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:24px">
+<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">1 · Build first</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">Saved, but the answer is lost</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> a timeout says "couldn't send"; Try again then says "already registered".</p>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> two wrong messages, and retries can't be automatic.</p>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> an idempotency key per submission, then automatic retries.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">2 · Client side</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">The browser never sends it</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> tab closed in the second after "Thanks": lost.</p>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> a confirmation for a registration that doesn't exist.</p>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> keep it in localStorage until confirmed; resend on the next visit.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:16px; background:#edfaf5; border:1px solid #b9e3d3; border-top:8px solid #006045; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">3 · Matters most</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">The API or Postgres is down</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> "couldn't send", details kept; the visitor must come back.</p>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> some visitors won't; Postgres can't cover its own outage.</p>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> Next publishes to Kafka when the API fails; an API consumer saves it later.</p>
+</div>
+</div>
+<aside class="notes">The confirmation shows before the server answers (useOptimistic), but it stays only once Postgres has committed the lead; anything else withdraws it with the reason and what was typed. So nothing the server accepted is lost. These are the gaps left. Gap 1 comes first because gaps 2 and 3 both need retries to be safe. For gap 3, Kafka runs with acks=all and an idempotent producer; the consumer commits its offset after the database commit, treats a replayed CONFLICT as done and sends validation failures to a dead-letter topic. Still to decide: queue only as a fallback, which keeps the duplicate-email and rate-limit feedback, or every registration. Details and checklist in docs/architecture.md.</aside>
+</section>
+<section class="slide" id="aws-target" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Cloud-native on AWS</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Target architecture</h2>
+<div style="position:absolute; left:128px; top:330px; width:272px; height:220px; display:flex; flex-direction:column; gap:8px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700">Edge</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Route 53, CloudFront, AWS WAF</p>
+</div>
+<div style="position:absolute; left:476px; top:330px; width:272px; height:220px; display:flex; flex-direction:column; gap:8px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700">ALB</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">TLS via ACM, checks /health/ready</p>
+</div>
+<div style="position:absolute; left:824px; top:330px; width:272px; height:220px; display:flex; flex-direction:column; gap:8px; background:#1e2028; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">Web · BFF</h3>
+<p style="font-size:24px; line-height:1.4; color:#c4c5c7">Next.js on ECS; guards routes, holds tokens</p>
+</div>
+<div style="position:absolute; left:1172px; top:330px; width:272px; height:220px; display:flex; flex-direction:column; gap:8px; background:#1e2028; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">API</h3>
+<p style="font-size:24px; line-height:1.4; color:#c4c5c7">NestJS on ECS; checks Cognito JWT and roles</p>
+</div>
+<div style="position:absolute; left:1520px; top:330px; width:272px; height:220px; display:flex; flex-direction:column; gap:8px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700">Postgres</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">RDS Multi-AZ, behind RDS Proxy</p>
+</div>
+<div style="position:absolute; left:128px; top:630px; width:272px; height:220px; display:flex; flex-direction:column; gap:8px; background:#ffffff; border:1px dashed #9a9b9e; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700">CI · GitHub</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">OIDC; migrates with the CI secret</p>
+</div>
+<div style="position:absolute; left:476px; top:630px; width:524px; height:220px; display:flex; flex-direction:column; gap:8px; background:#edfaf5; border:2px solid #00805c; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700">Cognito user pool</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Groups ADMIN and USER become roles. Web app client: code flow with PKCE.</p>
+</div>
+<div style="position:absolute; left:1040px; top:630px; width:404px; height:220px; display:flex; flex-direction:column; gap:8px; background:#edfaf5; border:2px solid #00805c; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700">ElastiCache Redis</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Sessions, service-type cache, rate-limit counters</p>
+</div>
+<div style="position:absolute; left:1520px; top:630px; width:272px; height:220px; display:flex; flex-direction:column; gap:8px; background:#edfaf5; border:2px solid #00805c; border-radius:16px; padding:24px">
+<h3 style="font-size:32px; font-weight:700">Secrets Manager</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Per-role DB secrets</p>
+</div>
+<p style="position:absolute; left:128px; top:884px; width:1664px; font-size:24px; color:#404148">Browsers reach only the edge. Web, API, Redis and the database sit in private subnets; only the BFF can call the API.</p>
+<svg aria-hidden="true" class="connectors" viewBox="0 0 1920 1080"><defs><marker id="head0-aws-target" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#00805c"/></marker></defs><line x1="400" y1="440" x2="476" y2="440" stroke="#00805c" stroke-width="3" marker-end="url(#head0-aws-target)"/><line x1="748" y1="440" x2="824" y2="440" stroke="#00805c" stroke-width="3" marker-end="url(#head0-aws-target)"/><line x1="1096" y1="440" x2="1172" y2="440" stroke="#00805c" stroke-width="3" marker-end="url(#head0-aws-target)"/><line x1="1444" y1="440" x2="1520" y2="440" stroke="#00805c" stroke-width="3" marker-end="url(#head0-aws-target)"/><line x1="900" y1="550" x2="900" y2="630" stroke="#00805c" stroke-width="3" marker-end="url(#head0-aws-target)"/><line x1="1066" y1="550" x2="1066" y2="630" stroke="#00805c" stroke-width="3" marker-end="url(#head0-aws-target)"/><line x1="1308" y1="550" x2="1308" y2="630" stroke="#00805c" stroke-width="3" marker-end="url(#head0-aws-target)"/><line x1="1656" y1="630" x2="1656" y2="550" stroke="#00805c" stroke-width="3" marker-end="url(#head0-aws-target)"/></svg>
+<aside class="notes">Top row is the request path. The BFF signs admins in through Cognito and keeps their sessions in Redis. The API verifies Cognito tokens against the user pool's JWKS and uses Redis for shared rate-limit counters. Each service reads its own database secret from Secrets Manager; CI runs migrations with a separate, more privileged one. Pages carry a per-request CSP nonce, so CloudFront caches only /_next/static.</aside>
+</section>
+<section class="slide" id="aws-auth" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Cloud-native on AWS · Identity</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Cognito signs people in; the API decides</h2>
+</div>
+<div style="display:flex; gap:48px">
+<div style="flex:1; display:flex; flex-direction:column; gap:24px">
+<div style="display:flex; gap:24px; align-items:start">
+<p style="width:56px; font-size:44px; font-weight:700; color:#00805c">1</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Sign in</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">/admin redirects to Cognito's managed login: authorisation code with PKCE.</p>
+</div>
+</div>
+<div style="display:flex; gap:24px; align-items:start">
+<p style="width:56px; font-size:44px; font-weight:700; color:#00805c">2</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Session</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">The BFF swaps the code using its client secret. Tokens stay in Redis; the browser gets an opaque httpOnly cookie.</p>
+</div>
+</div>
+<div style="display:flex; gap:24px; align-items:start">
+<p style="width:56px; font-size:44px; font-weight:700; color:#00805c">3</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Call the API</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">The API verifies the access token against Cognito's JWKS and maps cognito:groups to ADMIN or USER.</p>
+</div>
+</div>
+<div style="display:flex; gap:24px; align-items:start">
+<p style="width:56px; font-size:44px; font-weight:700; color:#00805c">4</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Sign out</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">The BFF deletes the session and revokes the refresh token: sessions become revocable.</p>
+</div>
+</div>
+</div>
+<div style="width:620px; display:flex; flex-direction:column; gap:20px; background:#1e2028; border-radius:16px; padding:40px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">Cognito setup</h3>
+<ul style="font-size:24px; line-height:1.4; color:#c4c5c7">
+<li>User pool: MFA and threat protection for admins</li>
+<li>Groups ADMIN and USER feed the existing @Roles guard</li>
+<li>App client web-bff: confidential, code flow</li>
+<li>App client ci-smoke: client credentials, own scope</li>
+<li>Access token 30 min, refresh token 8 h</li>
+<li>Admins created in Cognito, not by createUser</li>
+</ul>
+</div>
+</div>
+<aside class="notes">Token lifetimes match today's sessions: 8 hours at most, and the BFF expires a session in Redis after 30 minutes idle. Moving to Cognito retires the API's login mutation, password hashing and the users' password column; the deny-by-default AuthGuard and @Roles stay, with the JWT strategy switched to Cognito's keys (for example aws-jwt-verify). Rate limiting on login moves to Cognito and WAF.</aside>
+</section>
+<section class="slide" id="aws-bff" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Recommendation · BFF</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Keep the BFF in Next.js</h2>
+</div>
+<p style="font-size:32px; line-height:1.4; color:#404148; max-width:1500px">Yes to a BFF as a guard, but it already exists: the Next.js server. Make it the <b style="color:#1e2028">first</b> guard and keep the API as the <b style="color:#1e2028">final</b> one.</p>
+<div style="display:flex; gap:32px">
+<div style="flex:1; display:flex; flex-direction:column; gap:20px; background:#ffffff; border-radius:16px; padding:40px">
+<h3 style="font-size:32px; font-weight:700">BFF: coarse, user-facing</h3>
+<ul style="font-size:24px; line-height:1.5; color:#404148">
+<li>Session present and not idle</li>
+<li>ADMIN group before rendering /admin</li>
+<li>Holds the tokens; the browser never does</li>
+<li>Same-origin Server Actions, nonce CSP</li>
+<li>Forwards the visitor IP for rate limits</li>
+</ul>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:20px; background:#1e2028; border-radius:16px; padding:40px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">API: authoritative</h3>
+<ul style="font-size:24px; line-height:1.5; color:#c4c5c7">
+<li>Verifies signature, expiry, audience</li>
+<li>@Roles on every field, deny by default</li>
+<li>Zod validation, rate limits in Redis</li>
+<li>Reachable only from the BFF's security group</li>
+<li>Never trusts the BFF's own checks</li>
+</ul>
+</div>
+</div>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Not recommended:</b> a separate BFF service or API Gateway in front. One more hop and deploy, no new control.</p>
+<aside class="notes">Revisit API Gateway if third parties or a mobile app need to call the API directly; then it adds usage plans, API keys and a Cognito authorizer. Until then the Next.js server already does what a BFF is for: it tailors data for the pages and keeps tokens off the client.</aside>
+</section>
+<section class="slide" id="aws-secrets" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Cloud-native on AWS · Database access</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">One secret per job, least privilege</h2>
+</div>
+<table style="font-size:32px; color:#404148">
+<tr><th style="width:18%; color:#1e2028">Secret</th><th style="width:24%; color:#1e2028">Database role</th><th style="width:34%; color:#1e2028">Can</th><th style="width:24%; color:#1e2028">Used by</th></tr>
+<tr><td style="color:#1e2028">App</td><td>brighte_app</td><td>Read and write rows; no DDL</td><td>API tasks</td></tr>
+<tr><td style="color:#1e2028">CI</td><td>brighte_migrator</td><td>Owns the schema; migrations</td><td>CI migration task</td></tr>
+<tr><td style="color:#1e2028">Read-only</td><td>brighte_readonly</td><td>SELECT only, on the replica</td><td>Reporting, support</td></tr>
+<tr><td style="color:#1e2028">Admin</td><td>RDS master user</td><td>Everything; break-glass</td><td>No one, day to day</td></tr>
+</table>
+<p style="font-size:24px; line-height:1.4; color:#404148">Each ECS task role can read only its own secret; the CI secret only through GitHub's OIDC role. Secrets rotate automatically, and RDS Proxy holds the app and read-only ones.</p>
+<aside class="notes">The migrator role owns the tables and the SequelizeMeta history, and grants the app role access with ALTER DEFAULT PRIVILEGES, so new tables from later migrations are covered. A leaked app secret can't drop or alter tables; a leaked read-only secret can't write. Today the API uses one DATABASE_URL for both running and migrating.</aside>
+</section>
+<section class="slide" id="aws-map" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Cloud-native on AWS</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Each piece has a managed home</h2>
+</div>
+<table style="font-size:32px; color:#404148">
+<tr><th style="width:42%; color:#1e2028">Today</th><th style="width:58%; color:#1e2028">On AWS</th></tr>
+<tr><td style="color:#1e2028">Postgres in Docker</td><td>RDS PostgreSQL, Multi-AZ, RDS Proxy</td></tr>
+<tr><td style="color:#1e2028">Two Node processes</td><td>ECS Fargate: web (BFF) and API</td></tr>
+<tr><td style="color:#1e2028">login, users, own JWT</td><td>Cognito user pool, groups, app clients</td></tr>
+<tr><td style="color:#1e2028">One DATABASE_URL</td><td>Secrets Manager: app, CI, read-only</td></tr>
+<tr><td style="color:#1e2028">In-memory limits, cache</td><td>ElastiCache Redis, shared by all tasks</td></tr>
+<tr><td style="color:#1e2028">pnpm db:migrate</td><td>CI task with the migrator secret</td></tr>
+<tr><td style="color:#1e2028">App-level limits only</td><td>CloudFront, AWS WAF and Shield</td></tr>
+</table>
+<aside class="notes">Already cloud-ready: stateless servers, config from the environment, JSON logs on stdout (to CloudWatch Logs, with X-Ray tracing), separate live and ready health checks, a bounded connection pool, and migrations as a separate step. Postgres 18 on RDS would also let the database generate UUID v7 ids.</aside>
+</section>
+<section class="slide" id="aws-plan" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:32px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Cloud-native on AWS</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Six steps to get there</h2>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<div style="display:flex; gap:32px; align-items:start; border-top:1px solid #dddedf; padding:16px 0 0 0">
+<p style="width:72px; font-size:44px; font-weight:700; color:#00805c">1</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Containerise</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Dockerfiles for web and API; Next.js standalone output; images in ECR.</p>
+</div>
+</div>
+<div style="display:flex; gap:32px; align-items:start; border-top:1px solid #dddedf; padding:16px 0 0 0">
+<p style="width:72px; font-size:44px; font-weight:700; color:#00805c">2</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Infrastructure as code</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">CDK in TypeScript: VPC, CloudFront, ALB, ECS, RDS Proxy, ElastiCache, Cognito.</p>
+</div>
+</div>
+<div style="display:flex; gap:32px; align-items:start; border-top:1px solid #dddedf; padding:16px 0 0 0">
+<p style="width:72px; font-size:44px; font-weight:700; color:#00805c">3</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Least-privilege database</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">App, CI and read-only roles, one rotated secret each, readable only by its own task.</p>
+</div>
+</div>
+<div style="display:flex; gap:32px; align-items:start; border-top:1px solid #dddedf; padding:16px 0 0 0">
+<p style="width:72px; font-size:44px; font-weight:700; color:#00805c">4</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Auth on Cognito</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">The BFF runs the code flow; the API verifies Cognito tokens; groups become roles.</p>
+</div>
+</div>
+<div style="display:flex; gap:32px; align-items:start; border-top:1px solid #dddedf; padding:16px 0 0 0">
+<p style="width:72px; font-size:44px; font-weight:700; color:#00805c">5</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Redis cache layer</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Sessions, the service-type cache and rate-limit counters, shared by every task.</p>
+</div>
+</div>
+<div style="display:flex; gap:32px; align-items:start; border-top:1px solid #dddedf; padding:16px 0 0 0">
+<p style="width:72px; font-size:44px; font-weight:700; color:#00805c">6</p>
+<div style="flex:1; display:flex; flex-direction:column; gap:4px">
+<h3 style="font-size:32px; font-weight:700">Pipeline and operations</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">GitHub OIDC, migrate with the CI secret, roll out; alarms on errors and rate_limit.blocked; autoscaling.</p>
+</div>
+</div>
+</div>
+<aside class="notes">Other settings: WEB_TRUST_PROXY=2 (CloudFront and the ALB sit in front of the web), TRUST_PROXY=1 on the API, SITE_URL and WEB_ORIGIN set to the public HTTPS address. Keep instances times DB_POOL_MAX under the database's connection limit, or let RDS Proxy absorb it.</aside>
+</section>
+<section class="slide" id="close" data-transition="fade" style="background:#006045; color:#f7f7f5; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; justify-content:center; gap:40px">
+<h2 style="font-size:120px; font-weight:700; line-height:1.05; letter-spacing:-2px; max-width:1500px">A new service is a row, not a deploy.</h2>
+<p style="font-size:44px; line-height:1.3; color:#d7f4da; max-width:1500px">Next: CI on every pull request, shared rate limits, and a CDK stack for AWS.</p>
+<aside class="notes">Built to change: the data model, validation and security choices keep the app easy to adapt, and the move to AWS is mostly infrastructure rather than code.</aside>
+</section>
+<section class="slide" id="demo-register" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · Responsive</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Registration form</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:end">
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-register-1.png" alt="Registration form on a 390 px mobile screen" style="width:268px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Mobile · 390 px</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-register-2.png" alt="Registration form on an 820 px tablet screen" style="width:403px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Tablet · 820 px</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-register-3.png" alt="Registration form on a 1440 px desktop screen" style="width:928px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Desktop · 1440 px</p>
+</div>
+</div>
+<aside class="notes">One mobile-first layout: fields stack on mobile, mobile and postcode share a row from tablet up, and the pitch moves beside the form on desktop. Service options come from the API, so a new service appears without a deploy.</aside>
+</section>
+<section class="slide" id="demo-login" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · Responsive</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Admin sign-in</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:end">
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-login-1.png" alt="Admin sign-in on a 390 px mobile screen" style="width:268px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Mobile · 390 px</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-login-2.png" alt="Admin sign-in on an 820 px tablet screen" style="width:403px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Tablet · 820 px</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-login-3.png" alt="Admin sign-in on a 1440 px desktop screen" style="width:928px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Desktop · 1440 px</p>
+</div>
+</div>
+<aside class="notes">The sign-in page is noindex. On success the session is the API's token in an httpOnly cookie, and an expired session returns the admin to the same dashboard URL after signing in again.</aside>
+</section>
+<section class="slide" id="demo-dashboard" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · Responsive</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Leads dashboard</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:end">
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-dashboard-1.png" alt="Leads dashboard on a 390 px mobile screen, leads shown as cards" style="width:268px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Mobile · cards</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-dashboard-2.png" alt="Leads dashboard on an 820 px tablet screen, leads in a table" style="width:403px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Tablet · table</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-dashboard-3.png" alt="Leads dashboard on a 1440 px desktop screen, with a lead's detail beside the table" style="width:928px; height:580px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; font-weight:600; color:#404148">Desktop · detail beside the list</p>
+</div>
+</div>
+<aside class="notes">Sorted by name here. Search, service filter, sort, page size and the selected lead all live in the URL, so the dashboard works without JavaScript and survives a re-sign-in. On mobile the sort is a select; on tablet and desktop, the column headers. On tablet a selected lead opens as its own view with a back link.</aside>
+</section>
+<section class="slide" id="demo-errors" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · Form errors on mobile</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Every error says what to do</h2>
+</div>
+<div style="display:flex; justify-content:space-between; align-items:start">
+<div style="width:259px; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-errors-1.png" alt="Registration form with a message under each empty field" style="width:259px; height:560px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Invalid input:</b> caught in the browser</p>
+</div>
+<div style="width:259px; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-errors-2.png" alt="Email field showing that this email has already registered interest" style="width:259px; height:560px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Duplicate email:</b> the API's CONFLICT</p>
+</div>
+<div style="width:259px; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-errors-3.png" alt="Registration form showing Too many attempts, please wait 59 seconds and try again" style="width:259px; height:560px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Rate limited:</b> a live countdown</p>
+</div>
+<div style="width:259px; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-errors-4.png" alt="Admin sign-in showing email or password is incorrect" style="width:259px; height:560px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Wrong password:</b> no hint which</p>
+</div>
+</div>
+<aside class="notes">Invalid input is checked with the shared rules before anything is sent, so typos never count against the rate limit. The duplicate message sits on the email field and keeps everything typed. The sixth register attempt in a minute gets TOO_MANY_REQUESTS; the countdown comes from the API's retryAfter, and repeat offenders wait twice as long each time. Sign-in never says whether the email exists.</aside>
+</section>
+<section class="slide" id="demo-failures" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · Failures on mobile</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Failing politely, with a way out</h2>
+</div>
+<div style="display:flex; justify-content:space-between; align-items:start">
+<div style="width:259px; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-failures-1.png" alt="Registration form after losing the connection: We couldn't send your registration, your details are still here, with Try again" style="width:259px; height:560px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Connection lost:</b> details kept</p>
+</div>
+<div style="width:259px; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-failures-2.png" alt="Registration page saying the form can't be shown right now, with Try again" style="width:259px; height:560px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">API down:</b> a message and Try again</p>
+</div>
+<div style="width:259px; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-failures-3.png" alt="Branded 404 page: Sorry, we can't find that page, with Back to home" style="width:259px; height:560px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">404:</b> branded, with a way home</p>
+</div>
+<div style="width:259px; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-failures-4.png" alt="Branded error page: Something went wrong, please try again later, with Try again" style="width:259px; height:560px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Error boundary:</b> no internal details</p>
+</div>
+</div>
+<aside class="notes">Connection lost mid-submit: the form stays with everything typed, and Try again sends it once back online. API down: the register page explains instead of showing a broken form. The 404 page covers any unknown URL. The error boundary (app/error.tsx) catches failures such as the admin dashboard when the API can't be reached: it returns 500, shows no stack or connection details, and Try again fetches the page again.</aside>
+</section>
+<section class="slide" id="demo-storybook" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · Component library</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Every story is a test in Storybook</h2>
+</div>
+<div style="display:flex; gap:48px; align-items:start">
+<div style="flex:1; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-storybook-1.png" alt="Storybook: the RegistrationForm Field Errors story, organisms and templates in the sidebar, and the Accessibility panel showing 0 violations and 18 passes" style="width:808px; height:505px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Every state as a story,</b> each checked by axe: 0 violations</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:12px">
+<img src="images/demo-storybook-2.png" alt="Storybook: the Foundations Colors Contrast page, a table of every colour pairing with its ratio and WCAG level, mostly AAA" style="width:808px; height:505px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.08)">
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Brand tokens,</b> every pairing measured; text at AAA</p>
+</div>
+</div>
+<aside class="notes">Atomic design: atoms, molecules, organisms and templates, with the import direction enforced by ESLint. The RegistrationForm alone has stories for empty, field errors, duplicate email, submitting, network error, rate limited and success. pnpm test renders every story in Chromium, runs its interaction test and an axe WCAG 2.1 AA check. The contrast story fails if any pairing drops below its minimum.</aside>
+</section>
+<section class="slide" id="demo-bruno" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · API collection</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Every operation, runnable in Bruno</h2>
+</div>
+<div style="display:flex; gap:48px; align-items:start">
+<img src="images/demo-bruno-1.png" alt="Terminal: the Bruno CLI runs the Brighte API collection against the local API; 11 requests across Auth, Leads, Users and Access checks each return 200 OK with a passing test; summary: PASS, 11 of 11 tests" style="width:1204px; height:654px; object-fit:contain; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.12)">
+<div style="flex:1; display:flex; flex-direction:column; gap:28px">
+<div style="display:flex; flex-direction:column; gap:8px">
+<h3 style="font-size:32px; font-weight:700">Four folders</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Auth, Leads, Users and Access checks: 13 requests.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:8px">
+<h3 style="font-size:32px; font-weight:700">Tests included</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Each request checks its result, including the error codes.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:8px">
+<h3 style="font-size:32px; font-weight:700">App or CLI</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Open it in Bruno, or run it in one command.</p>
+</div>
+</div>
+</div>
+<aside class="notes">The collection lives in apps/api/bruno and is plain text in git. Login stores the token, which every request then inherits. The access checks show FORBIDDEN for a USER token, UNAUTHENTICATED without one, and BAD_USER_INPUT with a field-by-field error map. For this run, Register and Create user were left out so the dev database stayed unchanged, and Get lead read a sample lead instead of the one Register creates.</aside>
+</section>
+<section class="slide" id="demo-ops-health" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · Operability</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Health, request ids, bounded pool</h2>
+</div>
+<div style="display:flex; gap:48px; align-items:start">
+<img src="images/demo-ops-health-1.png" alt="Terminal: /health/live and /health/ready both return 200 with a request id; a GraphQL call sent with X-Request-Id demo-7f3a9c21 gets the same id back; pg_stat_activity lists connections named brighte-api" style="width:1149px; height:654px; object-fit:contain; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.12)">
+<div style="flex:1; display:flex; flex-direction:column; gap:28px">
+<div style="display:flex; flex-direction:column; gap:8px">
+<h3 style="font-size:32px; font-weight:700">Live vs ready</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Live never touches the database; ready returns 503 if Postgres is slow.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:8px">
+<h3 style="font-size:32px; font-weight:700">Request ids</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">A caller's id is kept and echoed; otherwise the API makes one.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:8px">
+<h3 style="font-size:32px; font-weight:700">Bounded pool</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Named brighte-api; at most 10, idle ones close after 10 s.</p>
+</div>
+</div>
+</div>
+<aside class="notes">Captured from the API running with NODE_ENV=production. Liveness doesn't touch the database, so a database outage doesn't get the API restarted; readiness takes it out of the load balancer instead. The web server can pass its own request id so both sides log the same one. Statements past 5 seconds are cancelled.</aside>
+</section>
+<section class="slide" id="demo-ops-logs" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Demo · Operability</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Logs a collector can alert on</h2>
+</div>
+<img src="images/demo-ops-logs-1.png" alt="Terminal: four JSON log lines: a GraphQL operation with reqId demo-7f3a9c21, an auth.login_failed event with reason wrong_password, a rate_limit.blocked event for register, and the failed register with TOO_MANY_REQUESTS" style="width:1560px; height:625px; object-fit:contain; border-radius:12px; box-shadow:0 8px 24px rgba(30,32,40,0.12)">
+<aside class="notes">One JSON object per line on stdout: one line per GraphQL operation with its name, duration, caller and error codes, plus security events with an event field to alert on, such as auth.login_failed and rate_limit.blocked. The first line carries the request id from the previous slide. Variables, headers, tokens and emails are never logged. Hostname and pid were removed from these lines for the slide.</aside>
+</section>
+</main>
+<div id="notes" hidden></div>
+<nav class="bar" aria-label="Slides">
+  <button type="button" id="prev" aria-label="Previous slide">←</button>
+  <span id="count"></span>
+  <button type="button" id="next" aria-label="Next slide">→</button>
+  <button type="button" id="toggle-notes" aria-pressed="false">Notes (N)</button>
+</nav>
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const notes = document.getElementById("notes");
+  const toggle = document.getElementById("toggle-notes");
+  let index = 0;
+
+  function fit() {
+    const scale = Math.min(innerWidth / 1920, innerHeight / 1080);
+    for (const slide of slides) slide.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+
+  function show(next) {
+    index = Math.max(0, Math.min(slides.length - 1, next));
+    slides.forEach((slide, i) => {
+      slide.classList.toggle("current", i === index);
+      slide.setAttribute("aria-hidden", String(i !== index));
+    });
+    document.getElementById("count").textContent = `${index + 1} / ${slides.length}`;
+    notes.textContent = slides[index].querySelector(".notes")?.textContent ?? "No notes for this slide.";
+    history.replaceState(null, "", `#${index + 1}`);
+  }
+
+  function toggleNotes() {
+    notes.hidden = !notes.hidden;
+    toggle.setAttribute("aria-pressed", String(!notes.hidden));
+  }
+
+  document.getElementById("prev").addEventListener("click", () => show(index - 1));
+  document.getElementById("next").addEventListener("click", () => show(index + 1));
+  toggle.addEventListener("click", toggleNotes);
+  addEventListener("keydown", (event) => {
+    if (event.target instanceof HTMLButtonElement && (event.key === " " || event.key === "Enter")) return;
+    const moves = { ArrowRight: 1, ArrowDown: 1, PageDown: 1, " ": 1, ArrowLeft: -1, ArrowUp: -1, PageUp: -1 };
+    if (event.key in moves) show(index + moves[event.key]);
+    else if (event.key === "Home") show(0);
+    else if (event.key === "End") show(slides.length - 1);
+    else if (event.key.toLowerCase() === "n") toggleNotes();
+    else return;
+    event.preventDefault();
+  });
+  addEventListener("hashchange", () => show((parseInt(location.hash.slice(1), 10) || 1) - 1));
+  addEventListener("resize", fit);
+  fit();
+  show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 # Brighte Eats
 
+**Slides:** [Brighte Eats Solution](docs/slides/index.html), the solution review deck: what was built and in what order, the stack, the non-functional design, what to improve (including registration reliability) and the move to AWS, then a demo of every page and error state. It's a standalone HTML file: clone the repo and open it in a browser (GitHub shows its source). Use ← → or the buttons to move, and N for speaker notes; printing gives one slide per page.
+
 Brighte Eats collects expressions of interest before launch (a public registration form) and shows them to Brighte staff in a leads dashboard. pnpm + Turborepo monorepo:
 
 | Path          | Stack                                                    | Port (root `.env`) |
@@ -86,7 +88,7 @@ Brighte Eats leads can be interested in several services, and the service types 
 
 `leads.email` is unique, and `register` relies on that constraint rather than a prior lookup, so two concurrent registrations with one email can't both succeed. The loser gets `CONFLICT` and nothing is changed. The form shows it on the email field: "This email has already registered interest. Use a different email."
 
-`register` is public, so it deliberately doesn't merge into or return the existing lead: that would hand anyone who knows an email that person's stored name and mobile. The trade-off is that a retried request that already succeeded sees `CONFLICT`. Double submits from the form are also blocked in the browser while a submit is in flight.
+`register` is public, so it deliberately doesn't merge into or return the existing lead: that would hand anyone who knows an email that person's stored name and mobile. The trade-off is that a retried request that already succeeded sees `CONFLICT`: an idempotency key per submission would fix it (see [TODOs](#todos--known-gaps)). With JavaScript, double submits from the form can't happen: while a submit is in flight, the form is replaced by the confirmation.
 
 ## Stretch goals
 
@@ -269,6 +271,10 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **No CI configuration** in the repo yet; quality gates run in the pre-commit hook and locally.
 - **Sign out doesn't revoke the token**, only removes the cookie (see 10× scale).
 - **No admin user management UI**; admins are created with `createUser` (ADMIN only) or the dev seed.
+- **Registration reliability.** "Thanks" shows at once and stays only once Postgres has committed the lead, so nothing the server accepted is lost. Three gaps remain, each with its reason and planned fix in [docs/architecture.md](docs/architecture.md#reliability-known-gaps-todo):
+  1. A registration that was saved but whose answer was lost (timeout, dropped connection) is reported as failed, and Try again then says the email is already registered. Fix: an idempotency key per submission, then automatic retries.
+  2. A tab closed in the second after "Thanks" never sends the registration. Fix: keep it in `localStorage` until confirmed and resend it on the next visit.
+  3. While the API or Postgres is down, visitors must come back and try again. This matters most. Fix: the Next server publishes to Kafka when the API fails, and an API consumer saves it later.
 - **Lighthouse can't sign in**, so `/admin` was measured by hand with a session cookie (100 for Performance, Accessibility and Best Practices).
 
 ## AI Assistance
