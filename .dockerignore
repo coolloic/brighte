@@ -1,0 +1,15 @@
+# Build context for apps/*/Dockerfile (docker build -f apps/<app>/Dockerfile .): sources only.
+.git
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/storybook-static
+**/*.tsbuildinfo
+**/.env
+**/.env*.local
+apps/web/test-results
+apps/web/playwright-report
+apps/web/.lighthouseci
+docs

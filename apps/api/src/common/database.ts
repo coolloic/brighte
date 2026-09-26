@@ -10,6 +10,30 @@ const positiveInt = (value: string | undefined, fallback: number) => {
   return Number.isInteger(n) && n > 0 ? n : fallback;
 };
 
+type Connection = { host: string; port: number; username: string; password: string; database: string };
+
+const connection = (url: string): Connection => {
+  const { hostname, port, username, password, pathname } = new URL(url);
+  return {
+    host: hostname,
+    port: Number(port || 5432),
+    username: decodeURIComponent(username),
+    password: decodeURIComponent(password),
+    database: decodeURIComponent(pathname.slice(1)),
+  };
+};
+
+/**
+ * Reads from a replica when `DATABASE_READ_URL` is set (Sequelize replication): a query outside a
+ * transaction goes to the replica, and writes and transactions to `DATABASE_URL`. A replica is a
+ * little behind, so a read right after a write may not see it yet (e.g. a new lead on the dashboard).
+ * Each side gets its own pool of `DB_POOL_MAX` connections. Unset, everything uses `DATABASE_URL`.
+ */
+export function replicationOptions(env: NodeJS.ProcessEnv = process.env): Pick<SequelizeOptions, 'replication'> {
+  if (!env.DATABASE_READ_URL || !env.DATABASE_URL) return {};
+  return { replication: { read: [connection(env.DATABASE_READ_URL)], write: connection(env.DATABASE_URL) } };
+}
+
 /**
  * Connection pool and timeouts for the API's database connection. Without them Sequelize allows 5
  * connections, a request waits up to 60s for one, and a slow query holds its connection forever.

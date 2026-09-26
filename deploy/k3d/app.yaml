@@ -1,0 +1,118 @@
+# The API and web app, 1 vCPU per pod (like a 1-vCPU Fargate task), behind Traefik (k3s's ingress).
+# Scale with: kubectl scale deployment/api --replicas=4
+#
+# POC only: secrets are inline, and rate limits are raised so a load test from one machine measures
+# capacity (Traefik rewrites X-Forwarded-For, so every request would otherwise share one visitor IP).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: brighte-app
+stringData:
+  JWT_SECRET: poc-only-secret-0123456789abcdef0123456789abcdef
+  SEED_ADMIN_PASSWORD: admin-dev-password
+  SEED_USER_PASSWORD: user-dev-password
+  DATABASE_URL: postgres://brighte:brighte-poc@brighte-db-rw:5432/brighte
+  DATABASE_READ_URL: postgres://brighte:brighte-poc@brighte-db-ro:5432/brighte
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: brighte-api
+data:
+  NODE_ENV: production
+  PORT: "4001"
+  WEB_ORIGIN: http://localhost:8080
+  TRUST_PROXY: "1"
+  LOG_LEVEL: warn
+  RATE_LIMIT_PER_MINUTE: "100000000"
+  RATE_LIMIT_LOGIN_PER_MINUTE: "100000000"
+  RATE_LIMIT_REGISTER_PER_MINUTE: "100000000"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: api } }
+  template:
+    metadata: { labels: { app: api } }
+    spec:
+      containers:
+        - name: api
+          image: brighte-api:poc
+          imagePullPolicy: Never
+          ports: [{ containerPort: 4001 }]
+          envFrom:
+            - configMapRef: { name: brighte-api }
+          env:
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: brighte-app, key: JWT_SECRET } }
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: brighte-app, key: DATABASE_URL } }
+            # Reads from the replica. Remove to send everything to the primary:
+            #   kubectl set env deployment/api DATABASE_READ_URL-
+            - name: DATABASE_READ_URL
+              valueFrom: { secretKeyRef: { name: brighte-app, key: DATABASE_READ_URL } }
+          resources:
+            requests: { cpu: "1", memory: 384Mi }
+            limits: { cpu: "1", memory: 384Mi }
+          # A saturated 1-vCPU pod answers slowly: give probes time, and let liveness fail for a minute
+          # before a restart. With Kubernetes' 1-second default, the load test saw busy pods marked
+          # unready (Traefik answered 503) and then restarted, pushing their load onto the others.
+          readinessProbe: { httpGet: { path: /health/ready, port: 4001 }, periodSeconds: 5, timeoutSeconds: 3, failureThreshold: 3 }
+          livenessProbe: { httpGet: { path: /health/live, port: 4001 }, periodSeconds: 10, timeoutSeconds: 5, failureThreshold: 6 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  selector: { app: api }
+  ports: [{ port: 4001, targetPort: 4001 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: web } }
+  template:
+    metadata: { labels: { app: web } }
+    spec:
+      containers:
+        - name: web
+          image: brighte-web:poc
+          imagePullPolicy: Never
+          ports: [{ containerPort: 3001 }]
+          env:
+            - { name: API_URL, value: "http://api:4001/graphql" }
+            - { name: SITE_URL, value: "http://localhost:8080" }
+            - { name: WEB_TRUST_PROXY, value: "1" }
+          resources:
+            requests: { cpu: "1", memory: 512Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          readinessProbe: { httpGet: { path: /, port: 3001 }, periodSeconds: 5, timeoutSeconds: 3, failureThreshold: 3 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  selector: { app: web }
+  ports: [{ port: 3001, targetPort: 3001 }]
+---
+# One address for both, on http://localhost:8080 (k3d maps it to Traefik): /graphql and /health go to
+# the API (exposed here only so the load test can call it directly; in production it stays private).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: brighte
+spec:
+  rules:
+    - http:
+        paths:
+          - { path: /graphql, pathType: Prefix, backend: { service: { name: api, port: { number: 4001 } } } }
+          - { path: /health, pathType: Prefix, backend: { service: { name: api, port: { number: 4001 } } } }
+          - { path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 3001 } } } }

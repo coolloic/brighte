@@ -1,0 +1,24 @@
+# The dev seed (admin and user accounts, 150 sample leads), from the API image. Run after migrate.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: brighte-api:poc
+          imagePullPolicy: Never
+          command: ["node", "dist/database/seed.js"]
+          env:
+            # The seed refuses to run with NODE_ENV=production.
+            - { name: NODE_ENV, value: development }
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: brighte-app, key: DATABASE_URL } }
+            - name: SEED_ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: brighte-app, key: SEED_ADMIN_PASSWORD } }
+            - name: SEED_USER_PASSWORD
+              valueFrom: { secretKeyRef: { name: brighte-app, key: SEED_USER_PASSWORD } }
