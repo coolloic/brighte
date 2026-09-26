@@ -147,7 +147,7 @@ sequenceDiagram
         D-->>A: ok
         A-->>W: Lead
         W-->>B: success
-        B->>B: Draft cleared; the confirmation stays
+        B->>B: Draft cleared, the confirmation stays
     else email already registered, rate limited, API down, connection lost
         A-->>W: CONFLICT / TOO_MANY_REQUESTS / error (or no answer)
         W-->>B: error with the typed values
