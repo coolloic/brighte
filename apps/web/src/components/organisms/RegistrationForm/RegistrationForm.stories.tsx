@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState, type ComponentProps } from "react";
 import { expect, fn, userEvent } from "storybook/test";
 import { RegistrationForm } from "./RegistrationForm";
 
@@ -12,6 +13,7 @@ const meta = {
       { code: "payment", label: "Payment" },
     ],
     onSubmit: fn(),
+    onValuesChange: fn(),
   },
   parameters: { layout: "padded" },
   render: (args) => (
@@ -35,6 +37,8 @@ export const Empty: Story = {
     await userEvent.type(canvas.getByRole("textbox", { name: "Postcode" }), "2000");
     await userEvent.click(canvas.getByText("Delivery"));
     await userEvent.click(canvas.getByText("Payment"));
+    // Every change reports all the values (e.g. to keep a draft).
+    await expect(args.onValuesChange).toHaveBeenLastCalledWith({ ...filled, services: ["delivery", "payment"] });
     await userEvent.click(canvas.getByRole("button", { name: "Register interest" }));
     await expect(args.onSubmit).toHaveBeenCalledWith({ ...filled, services: ["delivery", "payment"] });
   },
@@ -129,5 +133,56 @@ export const Success: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("heading", { level: 2, name: "Thanks, you're registered" })).toHaveFocus();
     await expect(canvas.queryByRole("textbox")).toBeNull();
+  },
+};
+
+/**
+ * A filled-in form, submitted: shows the confirmation (optimistic) until "Server answers" is pressed,
+ * then the form again with `answer`, as when the server doesn't confirm the submit.
+ */
+function Withdrawn({ answer, ...args }: ComponentProps<typeof RegistrationForm> & { answer: Partial<ComponentProps<typeof RegistrationForm>> }) {
+  const [answered, setAnswered] = useState(false);
+  return (
+    <div className="mx-auto w-full max-w-xl space-y-4">
+      <button type="button" onClick={() => setAnswered(true)}>
+        Server answers
+      </button>
+      <RegistrationForm {...args} defaultValues={filled} {...(answered ? answer : { success: true })} />
+    </div>
+  );
+}
+
+/** The confirmation was shown, then the server couldn't be reached: focus goes to the alert, and the typed values are back. */
+export const ConfirmationWithdrawnWithAlert: Story = {
+  render: (args) => (
+    <Withdrawn
+      {...args}
+      answer={{
+        formAlert: { tone: "error", title: "We couldn't send your registration", message: "Check your connection and try again.", onRetry: fn() },
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 2, name: "Thanks, you're registered" })).toHaveFocus();
+    await userEvent.click(canvas.getByRole("button", { name: "Server answers" }));
+    await expect(canvas.queryByRole("heading", { name: "Thanks, you're registered" })).toBeNull();
+    await expect(canvas.getByRole("alert").parentElement).toHaveFocus();
+    await expect(canvas.getByRole("textbox", { name: "Email" })).toHaveValue(filled.email);
+  },
+};
+
+/** The confirmation was shown, then the API said the email is taken: focus goes to the email field. */
+export const ConfirmationWithdrawnWithFieldError: Story = {
+  render: (args) => (
+    <Withdrawn
+      {...args}
+      answer={{ fieldErrors: { email: "This email has already registered interest. Use a different email." } }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Server answers" }));
+    const email = canvas.getByRole("textbox", { name: "Email" });
+    await expect(email).toHaveFocus();
+    await expect(email).toHaveValue(filled.email);
   },
 };

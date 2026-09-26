@@ -20,6 +20,13 @@ async function fillValid(page: Page, email = uniqueEmail()) {
 
 const submit = (page: Page) => page.getByRole("button", { name: "Register interest" }).click();
 
+/**
+ * Submits and waits for the server's answer. The confirmation shows before it arrives (optimistic),
+ * so seeing it doesn't mean the registration is saved yet.
+ */
+const submitAndWait = (page: Page) =>
+  Promise.all([page.waitForResponse((response) => response.request().method() === "POST"), submit(page)]);
+
 async function expectNoA11yViolations(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   expect(results.violations).toEqual([]);
@@ -70,6 +77,34 @@ test.describe("register page", () => {
     await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toHaveCount(0);
   });
 
+  test("a reload keeps what was typed, until the registration is confirmed", async ({ page }) => {
+    await page.goto("/");
+    const email = await fillValid(page);
+    await page.reload();
+    await expect(page.getByLabel("Full name")).toHaveValue("Ada Lovelace");
+    await expect(page.getByLabel("Email")).toHaveValue(email);
+    await expect(page.getByLabel("Mobile number")).toHaveValue("0412 345 678");
+    await expect(page.getByLabel("Postcode")).toHaveValue("2000");
+    await expect(page.getByRole("checkbox", { name: "Delivery" })).toBeChecked();
+    await expectNoA11yViolations(page);
+
+    // The restored values are what gets sent; once registered, a reload starts empty.
+    await submitAndWait(page);
+    await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("Full name")).toHaveValue("");
+    await expect(page.getByRole("checkbox", { name: "Delivery" })).not.toBeChecked();
+  });
+
+  test("the draft stays in its tab", async ({ page, context }) => {
+    await page.goto("/");
+    await page.getByLabel("Full name").fill("Ada Lovelace");
+    const other = await context.newPage();
+    await other.goto("/");
+    await expect(other.getByRole("button", { name: "Register interest" })).toBeVisible();
+    await expect(other.getByLabel("Full name")).toHaveValue("");
+  });
+
   test("the skip link is the first Tab stop, shows when focused and moves focus to the main content", async ({ page }) => {
     await page.goto("/");
     const skip = page.getByRole("link", { name: "Skip to main content" });
@@ -111,7 +146,7 @@ test.describe("register page", () => {
     const email = uniqueEmail();
     await page.goto("/");
     await fillValid(page, email);
-    await submit(page);
+    await submitAndWait(page);
     await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toBeVisible();
 
     await page.goto("/");
@@ -128,13 +163,13 @@ test.describe("register page", () => {
     const email = uniqueEmail();
     await page.goto("/");
     await fillValid(page, email);
-    await submit(page);
+    await submitAndWait(page);
     await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toBeVisible();
 
     await page.goto("/");
     await fillValid(page, email);
     for (let attempt = 2; attempt <= 5; attempt++) {
-      await Promise.all([page.waitForResponse((response) => response.request().method() === "POST"), submit(page)]);
+      await submitAndWait(page);
       await expect(page.getByLabel("Email")).toHaveAccessibleDescription("This email has already registered interest. Use a different email.");
     }
     // ...and the 6th attempt is over the limit.

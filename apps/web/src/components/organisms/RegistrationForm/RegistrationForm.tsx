@@ -42,9 +42,15 @@ export type RegistrationFormProps = {
   fieldErrors?: Partial<Record<RegistrationField, string>>;
   formAlert?: FormAlert;
   submitting?: boolean;
-  /** Replaces the form with a confirmation, which receives focus. */
+  /**
+   * Replaces the form with a confirmation, which receives focus. It may be shown before the server
+   * answers (optimistic) and withdrawn if it fails: focus then goes to the first invalid field, or
+   * to the alert.
+   */
   success?: boolean;
   defaultValues?: Partial<RegistrationValues>;
+  /** Called with all the values after each change, e.g. to keep a draft. */
+  onValuesChange?: (values: RegistrationValues) => void;
 };
 
 // Focus order for errors: the first invalid field in the order they appear.
@@ -66,10 +72,13 @@ export function RegistrationForm({
   submitting = false,
   success = false,
   defaultValues,
+  onValuesChange,
 }: RegistrationFormProps) {
   const [values, setValues] = useState<RegistrationValues>({ ...EMPTY, ...defaultValues });
   const formRef = useRef<HTMLFormElement>(null);
   const confirmationRef = useRef<HTMLHeadingElement>(null);
+  const alertRef = useRef<HTMLDivElement>(null);
+  const wasSuccess = useRef(success);
 
   // Take keyboard and screen-reader users to the first problem, as soon as errors arrive.
   const firstInvalid = FIELD_ORDER.find((field) => fieldErrors[field]);
@@ -83,6 +92,13 @@ export function RegistrationForm({
   useEffect(() => {
     if (success) confirmationRef.current?.focus();
   }, [success]);
+
+  // A confirmation was withdrawn and the heading that had focus is gone: without this, focus would
+  // drop to the page. Field errors are focused by the effect above; otherwise go to the alert.
+  useEffect(() => {
+    if (wasSuccess.current && !success && !firstInvalid) alertRef.current?.focus();
+    wasSuccess.current = success;
+  }, [success, firstInvalid]);
 
   if (success) {
     return (
@@ -103,7 +119,11 @@ export function RegistrationForm({
     );
   }
 
-  const set = <K extends RegistrationField>(field: K, value: RegistrationValues[K]) => setValues((current) => ({ ...current, [field]: value }));
+  const set = <K extends RegistrationField>(field: K, value: RegistrationValues[K]) => {
+    const next = { ...values, [field]: value };
+    setValues(next);
+    onValuesChange?.(next);
+  };
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (submitting) return;
@@ -180,19 +200,22 @@ export function RegistrationForm({
       </fieldset>
 
       {formAlert && (
-        <Alert
-          tone={formAlert.tone}
-          title={formAlert.title}
-          action={
-            formAlert.onRetry && (
-              <Button variant="secondary" onClick={formAlert.onRetry}>
-                Try again
-              </Button>
-            )
-          }
-        >
-          {formAlert.message}
-        </Alert>
+        // Focusable from script only, for a withdrawn confirmation (see above).
+        <div ref={alertRef} tabIndex={-1} className="rounded-control focus-visible:focus-ring">
+          <Alert
+            tone={formAlert.tone}
+            title={formAlert.title}
+            action={
+              formAlert.onRetry && (
+                <Button variant="secondary" onClick={formAlert.onRetry}>
+                  Try again
+                </Button>
+              )
+            }
+          >
+            {formAlert.message}
+          </Alert>
+        </div>
       )}
 
       <div className="space-y-3">
