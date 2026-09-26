@@ -96,9 +96,10 @@ The spec suggests picking one. I picked the **admin boundary for the dashboard**
 
 **Rate limiting on `register`** came with it. Once `register` and `login` are the only public operations, they are the attack surface, so both are limited per IP with a doubling backoff, and the form shows a countdown (see [Security](#security)).
 
+**Optimistic UI** followed. Once the browser check passes, the form shows "Thanks, you're registered" at once (`useOptimistic`) while the Server Action runs. Whether a registration succeeds is only known on the server, so the confirmation stays only once Postgres has committed the lead. Anything else (duplicate email, rate limit, a retired service, a lost connection) withdraws it and brings the form back with the reason, what was typed, and focus on the problem. A form with mistakes never shows it. What's typed is also kept in `sessionStorage` until the server confirms, so a reload doesn't lose it. The gaps that remain, and their fixes, are under [TODOs](#todos--known-gaps).
+
 Not done:
 
-- **Optimistic UI, on purpose.** Whether a registration succeeds is only known on the server (duplicate email, rate limit, an inactive service), so showing success early would sometimes mean taking it back. Instead the form validates in the browser first, then shows a clear submitting state.
 - **Audit trail:** listed under [10× scale](#what-id-change-at-10-scale).
 
 ## Frontend
@@ -118,11 +119,12 @@ Not done:
 
 | Situation | What the user sees |
 |---|---|
-| Submitting (slow) | The button shows a spinner and "Submitting…", keeps keyboard focus, and ignores a second click or Enter; screen readers hear "Submitting your registration…" |
+| Registering (slow) | "Thanks, you're registered" shows at once, with focus, while the request runs; if the server then disagrees, the form comes back with the reason and focus on the problem |
+| Signing in (slow) | The button shows a spinner and "Signing in…", keeps keyboard focus, and ignores a second submit; screen readers hear the wait |
 | Invalid input | Messages under each field, focus on the first (checked in the browser; the API's field messages if it disagrees) |
 | Email already registered | A message on the email field |
 | Rate limited | "Too many attempts" with a live countdown from the API's `retryAfter` (the API doubles the wait for repeat offenders) |
-| Connection lost mid-submit | The form stays with everything typed, and "Check your connection and try again" with **Try again** |
+| Connection lost mid-submit | The confirmation is withdrawn and the form comes back with everything typed, "Check your connection and try again", focus on that message, and **Try again** |
 | API down | Register: "We can't show the form right now" with Try again. Admin pages: the branded error page, with Try again |
 | Admin session expired | Sign in again, then straight back to the same URL (search, filter, sort, page and lead kept) |
 | Searching (slow) | Results follow the typing after a 300 ms pause, focus stays in the box, and letters typed while a search loads are kept; the lead count is announced to screen readers |
@@ -284,9 +286,9 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Sign out doesn't revoke the token**, only removes the cookie (see 10× scale).
 - **No admin user management UI**; admins are created with `createUser` (ADMIN only) or the dev seed.
 - **Registration reliability.** "Thanks" shows at once and stays only once Postgres has committed the lead, so nothing the server accepted is lost. Three gaps remain, each with its reason and planned fix in [docs/architecture.md](docs/architecture.md#reliability-known-gaps-todo):
-  1. A registration that was saved but whose answer was lost (timeout, dropped connection) is reported as failed, and Try again then says the email is already registered. Fix: an idempotency key per submission, then automatic retries.
-  2. A tab closed in the second after "Thanks" never sends the registration. Fix: keep it in `localStorage` until confirmed and resend it on the next visit.
-  3. While the API or Postgres is down, visitors must come back and try again. This matters most. Fix: the Next server publishes to Kafka when the API fails, and an API consumer saves it later.
+  1. A registration that was saved but whose answer was lost (timeout, dropped connection) is reported as failed, and Try again then says the email is already registered. Fix: an idempotency key per submission, a hash of its normalised values computed on the Next server with a secret, then automatic retries.
+  2. A tab closed in the second after "Thanks" never sends the registration. Fix: keep the values in `localStorage` until confirmed and resend them on the next visit (the same values give the same key).
+  3. While the API or Postgres is down, visitors must come back and try again. This matters most. Fix: the Next server sends it to an SQS FIFO queue when the API fails (the content key as deduplication id), and an API worker saves it later.
 - **Security gaps**, from a review against the OWASP Top 10, by priority:
   - High: revocable sessions, with the role rechecked on each request (a removed admin keeps access until the token expires, up to 30 minutes); rate limits and backoff in Redis before running more than one instance; per-account lockout and MFA for admins (per-IP limits don't stop guessing from many IPs).
   - Medium: per-user quotas and alerts on bulk `leads` reads (anti-scraping); CSP reports and browser error reporting; Dependabot and `pnpm audit` in CI (today: one moderate advisory in a `uuid` version pulled in by Sequelize, in functions the app doesn't call); scrypt cost raised to OWASP's minimum (N=2^17); refuse to start in production without `WEB_TRUST_PROXY`, or every visitor shares one rate-limit bucket.

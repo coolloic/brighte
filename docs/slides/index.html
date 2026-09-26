@@ -58,16 +58,16 @@
 <p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">What shipped</p>
 <h2 style="font-size:72px; font-weight:700; line-height:1.1">A working end-to-end flow</h2>
 </div>
-<p style="font-size:32px; line-height:1.4; color:#404148; max-width:1500px">A public registration form and an admin leads dashboard on a real GraphQL API. Stretch goal: the admin boundary, with rate limiting alongside.</p>
+<p style="font-size:32px; line-height:1.4; color:#404148; max-width:1500px">A public registration form and an admin leads dashboard on a real GraphQL API. Stretch goals: the admin boundary, with rate limiting alongside, and an optimistic register that the server confirms.</p>
 </div>
 <div style="display:flex; gap:32px">
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
-<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">44</p>
+<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">45</p>
 <p style="font-size:24px; color:#404148">merged pull requests</p>
 </div>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
-<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">3</p>
-<p style="font-size:24px; color:#404148">days, 24 to 26 Sep</p>
+<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">10</p>
+<p style="font-size:24px; color:#404148">hours, 24 to 26 Sep</p>
 </div>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
 <p style="font-size:120px; font-weight:700; line-height:1; color:#006045">6</p>
@@ -379,8 +379,8 @@
 <tr><td style="color:#1e2028; font-weight:600">To run</td><td>Fully managed, pay per request</td><td>A cluster (or MSK) to size, patch and watch</td></tr>
 <tr><td style="color:#1e2028; font-weight:600">Best for</td><td>One consumer, modest volume</td><td>Many consumers, replay, event streams</td></tr>
 </table>
-<p style="font-size:26px; line-height:1.4; color:#1e2028"><b>Plan:</b> an SQS FIFO queue with the submission id as the deduplication id; the web sends to it when the API fails, and an API worker saves from it. Both are at-least-once, so the save must be idempotent.</p>
-<aside class="notes">Correction to a common belief: Kafka doesn't keep messages forever by default. Topics have a retention time or size, 7 days by default; infinite retention has to be set, and tiered storage makes it affordable. Delivery is guaranteed when producers use acks=all with replication factor 3 and min.insync.replicas 2, and consumers commit only after the database commit. SQS gives the same outcome for one consumer with nothing to operate: a message that fails comes back after its visibility timeout and moves to a dead-letter queue after maxReceiveCount. If registrations later feed a CRM, emails and analytics, Kafka (or SNS fan-out to several SQS queues) becomes worth it.</aside>
+<p style="font-size:26px; line-height:1.4; color:#1e2028"><b>Plan:</b> SQS FIFO. Deduplication id: a hash of all the details, so a corrected submission still goes through (the email alone would drop it). Group id: a hash of the email, so its submissions stay in order. The worker is idempotent anyway.</p>
+<aside class="notes">Correction to a common belief: Kafka doesn't keep messages forever by default. Topics have a retention time or size, 7 days by default; infinite retention has to be set, and tiered storage makes it affordable. Delivery is guaranteed when producers use acks=all with replication factor 3 and min.insync.replicas 2, and consumers commit only after the database commit. SQS gives the same outcome for one consumer with nothing to operate: a message that fails comes back after its visibility timeout and moves to a dead-letter queue after maxReceiveCount. Both hashes are HMACs with a secret, computed on the Next server, so no email appears in queue metadata. The 5-minute deduplication window only catches quick repeats; the submission_id stored on the lead makes a replay days later a success too. If registrations later feed a CRM, emails and analytics, Kafka (or SNS fan-out to several SQS queues) becomes worth it.</aside>
 </section>
 <section class="slide" id="reliability" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
 <div style="display:flex; flex-direction:column; gap:16px">
@@ -393,7 +393,7 @@
 <h3 style="font-size:32px; font-weight:700; line-height:1.2">Saved, but the answer is lost</h3>
 <p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> a timeout says "couldn't send"; Try again then says "already registered".</p>
 <p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> two wrong messages, and retries can't be automatic.</p>
-<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> an idempotency key per submission, then automatic retries.</p>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> a key hashed from the details on the server, then automatic retries.</p>
 </div>
 <div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
 <p style="font-size:24px; font-weight:600; color:#006045">2 · Client side</p>
@@ -410,7 +410,7 @@
 <p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> the web queues it (SQS) when the API fails; a worker saves it later.</p>
 </div>
 </div>
-<aside class="notes">The confirmation shows before the server answers (useOptimistic), but it stays only once Postgres has committed the lead; anything else withdraws it with the reason and what was typed. So nothing the server accepted is lost. These are the gaps left. Gap 1 comes first because gaps 2 and 3 both need retries to be safe. For gap 3, an SQS FIFO queue with the submission id as its deduplication id: a failed save comes back after the visibility timeout and goes to a dead-letter queue after a few tries; a replayed CONFLICT counts as done. Kafka works too, and is worth it once registrations feed several systems. Still to decide: queue only as a fallback, which keeps the duplicate-email and rate-limit feedback, or every registration. Details and checklist in docs/architecture.md.</aside>
+<aside class="notes">The confirmation shows before the server answers (useOptimistic), but it stays only once Postgres has committed the lead; anything else withdraws it with the reason and what was typed. So nothing the server accepted is lost. These are the gaps left. Gap 1 comes first because gaps 2 and 3 both need retries to be safe. The idempotency key is HMAC-SHA256 of the normalised details (email lowercased, mobile as digits, services sorted), computed on the Next server with a secret: identical details always give the same key, so retries, the resend and the queue agree with nothing stored, while a corrected submission gets a new key and is told the email is taken instead of being dropped. Never computed in the browser, where the key would be public and the hash a guessable fingerprint of personal data. For gap 3, an SQS FIFO queue with the submission id as its deduplication id: a failed save comes back after the visibility timeout and goes to a dead-letter queue after a few tries; a replayed CONFLICT counts as done. Kafka works too, and is worth it once registrations feed several systems. Still to decide: queue only as a fallback, which keeps the duplicate-email and rate-limit feedback, or every registration. Details and checklist in docs/architecture.md.</aside>
 </section>
 <section class="slide" id="nfr-scalability" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
 <div style="display:flex; flex-direction:column; gap:16px">
@@ -443,7 +443,7 @@
 <div style="display:flex; gap:32px; align-items:stretch">
 <div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#ffffff; border-radius:16px; padding:36px">
 <h3 style="font-size:32px; font-weight:700; color:#1e2028">Tracing a request</h3>
-<ul style="font-size:24px; line-height:1.45; color:#404148"><li>The API keeps a caller's X-Request-Id or makes one, and returns it</li><li>reqId on every JSON log line; one line per GraphQL operation with name, duration, user, IP and error codes</li><li>Stable error codes, turned into copy in one place</li><li>Readiness names the failing dependency</li><li><b style="color:#f7f7f5">TODO:</b> the web creates the id, forwards it and shows it on the error page; OpenTelemetry tracing</li></ul>
+<ul style="font-size:24px; line-height:1.45; color:#404148"><li>The API keeps a caller's X-Request-Id or makes one, and returns it</li><li>reqId on every JSON log line; one line per GraphQL operation with name, duration, user, IP and error codes</li><li>Stable error codes, turned into copy in one place</li><li>Readiness names the failing dependency</li><li><b style="color:#000">TODO:</b> the web creates the id, forwards it and shows it on the error page; OpenTelemetry tracing</li></ul>
 </div>
 <div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#1e2028; border-radius:16px; padding:36px">
 <h3 style="font-size:32px; font-weight:700; color:#f7f7f5">Code and tests</h3>
@@ -505,7 +505,7 @@
 <div style="display:flex; gap:32px; align-items:stretch">
 <div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#ffffff; border-radius:16px; padding:36px">
 <h3 style="font-size:32px; font-weight:700; color:#1e2028">Browsers and devices</h3>
-<ul style="font-size:24px; line-height:1.45; color:#404148"><li>Chrome, Edge and Firefox 111+, Safari 16.4+ (Next.js 16 targets)</li><li>Tested: Chromium on desktop and an emulated Pixel 7; every story in Chromium</li><li>Forms and dashboard work without JavaScript</li><li>From 320 px wide; 44 px touch targets</li><li><b style="color:#f7f7f5">TODO:</b> WebKit (Safari) and Firefox runs in the e2e suite</li></ul>
+<ul style="font-size:24px; line-height:1.45; color:#404148"><li>Chrome, Edge and Firefox 111+, Safari 16.4+ (Next.js 16 targets)</li><li>Tested: Chromium on desktop and an emulated Pixel 7; every story in Chromium</li><li>Forms and dashboard work without JavaScript</li><li>From 320 px wide; 44 px touch targets</li><li><b style="color:#000">TODO:</b> WebKit (Safari) and Firefox runs in the e2e suite</li></ul>
 </div>
 <div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#1e2028; border-radius:16px; padding:36px">
 <h3 style="font-size:32px; font-weight:700; color:#f7f7f5">Runtimes and clouds</h3>
