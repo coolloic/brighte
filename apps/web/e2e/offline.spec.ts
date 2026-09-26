@@ -19,7 +19,11 @@ test("registering offline keeps the form and its values; Try again sends it once
 
   await context.setOffline(true);
   await page.getByRole("button", { name: "Register interest" }).click();
-  await expect(alertWith(page, "We couldn't send your registration")).toContainText("Your details are still here.");
+  const alert = alertWith(page, "We couldn't send your registration");
+  await expect(alert).toContainText("Your details are still here.");
+  // The confirmation shown meanwhile (optimistic) is withdrawn, and focus goes to the alert, not the page.
+  await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toHaveCount(0);
+  await expect(alert.locator("..")).toBeFocused();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Register your interest in Brighte Eats");
   await expect(page.getByLabel("Email")).toHaveValue(email);
   await expect(page.getByRole("checkbox", { name: "Delivery" })).toBeChecked();
