@@ -1,0 +1,44 @@
+# A. API replicas (web 1, reads on the replica)
+  cpu: api-8495f7bf6d-mvpcr=571m brighte-db-1=5m brighte-db-2=102m web-9cd849467-vvv5q=2m 
+{"setup":"api1","scenario":"read","connections":200,"okPerSec":2228,"successRate":1,"p50":69,"p97_5":179,"p99":194,"total":44567,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-mvpcr=553m brighte-db-1=4m brighte-db-2=62m web-9cd849467-vvv5q=4m 
+{"setup":"api1","scenario":"register","connections":200,"okPerSec":1116,"successRate":1,"p50":138,"p97_5":335,"p99":347,"total":22314,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: brighte-db-1=301m brighte-db-2=375m web-9cd849467-vvv5q=3m 
+{"setup":"api1","scenario":"leads","connections":200,"okPerSec":149,"successRate":0.0197,"p50":3,"p97_5":15,"p99":1036,"total":151369,"failed":148391,"non2xx":148391,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-mvpcr=388m brighte-db-1=8m brighte-db-2=1244m web-9cd849467-vvv5q=4m 
+{"setup":"api1","scenario":"search","connections":200,"okPerSec":618,"successRate":1,"p50":305,"p97_5":513,"p99":608,"total":12368,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-mvpcr=825m api-8495f7bf6d-qv9s5=843m brighte-db-1=8m brighte-db-2=210m web-9cd849467-vvv5q=2m 
+{"setup":"api2","scenario":"read","connections":200,"okPerSec":3766,"successRate":1,"p50":42,"p97_5":199,"p99":229,"total":75311,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-mvpcr=493m api-8495f7bf6d-qv9s5=440m brighte-db-1=5m brighte-db-2=106m web-9cd849467-vvv5q=2m 
+{"setup":"api2","scenario":"register","connections":200,"okPerSec":1687,"successRate":1,"p50":106,"p97_5":413,"p99":446,"total":33731,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-qv9s5=622m brighte-db-1=404m brighte-db-2=236m web-9cd849467-vvv5q=3m 
+{"setup":"api2","scenario":"leads","connections":200,"okPerSec":43,"successRate":0.0776,"p50":0,"p97_5":1387,"p99":1536,"total":11139,"failed":10675,"non2xx":10275,"errors":400,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-mvpcr=208m api-8495f7bf6d-qv9s5=973m brighte-db-1=4m brighte-db-2=864m web-9cd849467-vvv5q=3m 
+{"setup":"api2","scenario":"search","connections":200,"okPerSec":542,"successRate":1,"p50":356,"p97_5":819,"p99":892,"total":10833,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-77txg=525m api-8495f7bf6d-mvpcr=561m api-8495f7bf6d-qv9s5=383m api-8495f7bf6d-xr8d5=926m brighte-db-1=6m brighte-db-2=138m web-9cd849467-vvv5q=3m 
+{"setup":"api4","scenario":"read","connections":200,"okPerSec":6327,"successRate":1,"p50":9,"p97_5":145,"p99":173,"total":126543,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-77txg=692m api-8495f7bf6d-mvpcr=610m api-8495f7bf6d-qv9s5=778m api-8495f7bf6d-xr8d5=594m brighte-db-1=71m brighte-db-2=328m web-9cd849467-vvv5q=3m 
+{"setup":"api4","scenario":"register","connections":200,"okPerSec":2683,"successRate":1,"p50":32,"p97_5":296,"p99":327,"total":53653,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-77txg=395m api-8495f7bf6d-mvpcr=678m api-8495f7bf6d-qv9s5=854m api-8495f7bf6d-xr8d5=625m brighte-db-1=1190m brighte-db-2=385m web-9cd849467-vvv5q=3m 
+{"setup":"api4","scenario":"leads","connections":200,"okPerSec":54,"successRate":0.9581,"p50":1274,"p97_5":9353,"p99":9918,"total":1121,"failed":343,"non2xx":11,"errors":296,"graphqlErrors":36}
+  cpu: api-8495f7bf6d-77txg=977m api-8495f7bf6d-mvpcr=458m api-8495f7bf6d-qv9s5=527m api-8495f7bf6d-xr8d5=596m brighte-db-1=5m brighte-db-2=556m web-9cd849467-vvv5q=2m 
+{"setup":"api4","scenario":"search","connections":200,"okPerSec":472,"successRate":1,"p50":363,"p97_5":1001,"p99":1100,"total":9443,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+# B. Web replicas (API 1)
+  cpu: api-8495f7bf6d-77txg=21m api-8495f7bf6d-mvpcr=8m api-8495f7bf6d-qv9s5=16m api-8495f7bf6d-xr8d5=16m brighte-db-1=6m brighte-db-2=24m web-9cd849467-vvv5q=948m 
+{"setup":"web1","scenario":"web","connections":200,"okPerSec":247,"successRate":1,"p50":730,"p97_5":1819,"p99":5304,"total":4937,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-mvpcr=14m brighte-db-1=5m brighte-db-2=8m web-9cd849467-spcgz=854m web-9cd849467-vvv5q=262m 
+{"setup":"web2","scenario":"web","connections":200,"okPerSec":481,"successRate":1,"p50":264,"p97_5":904,"p99":3011,"total":9620,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-mvpcr=3m brighte-db-1=8m brighte-db-2=8m web-9cd849467-kjzkp=590m web-9cd849467-spcgz=663m web-9cd849467-vh2w9=591m web-9cd849467-vvv5q=173m 
+{"setup":"web4","scenario":"web","connections":200,"okPerSec":897,"successRate":1,"p50":219,"p97_5":476,"p99":667,"total":17949,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+# C. Read replica (API 4, web 1): register and search at the same time
+  cpu: api-5778fc58cb-5424s=207m api-5778fc58cb-d4252=258m api-5778fc58cb-jwz6r=3m api-5778fc58cb-rdgwf=123m api-8495f7bf6d-mvpcr=2m brighte-db-1=43m brighte-db-2=17m web-9cd849467-vvv5q=5m 
+{"setup":"reads-on-primary","scenario":"mixed:register","connections":100,"okPerSec":226,"successRate":1,"p50":393,"p97_5":1231,"p99":1398,"total":4514,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+{"setup":"reads-on-primary","scenario":"mixed:search","connections":100,"okPerSec":219,"successRate":1,"p50":396,"p97_5":1288,"p99":1442,"total":4372,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-5778fc58cb-5424s=19m api-8495f7bf6d-5gq9m=385m api-8495f7bf6d-fhrmc=417m api-8495f7bf6d-mchj2=242m api-8495f7bf6d-wn4rh=204m brighte-db-1=151m brighte-db-2=1127m web-9cd849467-vvv5q=4m 
+{"setup":"reads-on-1-replica","scenario":"mixed:register","connections":100,"okPerSec":403,"successRate":1,"p50":207,"p97_5":590,"p99":602,"total":8068,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+{"setup":"reads-on-1-replica","scenario":"mixed:search","connections":100,"okPerSec":210,"successRate":1,"p50":411,"p97_5":1101,"p99":1195,"total":4208,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-5gq9m=451m api-8495f7bf6d-fhrmc=247m api-8495f7bf6d-mchj2=111m api-8495f7bf6d-wn4rh=102m brighte-db-1=65m brighte-db-2=674m brighte-db-3=1379m web-9cd849467-vvv5q=3m 
+{"setup":"reads-on-2-replicas","scenario":"search","connections":200,"okPerSec":1106,"successRate":1,"p50":86,"p97_5":619,"p99":683,"total":22117,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+  cpu: api-8495f7bf6d-5gq9m=486m api-8495f7bf6d-fhrmc=450m api-8495f7bf6d-mchj2=382m api-8495f7bf6d-wn4rh=303m brighte-db-1=214m brighte-db-2=1029m brighte-db-3=604m web-9cd849467-vvv5q=4m 
+{"setup":"reads-on-2-replicas","scenario":"mixed:register","connections":100,"okPerSec":715,"successRate":1,"p50":57,"p97_5":542,"p99":598,"total":14291,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}
+{"setup":"reads-on-2-replicas","scenario":"mixed:search","connections":100,"okPerSec":354,"successRate":1,"p50":120,"p97_5":1060,"p99":1148,"total":7074,"failed":0,"non2xx":0,"errors":0,"graphqlErrors":0}

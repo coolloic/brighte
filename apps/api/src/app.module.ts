@@ -19,6 +19,7 @@ import {
   operationLogPlugin,
   RATE_LIMIT_WINDOW_MS,
   RateLimits,
+  replicationOptions,
 } from './common/index.js';
 import { HealthController } from './health.controller.js';
 import { LeadsModule } from './leads/leads.module.js';
@@ -41,8 +42,10 @@ import { UsersModule } from './users/users.module.js';
         // Schema is owned by migrations (src/database/migrations), never synced from models.
         synchronize: false,
         logging: false,
-        // Pool size and timeouts (DB_POOL_MAX, DB_STATEMENT_TIMEOUT_MS): see common/database.ts.
+        // Pool size and timeouts (DB_POOL_MAX, DB_STATEMENT_TIMEOUT_MS), and reads from a replica
+        // (DATABASE_READ_URL): see common/database.ts.
         ...databaseOptions(),
+        ...replicationOptions(),
       }),
     }),
     GraphQLModule.forRoot<ApolloDriverConfig>({

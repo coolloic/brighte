@@ -1,0 +1,18 @@
+# Schema migrations, from the API image.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: brighte-api:poc
+          imagePullPolicy: Never
+          command: ["node", "dist/database/migrate.js", "up"]
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: brighte-app, key: DATABASE_URL } }

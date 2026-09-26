@@ -1,4 +1,4 @@
-import { databaseOptions } from './database.js';
+import { databaseOptions, replicationOptions } from './database.js';
 
 describe('databaseOptions', () => {
   it('bounds the pool: 10 connections, 5s to get one', () => {
@@ -23,5 +23,26 @@ describe('databaseOptions', () => {
     const options = databaseOptions({ DB_POOL_MAX: value, DB_POOL_IDLE_MS: value, DB_STATEMENT_TIMEOUT_MS: value });
     expect(options.pool).toMatchObject({ max: 10, idle: 10_000 });
     expect(options.dialectOptions).toMatchObject({ statement_timeout: 5_000 });
+  });
+});
+
+describe('replicationOptions', () => {
+  it('reads from DATABASE_READ_URL and writes to DATABASE_URL', () => {
+    expect(
+      replicationOptions({
+        DATABASE_URL: 'postgres://app:s%3Acret@db-rw:5432/brighte',
+        DATABASE_READ_URL: 'postgres://app:s%3Acret@db-ro/brighte',
+      }),
+    ).toEqual({
+      replication: {
+        write: { host: 'db-rw', port: 5432, username: 'app', password: 's:cret', database: 'brighte' },
+        read: [{ host: 'db-ro', port: 5432, username: 'app', password: 's:cret', database: 'brighte' }],
+      },
+    });
+  });
+
+  it('adds nothing without a read URL, so everything uses DATABASE_URL', () => {
+    expect(replicationOptions({ DATABASE_URL: 'postgres://app:x@db/brighte' })).toEqual({});
+    expect(replicationOptions({ DATABASE_URL: 'postgres://app:x@db/brighte', DATABASE_READ_URL: '' })).toEqual({});
   });
 });
