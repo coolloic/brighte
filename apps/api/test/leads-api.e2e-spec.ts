@@ -228,6 +228,35 @@ describe('Leads API (e2e)', () => {
         expect(await ids({ search: '%' })).toEqual([found.c]);
       });
 
+      it('serves every part of the search from an index, never a scan of every lead', async () => {
+        // The SQL the API sends for a search with 3+ digits, so all four branches are in its OR.
+        const query = vi.spyOn(sequelize, 'query');
+        await listLeads({ search: '0422 333' });
+        const sql = query.mock.calls.map(([statement]) => statement).filter((s): s is string => typeof s === 'string');
+        query.mockRestore();
+        const count = sql.find((s) => /count\(/i.test(s) && s.includes('ILIKE'));
+        expect(count).toBeDefined();
+
+        type PlanNode = { 'Node Type': string; 'Relation Name'?: string; 'Index Name'?: string; Plans?: PlanNode[] };
+        // A small test table is cheapest to scan whatever indexes exist, so scans are switched off:
+        // Postgres then combines indexes (BitmapOr) if every branch has one, and still has to scan
+        // the table if any branch hasn't.
+        const plan = await sequelize.transaction(async (transaction) => {
+          await sequelize.query('SET LOCAL enable_seqscan = off; SET LOCAL enable_indexscan = off; SET LOCAL enable_indexonlyscan = off', { transaction });
+          const [rows] = await sequelize.query(`EXPLAIN (FORMAT JSON) ${count}`, { transaction });
+          return (rows as { 'QUERY PLAN': { Plan: PlanNode }[] }[])[0]['QUERY PLAN'][0].Plan;
+        });
+        const nodes: PlanNode[] = [];
+        const walk = (node: PlanNode) => {
+          nodes.push(node);
+          node.Plans?.forEach(walk);
+        };
+        walk(plan);
+
+        expect(nodes.filter((n) => n['Relation Name'] === 'leads').map((n) => n['Node Type'])).toEqual(['Bitmap Heap Scan']);
+        expect(nodes.flatMap((n) => n['Index Name'] ?? []).sort()).toEqual(['leads_email_trgm', 'leads_mobile_trgm', 'leads_name_trgm', 'leads_postcode_prefix']);
+      });
+
       it('treats a blank search as none, and rejects one over 100 characters', async () => {
         expect((await ids({ search: '   ' })).length).toBe((await ids({})).length);
         expect(error(await listLeads({ search: 'x'.repeat(101) }))?.extensions?.fields).toHaveProperty('search');

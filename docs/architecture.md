@@ -56,7 +56,8 @@ erDiagram
 | `leads` | primary key `id` | `lead(id)` |
 | `leads` | unique `email` | duplicate-lead check (`CONFLICT`), even under concurrent requests |
 | `leads` | `(createdAt, id)` | the default newest-first order, with a stable tie-breaker for pages |
-| `leads` | GIN trigram on `name`, and on `email` (`pg_trgm`) | dashboard search, which matches anywhere in the text |
+| `leads` | GIN trigram on `name`, `email` and `mobile` (`pg_trgm`) | dashboard search, which matches anywhere in the text |
+| `leads` | `postcode` with `text_pattern_ops` | dashboard search's postcode prefix match; with the three above, every branch of the search's `OR` has an index |
 | `lead_service_types` | primary key `(leadId, serviceTypeId)` | a lead's services; no duplicates |
 | `lead_service_types` | `serviceTypeId` | filtering leads by service |
 | `service_types` | unique `code` | looking types up by code |
