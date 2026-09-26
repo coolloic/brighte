@@ -72,7 +72,7 @@ Brighte Eats leads can be interested in several services, and the service types 
 
 **What the join table costs.** Writes touch two tables, so `register` must insert the lead and its services in one transaction. Reads need a join or a batched lookup; the API uses a per-request DataLoader, so listing leads with their services doesn't cause N+1 queries. Both costs are small at this scale.
 
-**Indexes.** `leads(createdAt, id)` serves the default newest-first sort with a stable tie-breaker for offset pagination. `lead_service_types(serviceTypeId)` serves the filter by service type; the composite primary key already covers lookups by lead. The unique `leads.email` is what duplicate-lead (idempotency) handling relies on. Trigram (`pg_trgm`) GIN indexes on `leads.name` and `leads.email` serve the dashboard search, which matches anywhere in the text (`ILIKE '%term%'`), something a normal index can't do.
+**Indexes.** `leads(createdAt, id)` serves the default newest-first sort with a stable tie-breaker for offset pagination. `lead_service_types(serviceTypeId)` serves the filter by service type; the composite primary key already covers lookups by lead. The unique `leads.email` is what duplicate-lead (idempotency) handling relies on. Trigram (`pg_trgm`) GIN indexes on `leads.name`, `leads.email` and `leads.mobile` serve the dashboard search, which matches anywhere in the text (`ILIKE '%term%'`), something a normal index can't do; a `text_pattern_ops` index serves its postcode prefix match. The search is one `OR` across those four columns, and Postgres can combine indexes for an `OR` only when every branch has one, so an e2e test checks the plan uses all four.
 
 ## Validation strategy — client vs server
 
@@ -96,9 +96,10 @@ The spec suggests picking one. I picked the **admin boundary for the dashboard**
 
 **Rate limiting on `register`** came with it. Once `register` and `login` are the only public operations, they are the attack surface, so both are limited per IP with a doubling backoff, and the form shows a countdown (see [Security](#security)).
 
+**Optimistic UI** followed. Once the browser check passes, the form shows "Thanks, you're registered" at once (`useOptimistic`) while the Server Action runs. Whether a registration succeeds is only known on the server, so the confirmation stays only once Postgres has committed the lead. Anything else (duplicate email, rate limit, a retired service, a lost connection) withdraws it and brings the form back with the reason, what was typed, and focus on the problem. A form with mistakes never shows it. What's typed is also kept in `sessionStorage` until the server confirms, so a reload doesn't lose it. The gaps that remain, and their fixes, are under [TODOs](#todos--known-gaps).
+
 Not done:
 
-- **Optimistic UI, on purpose.** Whether a registration succeeds is only known on the server (duplicate email, rate limit, an inactive service), so showing success early would sometimes mean taking it back. Instead the form validates in the browser first, then shows a clear submitting state.
 - **Audit trail:** listed under [10× scale](#what-id-change-at-10-scale).
 
 ## Frontend
@@ -118,11 +119,12 @@ Not done:
 
 | Situation | What the user sees |
 |---|---|
-| Submitting (slow) | The button shows a spinner and "Submitting…", keeps keyboard focus, and ignores a second click or Enter; screen readers hear "Submitting your registration…" |
+| Registering (slow) | "Thanks, you're registered" shows at once, with focus, while the request runs; if the server then disagrees, the form comes back with the reason and focus on the problem |
+| Signing in (slow) | The button shows a spinner and "Signing in…", keeps keyboard focus, and ignores a second submit; screen readers hear the wait |
 | Invalid input | Messages under each field, focus on the first (checked in the browser; the API's field messages if it disagrees) |
 | Email already registered | A message on the email field |
 | Rate limited | "Too many attempts" with a live countdown from the API's `retryAfter` (the API doubles the wait for repeat offenders) |
-| Connection lost mid-submit | The form stays with everything typed, and "Check your connection and try again" with **Try again** |
+| Connection lost mid-submit | The confirmation is withdrawn and the form comes back with everything typed, "Check your connection and try again", focus on that message, and **Try again** |
 | API down | Register: "We can't show the form right now" with Try again. Admin pages: the branded error page, with Try again |
 | Admin session expired | Sign in again, then straight back to the same URL (search, filter, sort, page and lead kept) |
 | Searching (slow) | Results follow the typing after a 300 ms pause, focus stays in the box, and letters typed while a search loads are kept; the lead count is announced to screen readers |
@@ -178,7 +180,7 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 | Browser-side attacks on responses | API: `helmet` security headers (`nosniff`, HSTS, frame and referrer policies; CSP in production) and no `X-Powered-By`. Web: a **nonce-based Content-Security-Policy** set per request by `apps/web/src/proxy.ts` (scripts and styles only with that request's nonce, `frame-ancestors 'none'`, `object-src 'none'`, forms only to this site), plus `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options: DENY` and no `X-Powered-By`; HSTS and `upgrade-insecure-requests` when `SITE_URL` is HTTPS. `apps/web/e2e/security.spec.ts` checks the headers and that the policy blocks nothing the app needs. |
 | Schema discovery | Introspection and GraphiQL are off when `NODE_ENV=production` (Apollo and Nest defaults). |
 | Leaking internals | Unexpected errors are logged and returned as `Internal server error` (see `formatError`). |
-| Injection | All database access goes through Sequelize with bound parameters; inputs are validated with Zod first. Search terms escape `%` and `_`, so they match literally. |
+| Injection | All database access goes through Sequelize's query builder, which escapes every value (no raw SQL); inputs are validated with Zod first. Search terms escape `%` and `_`, so they match literally. |
 | Secrets in git | None are committed: every `.env` is gitignored and only `.env.example` files are tracked. `JWT_SECRET` is empty in the example (`pnpm bootstrap` generates one), and the seed passwords in it are for local development only. |
 
 **Behind a proxy**, set `TRUST_PROXY` to the number of hops so the limiter sees the client's IP. Otherwise every client shares the proxy's IP and one noisy client throttles everyone.
@@ -239,6 +241,18 @@ The spec's suggested tests, and where they live:
 | `register` returning a lead on the happy path | `apps/api/test/leads-api.e2e-spec.ts`, and the register flow in `apps/web/e2e/register.spec.ts` |
 | The form showing an error when the API fails | `apps/web/e2e/register.spec.ts` (field errors, duplicate email, rate limit), `api-down.spec.ts`, `offline.spec.ts` |
 
+**Load test** (production builds, one process each, on a MacBook Pro M4 Pro; 164k leads; a new visitor IP per request so the real rate limiter stays in the path; 15 s per run; p50 / p99 in ms):
+
+| Scenario | Requests/s | 10 concurrent | 200 concurrent |
+|---|---|---|---|
+| API `register` (write, one transaction) | 3,400 | 2 / 4 | 61 / 92 |
+| API `serviceTypes` (read) | 8,400 | 1 / 2 | 25 / 37 |
+| API `leads`, admin, 20 per page | 830 | 26 / 47 | 264 / 365 |
+| API `leads` search, admin: before → after the postcode and mobile indexes | 42 → 1,265 | 242 / 368 → 7 / 12 | 4,749 / 5,923 → 159 / 227 |
+| Web register page (server-rendered) | 1,200 | 9 / 40 | 157 / 276 |
+
+At 1,000 concurrent connections `register` held 3,200/s (p99 369 ms, no errors), while one web process started timing out (4-7%), the point to add a second. The test found that search read the whole table: its `OR` included postcode and mobile, which had no index, so Postgres couldn't use the trigram indexes on name and email. The `add-leads-postcode-mobile-indexes` migration adds them, and the same test against a database built by the migrations measured the "after" figures. Before the fix, at 200 concurrent searches, the bounded pool gave up on a few requests after its 5-second wait instead of queueing them without limit. The slides have the full results and an AWS scaling estimate.
+
 ## API collection (Bruno)
 
 `apps/api/bruno/` is a [Bruno](https://www.usebruno.com) collection with every operation. It's plain-text files, so it is versioned and reviewed with the API.
@@ -259,7 +273,7 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Rate limits across instances.** Counters and backoff are in memory, so each API instance counts separately. Move them to Redis, and absorb floods before Node with a CDN/WAF.
 - **Sessions that can be revoked.** Tokens can't be cancelled before they expire (signing out only removes the cookie). Keep sessions or refresh tokens server-side (a table or Redis) so "sign out everywhere" and account lockout take effect at once.
 - **Database.** A connection pooler (PgBouncer), and a read replica for the dashboard so reads don't compete with registrations.
-- **Caching.** Service types change rarely but are fetched on every form load; cache them on the web server with a short revalidation.
+- **Caching.** Service types are already cached per web instance for 5 minutes (`SERVICE_TYPES_CACHE_SECONDS`); with many instances, a shared cache (Redis) or on-demand revalidation keeps them consistent.
 - **Observability.** The API already writes structured logs with request ids (see [Observability](#observability-api)). Next: the same on the web server, sending its request id to the API; tracing across web → API → database (OpenTelemetry); metrics; and alerts on error rates and `rate_limit.blocked` spikes.
 - **Search.** Trigram indexes serve substring search well into the millions of rows; beyond that, or for ranking and typo tolerance, move to Postgres full-text search or a search service.
 - **Dashboard features.** CSV export, and an audit trail of service-interest changes.
@@ -272,9 +286,16 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Sign out doesn't revoke the token**, only removes the cookie (see 10× scale).
 - **No admin user management UI**; admins are created with `createUser` (ADMIN only) or the dev seed.
 - **Registration reliability.** "Thanks" shows at once and stays only once Postgres has committed the lead, so nothing the server accepted is lost. Three gaps remain, each with its reason and planned fix in [docs/architecture.md](docs/architecture.md#reliability-known-gaps-todo):
-  1. A registration that was saved but whose answer was lost (timeout, dropped connection) is reported as failed, and Try again then says the email is already registered. Fix: an idempotency key per submission, then automatic retries.
-  2. A tab closed in the second after "Thanks" never sends the registration. Fix: keep it in `localStorage` until confirmed and resend it on the next visit.
-  3. While the API or Postgres is down, visitors must come back and try again. This matters most. Fix: the Next server publishes to Kafka when the API fails, and an API consumer saves it later.
+  1. A registration that was saved but whose answer was lost (timeout, dropped connection) is reported as failed, and Try again then says the email is already registered. Fix: an idempotency key per submission, a hash of its normalised values computed on the Next server with a secret, then automatic retries.
+  2. A tab closed in the second after "Thanks" never sends the registration. Fix: keep the values in `localStorage` until confirmed and resend them on the next visit (the same values give the same key).
+  3. While the API or Postgres is down, visitors must come back and try again. This matters most. Fix: the Next server sends it to an SQS FIFO queue when the API fails (the content key as deduplication id), and an API worker saves it later.
+- **Security gaps**, from a review against the OWASP Top 10, by priority:
+  - High: revocable sessions, with the role rechecked on each request (a removed admin keeps access until the token expires, up to 30 minutes); rate limits and backoff in Redis before running more than one instance; per-account lockout and MFA for admins (per-IP limits don't stop guessing from many IPs).
+  - Medium: per-user quotas and alerts on bulk `leads` reads (anti-scraping); CSP reports and browser error reporting; Dependabot and `pnpm audit` in CI (today: one moderate advisory in a `uuid` version pulled in by Sequelize, in functions the app doesn't call); scrypt cost raised to OWASP's minimum (N=2^17); refuse to start in production without `WEB_TRUST_PROXY`, or every visitor shares one rate-limit bucket.
+  - Low: `__Host-` cookie prefix with `Secure` tied to HTTPS; COOP and CORP headers on the web; `iss` and `aud` claims on the JWT; a validated env schema; a length check on login arguments before hashing.
+- **Tracing across web and API.** The API tags every log line with a request id, but the web neither sends one nor logs its own: generate it in `proxy.ts`, forward it to the API and show it on error pages as a reference code.
+- **Graceful shutdown.** Enable Nest's shutdown hooks and let readiness answer 503 while draining, so deploys don't cut requests in flight.
+- **Browser coverage.** Automated tests run in Chromium only (desktop and an emulated Pixel 7). Add WebKit (Safari) and Firefox projects to the e2e suite.
 - **Lighthouse can't sign in**, so `/admin` was measured by hand with a session cookie (100 for Performance, Accessibility and Best Practices).
 
 ## AI Assistance

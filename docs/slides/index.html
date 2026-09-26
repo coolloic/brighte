@@ -58,16 +58,16 @@
 <p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">What shipped</p>
 <h2 style="font-size:72px; font-weight:700; line-height:1.1">A working end-to-end flow</h2>
 </div>
-<p style="font-size:32px; line-height:1.4; color:#404148; max-width:1500px">A public registration form and an admin leads dashboard on a real GraphQL API. Stretch goal: the admin boundary, with rate limiting alongside.</p>
+<p style="font-size:32px; line-height:1.4; color:#404148; max-width:1500px">A public registration form and an admin leads dashboard on a real GraphQL API. Stretch goals: the admin boundary, with rate limiting alongside, and an optimistic register that the server confirms.</p>
 </div>
 <div style="display:flex; gap:32px">
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
-<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">44</p>
+<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">45</p>
 <p style="font-size:24px; color:#404148">merged pull requests</p>
 </div>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
-<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">3</p>
-<p style="font-size:24px; color:#404148">days, 24 to 26 Sep</p>
+<p style="font-size:120px; font-weight:700; line-height:1; color:#006045">10</p>
+<p style="font-size:24px; color:#404148">hours, 24 to 26 Sep</p>
 </div>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
 <p style="font-size:120px; font-weight:700; line-height:1; color:#006045">6</p>
@@ -209,44 +209,310 @@
 </section>
 <section class="slide" id="nfr" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
 <div style="display:flex; flex-direction:column; gap:16px">
-<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Non-functional considerations</p>
-<h2 style="font-size:72px; font-weight:700; line-height:1.1">Decided, and covered by tests</h2>
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">Non-functional requirements</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Seven areas, measured or tested</h2>
 </div>
 <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:24px">
 <div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
-<h3 style="font-size:32px; font-weight:700">Idempotency</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148">Unique email in the database; a duplicate gets CONFLICT, never a merge.</p>
+<h3 style="font-size:32px; font-weight:700">1 · Performance</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">One process: 3,400 registrations/s, 8,400 reads/s; page p50 9 ms.</p>
 </div>
 <div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
-<h3 style="font-size:32px; font-weight:700">Validation</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148">Shared Zod rules: the browser checks first, the API decides.</p>
+<h3 style="font-size:32px; font-weight:700">2 · Security</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">OWASP Top 10 mapped to code: nonce CSP, deny-by-default roles, rate limits.</p>
 </div>
 <div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
-<h3 style="font-size:32px; font-weight:700">Security</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148">Deny by default, per-IP limits with backoff, nonce CSP.</p>
+<h3 style="font-size:32px; font-weight:700">3 · Reliability</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Confirmed only after commit; the pool fails fast; live and ready checks.</p>
 </div>
 <div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
-<h3 style="font-size:32px; font-weight:700">Performance</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148">No N+1, trigram search indexes, a bounded DB pool.</p>
+<h3 style="font-size:32px; font-weight:700">4 · Scalability</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Stateless servers scale out; limits move to Redis first.</p>
 </div>
 <div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
-<h3 style="font-size:32px; font-weight:700">Resilience</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148">Instant confirmation, reconciled; input kept through errors and reloads; works without JavaScript.</p>
+<h3 style="font-size:32px; font-weight:700">5 · Maintainability</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">A request id on every log line; typed error codes; six test layers.</p>
 </div>
 <div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
-<h3 style="font-size:32px; font-weight:700">Observability</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148">JSON logs with request ids, audit events, live and ready checks.</p>
+<h3 style="font-size:32px; font-weight:700">6 · Usability</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Brighte's look at WCAG AA, text at AAA; each device gets its own layout.</p>
 </div>
 <div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
-<h3 style="font-size:32px; font-weight:700">Accessibility</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148">WCAG 2.1 AA, AAA text contrast, axe on every story.</p>
+<h3 style="font-size:32px; font-weight:700">7 · Compatibility</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Chrome, Edge, Firefox 111+, Safari 16.4+; works without JavaScript.</p>
 </div>
-<div style="display:flex; flex-direction:column; gap:12px; background:#ffffff; border-radius:16px; padding:32px">
-<h3 style="font-size:32px; font-weight:700">Migrations</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148">Umzug steps with up and down; the ORM never alters the schema.</p>
+<div style="display:flex; flex-direction:column; gap:12px; background:#1e2028; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">What follows</h3>
+<p style="font-size:24px; line-height:1.4; color:#c4c5c7">One slide per area: what is in place, the evidence, and the gaps as TODOs.</p>
 </div>
 </div>
-<aside class="notes">Register doesn't merge into or return an existing lead: that would hand anyone who knows an email that person's details. Rate limits: register 5 a minute, login 10, doubling backoff up to 15 minutes. Statements time out after 5 seconds.</aside>
+<aside class="notes">The seven areas follow the usual non-functional requirement headings. Numbers on the performance slides come from a load test of the production builds on one laptop; everything else points at code and tests in the repo. Validation, idempotency and migrations sit under security, reliability and maintainability respectively.</aside>
+</section>
+<section class="slide" id="nfr-performance" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">1 · Performance</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Measured: one process each, one laptop</h2>
+</div>
+<table style="font-size:28px; line-height:1.35; color:#404148">
+<tr><th style="width:46%; color:#1e2028">Scenario</th><th style="width:16%; color:#1e2028">Requests/s</th><th style="width:19%; color:#1e2028">10 users, ms</th><th style="width:19%; color:#1e2028">200 users, ms</th></tr>
+<tr><td style="color:#1e2028; font-weight:600">API health check (no database)</td><td>34,700</td><td>0 / 0</td><td>5 / 7</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">API service types (read)</td><td>8,400</td><td>1 / 2</td><td>25 / 37</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">API register (write, transaction)</td><td>3,400</td><td>2 / 4</td><td>61 / 92</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">API leads page, admin (20 rows)</td><td>830</td><td>26 / 47</td><td>264 / 365</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">API leads search, admin (indexed)</td><td>1,265</td><td>7 / 12</td><td>159 / 227</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Web register page (server-rendered)</td><td>1,200</td><td>9 / 40</td><td>157 / 276</td></tr>
+</table>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Times are p50 / p99.</b> At 1,000 users, register holds 3,200/s (p99 369 ms, no errors); one web process starts timing out, so add a second.</p>
+<p style="position:absolute; left:128px; bottom:64px; width:1664px; font-size:24px; color:#6a7179">MacBook Pro M4 Pro, 24 GB · production builds · Postgres 17 in Docker · 164k leads · autocannon, 15 s runs, a new visitor IP per request · 0 errors</p>
+<aside class="notes">Setup: the API and the web ran as production builds (NODE_ENV=production), one Node process each, against a separate database that was dropped afterwards, so the real rate limiter stayed in the path: every request came from a new visitor IP through X-Forwarded-For. The load generator ran on the same laptop, so these are conservative. 'Users' here are concurrent connections sending back to back, far heavier than people filling in a form. Page load: Lighthouse scores the register page 100 for performance; the HTML itself comes back in under 50 ms at 10 concurrent users and under 300 ms at 200, well inside a 2-second budget. Register at 200 users is a write transaction every 0.3 ms.</aside>
+</section>
+<section class="slide" id="nfr-search" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">1 · Performance · found by the test</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Admin search read the whole table: fixed</h2>
+</div>
+<div style="display:flex; gap:32px">
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
+<p style="font-size:96px; font-weight:700; line-height:1; color:#006045">42 → 1,265</p>
+<p style="font-size:24px; color:#404148">searches per second, same search terms</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
+<p style="font-size:96px; font-weight:700; line-height:1; color:#006045">242 → 7 ms</p>
+<p style="font-size:24px; color:#404148">median response, 10 concurrent admins</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; border-top:4px solid #00805c; padding:24px 0 0 0">
+<p style="font-size:96px; font-weight:700; line-height:1; color:#006045">0</p>
+<p style="font-size:24px; color:#404148">pool timeouts after the fix (7 before, at 200)</p>
+</div>
+</div>
+<div style="display:flex; gap:32px">
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700; line-height:1.2; color:#1e2028">Cause</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Search is one OR across name, email, postcode and mobile. Postgres uses the trigram indexes only if every branch has an index; postcode and mobile had none, so every search scanned all rows, twice (page and count).</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#1e2028; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700; line-height:1.2; color:#f7f7f5">Fix · migration, with a test</h3>
+<p style="font-size:24px; line-height:1.4; color:#c4c5c7">A prefix index on postcode and a trigram index on mobile, so Postgres combines all four (BitmapOr). An e2e test checks the plan; one search went from 49 ms to 0.34 ms.</p>
+</div>
+</div>
+<aside class="notes">At 200 concurrent admins the slow search filled all 10 pooled connections and 7 requests waited past the 5-second acquire timeout: the bounded pool failed fast instead of queueing forever, as designed. The fix is the add-leads-postcode-mobile-indexes migration. The after figures come from the same load test against a fresh database built by the migrations, with a warm cache (the very first run, on a cold cache, managed 716 a second). The e2e test turns plain scans off and checks that the search's plan uses all four indexes, so a new search column without an index fails the build. A search that matches most rows (like a common mobile prefix) still scans, which is the right plan for Postgres.</aside>
+</section>
+<section class="slide" id="nfr-security" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">2 · Security</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">OWASP Top 10, mapped to code</h2>
+</div>
+<table style="font-size:26px; line-height:1.35; color:#404148">
+<tr><th style="width:27%; color:#1e2028">OWASP 2021</th><th style="width:73%; color:#1e2028">In place</th></tr>
+<tr><td style="color:#1e2028; font-weight:600">A01 Access control</td><td>Deny-by-default guard; leads and users need ADMIN; requireAdmin() asks the API on every admin page</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">A02 Cryptography</td><td>scrypt with salt, timing-safe compare; HS256 pinned, secret ≥ 32 chars; HSTS in production</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">A03 Injection · XSS</td><td>Zod on every input; Sequelize operators with LIKE escaped; nonce CSP with strict-dynamic</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">A04 Abuse · DoS</td><td>Per IP and operation: register 5, login 10, others 120/min, doubling backoff; 1,000-token query cap</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">A05 Misconfiguration</td><td>helmet; CORS allowlist; introspection and GraphiQL off in production; errors masked</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">A07 Authentication</td><td>httpOnly, SameSite=Lax, Secure cookie; 30 min idle, 8 h max; same answer for unknown email</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">A09 Logging</td><td>JSON logs without tokens or emails; events auth.login_failed, rate_limit.blocked, user.created</td></tr>
+</table>
+<aside class="notes">The browser never calls the API: pages and Server Actions call it from the Next server, so the API address and the admin's token never reach JavaScript. CSRF: Server Actions check the Origin, the cookie is SameSite=Lax, and Apollo rejects simple cross-site requests. The CSP gets a fresh nonce on every response; frame-ancestors 'none' and X-Frame-Options DENY stop clickjacking. Access control is covered by API end-to-end tests: a USER token gets FORBIDDEN on leads, no token gets UNAUTHENTICATED. pnpm audit --prod: one moderate advisory, in a uuid version pulled in by Sequelize for functions the app doesn't call.</aside>
+</section>
+<section class="slide" id="nfr-access" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">2 · Security · access</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Admin locked down, public page findable</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:stretch">
+<div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#1e2028; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">Admin portal: hard to reach or scrape</h3>
+<ul style="font-size:24px; line-height:1.45; color:#c4c5c7"><li>Only ADMIN tokens read leads; the USER role is a placeholder that can read only its own profile</li><li>noindex, nofollow on every /admin page</li><li>At most 100 leads per request; the UI offers 10 to 100</li><li>120 requests a minute per IP; no export</li><li>Only the fields on screen leave the server</li><li><b style="color:#f7f7f5">TODO:</b> per-user quotas and alerts on bulk reads</li></ul>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#ffffff; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#1e2028">Registration page: easy to find</h3>
+<ul style="font-size:24px; line-height:1.45; color:#404148"><li>Server-rendered HTML, so crawlers see the form</li><li>Title, description, canonical, Open Graph, Twitter</li><li>JSON-LD WebPage structured data</li><li>sitemap.xml lists only the public page</li><li>robots.txt allows /admin on purpose: a blocked crawler never sees noindex</li><li>Lighthouse SEO 100</li></ul>
+</div>
+</div>
+<aside class="notes">The USER role exists so accounts other than admins can be added later; today a USER signing in to the web is turned away, and its token can only call me and renewToken. Scraping risk that remains: an admin token, or a stolen one, can page through every lead at 120 requests a minute, so the TODO is a per-user limit on the leads query and an alert on unusual volume. The rate limit also counts GraphQL aliases one by one.</aside>
+</section>
+<section class="slide" id="nfr-security-todo" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">2 · Security · TODO</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Gaps, by priority</h2>
+</div>
+<table style="font-size:24px; line-height:1.35; color:#404148">
+<tr><th style="width:36%; color:#1e2028">Gap</th><th style="width:44%; color:#1e2028">Risk today</th><th style="width:20%; color:#1e2028">Priority</th></tr>
+<tr><td style="color:#1e2028; font-weight:600">Revocable sessions, role rechecked</td><td>A removed admin keeps access up to 30 min</td><td>High</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Rate limits in Redis</td><td>Counters are per instance: N instances, N× the limit</td><td>High, before scaling out</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Per-account lockout, admin MFA</td><td>Guessing from many IPs gets past per-IP limits</td><td>High</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Per-user quotas on leads</td><td>An admin token can page through every lead</td><td>Medium</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">CSP reports, browser error reporting</td><td>Violations and client errors are invisible</td><td>Medium</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Dependabot and audit in CI</td><td>No CI yet; one moderate transitive advisory</td><td>Medium</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">scrypt cost to OWASP minimum</td><td>Node's default N=2^14; OWASP asks 2^17</td><td>Medium</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Refuse to start without WEB_TRUST_PROXY</td><td>Unset, every visitor shares one rate-limit bucket</td><td>Medium</td></tr>
+</table>
+<aside class="notes">Found by a read-only review of the code against OWASP. Lower priority, also listed: __Host- cookie prefix and Secure tied to https, COOP and CORP headers on the web, iss and aud claims on the JWT, a validated env schema, and a login argument length check before hashing. Register answering CONFLICT reveals that an email is registered; accepted for the user experience, and limited to 5 tries a minute per IP.</aside>
+</section>
+<section class="slide" id="nfr-availability" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">3 · Reliability and availability</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Fail fast, keep what the visitor typed</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:stretch">
+<div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#ffffff; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#1e2028">In place</h3>
+<ul style="font-size:24px; line-height:1.45; color:#404148"><li>Instant confirmation, kept only once Postgres commits</li><li>Typed details kept through errors and reloads</li><li>Bounded pool: 10 connections, 5 s to get one, 5 s per statement; the load test saw it fail fast</li><li>Live check never touches the database; ready returns 503, so a balancer drains the instance</li><li>Web waits 10 s for the API, then shows Try again</li><li>Rate limits with backoff keep floods off the database</li></ul>
+</div>
+<div style="width:620px; display:flex; flex-direction:column; gap:16px; background:#1e2028; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">TODO</h3>
+<ul style="font-size:24px; line-height:1.45; color:#c4c5c7"><li>Queue registrations while the API or Postgres is down (next slide)</li><li>Idempotency key, then automatic retries</li><li>Graceful shutdown: finish requests in flight on deploy</li><li>Health endpoint for the web tier</li><li>Uptime target and alarms, set with the AWS move (Multi-AZ)</li></ul>
+</div>
+</div>
+<aside class="notes">Availability targets such as 99.9% belong to the infrastructure: two or more tasks across availability zones, RDS Multi-AZ, health checks on the load balancer. The application's part is to fail fast and visibly, never lose what the visitor typed, and let the balancer take a sick instance out of rotation. Graceful shutdown means enableShutdownHooks in Nest and readiness answering 503 while draining.</aside>
+</section>
+<section class="slide" id="nfr-queue" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">3 · Reliability · outage queue</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">SQS fits this; Kafka if events fan out</h2>
+</div>
+<table style="font-size:26px; line-height:1.35; color:#404148">
+<tr><th style="width:18%; color:#1e2028"></th><th style="width:37%; color:#1e2028">Amazon SQS</th><th style="width:45%; color:#1e2028">Kafka</th></tr>
+<tr><td style="color:#1e2028; font-weight:600">Holds messages</td><td>Up to 14 days (default 4)</td><td>Retention by time or size (default 7 days); unlimited is possible but must be configured</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">A failed save</td><td>Comes back after the visibility timeout; to a dead-letter queue after N tries</td><td>Stays until the consumer commits its offset; dead-letter topic by convention</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Duplicates</td><td>FIFO: deduplicated by id for 5 minutes</td><td>Idempotent producer; consumers still dedupe</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">To run</td><td>Fully managed, pay per request</td><td>A cluster (or MSK) to size, patch and watch</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Best for</td><td>One consumer, modest volume</td><td>Many consumers, replay, event streams</td></tr>
+</table>
+<p style="font-size:26px; line-height:1.4; color:#1e2028"><b>Plan:</b> SQS FIFO. Deduplication id: a hash of all the details, so a corrected submission still goes through (the email alone would drop it). Group id: a hash of the email, so its submissions stay in order. The worker is idempotent anyway.</p>
+<aside class="notes">Correction to a common belief: Kafka doesn't keep messages forever by default. Topics have a retention time or size, 7 days by default; infinite retention has to be set, and tiered storage makes it affordable. Delivery is guaranteed when producers use acks=all with replication factor 3 and min.insync.replicas 2, and consumers commit only after the database commit. SQS gives the same outcome for one consumer with nothing to operate: a message that fails comes back after its visibility timeout and moves to a dead-letter queue after maxReceiveCount. Both hashes are HMACs with a secret, computed on the Next server, so no email appears in queue metadata. The 5-minute deduplication window only catches quick repeats; the submission_id stored on the lead makes a replay days later a success too. If registrations later feed a CRM, emails and analytics, Kafka (or SNS fan-out to several SQS queues) becomes worth it.</aside>
+</section>
+<section class="slide" id="reliability" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Reliability · TODO</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Only the screen is fire and forget</h2>
+</div>
+<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:24px">
+<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">1 · Build first</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">Saved, but the answer is lost</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> a timeout says "couldn't send"; Try again then says "already registered".</p>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> two wrong messages, and retries can't be automatic.</p>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> a key hashed from the details on the server, then automatic retries.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">2 · Client side</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">The browser never sends it</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> tab closed in the second after "Thanks": lost.</p>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> a confirmation for a registration that doesn't exist.</p>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> keep it in localStorage until confirmed; resend on the next visit.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:16px; background:#edfaf5; border:1px solid #b9e3d3; border-top:8px solid #006045; border-radius:16px; padding:32px">
+<p style="font-size:24px; font-weight:600; color:#006045">3 · Matters most</p>
+<h3 style="font-size:32px; font-weight:700; line-height:1.2">The API or Postgres is down</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> "couldn't send", details kept; the visitor must come back.</p>
+<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> some visitors won't; Postgres can't cover its own outage.</p>
+<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> the web queues it (SQS) when the API fails; a worker saves it later.</p>
+</div>
+</div>
+<aside class="notes">The confirmation shows before the server answers (useOptimistic), but it stays only once Postgres has committed the lead; anything else withdraws it with the reason and what was typed. So nothing the server accepted is lost. These are the gaps left. Gap 1 comes first because gaps 2 and 3 both need retries to be safe. The idempotency key is HMAC-SHA256 of the normalised details (email lowercased, mobile as digits, services sorted), computed on the Next server with a secret: identical details always give the same key, so retries, the resend and the queue agree with nothing stored, while a corrected submission gets a new key and is told the email is taken instead of being dropped. Never computed in the browser, where the key would be public and the hash a guessable fingerprint of personal data. For gap 3, an SQS FIFO queue with the submission id as its deduplication id: a failed save comes back after the visibility timeout and goes to a dead-letter queue after a few tries; a replayed CONFLICT counts as done. Kafka works too, and is worth it once registrations feed several systems. Still to decide: queue only as a fallback, which keeps the duplicate-email and rate-limit feedback, or every registration. Details and checklist in docs/architecture.md.</aside>
+</section>
+<section class="slide" id="nfr-scalability" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">4 · Scalability</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Stateless, so it scales out</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:start">
+<div style="flex:1; display:flex; flex-direction:column; gap:20px">
+<p style="font-size:24px; line-height:1.4; color:#404148">Estimate on AWS Fargate, 1 vCPU per API task, taken as half the laptop process:</p>
+<table style="font-size:24px; line-height:1.35; color:#404148">
+<tr><th style="width:22%; color:#1e2028">API tasks</th><th style="width:26%; color:#1e2028">Registrations/s</th><th style="width:22%; color:#1e2028">DB connections</th><th style="width:30%; color:#1e2028">Note</th></tr>
+<tr><td style="color:#1e2028; font-weight:600">1 (today)</td><td>≈ 1,500</td><td>10</td><td>Far above launch traffic</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">2, across zones</td><td>≈ 3,000</td><td>20</td><td>The minimum for availability</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">4</td><td>≈ 6,000</td><td>40</td><td>5× growth, with headroom</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">10</td><td>≈ 15,000</td><td>100</td><td>The database writer becomes the limit: measure</td></tr>
+</table>
+</div>
+<div style="width:600px; display:flex; flex-direction:column; gap:16px; background:#1e2028; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">Before adding instances</h3>
+<ul style="font-size:24px; line-height:1.45; color:#c4c5c7"><li>Rate limits and backoff in Redis</li><li>RDS Proxy: tasks × 10 stays under max_connections</li><li>One Server Actions key and deployment id for all web tasks</li><li>Graceful shutdown for rolling deploys</li><li>Already fine: JWT sessions, state in the URL, a DataLoader per request</li></ul>
+</div>
+</div>
+<aside class="notes">Estimates, not measurements: each figure assumes throughput grows linearly with API tasks until Postgres limits it; confirm with the same load test on AWS. For scale, 100,000 sign-ups in a day average about 1 a second, and a campaign spike of a few hundred a second fits in one or two tasks; the second task is for availability, not load. Reads scale further with a read replica for the dashboard, and the register page is cheap to serve (about 1,200 per second per web process). Scale-out rules: CPU above 60% or p99 over 300 ms adds a task.</aside>
+</section>
+<section class="slide" id="nfr-maintainability" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">5 · Maintainability and testability</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Any failure can be traced to its module</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:stretch">
+<div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#ffffff; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#1e2028">Tracing a request</h3>
+<ul style="font-size:24px; line-height:1.45; color:#404148"><li>The API keeps a caller's X-Request-Id or makes one, and returns it</li><li>reqId on every JSON log line; one line per GraphQL operation with name, duration, user, IP and error codes</li><li>Stable error codes, turned into copy in one place</li><li>Readiness names the failing dependency</li><li><b style="color:#000">TODO:</b> the web creates the id, forwards it and shows it on the error page; OpenTelemetry tracing</li></ul>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#1e2028; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">Code and tests</h3>
+<ul style="font-size:24px; line-height:1.45; color:#c4c5c7"><li>Monorepo; one validation package for browser and API</li><li>Module barrels and atomic-design direction enforced by ESLint</li><li>Migrations with up and down; code-first GraphQL schema</li><li>Six test layers, from unit to browser, with axe</li><li>Pre-commit: ESLint, Stylelint, typecheck</li></ul>
+</div>
+</div>
+<aside class="notes">Support workflow today: from a visitor's time and IP, find the API line for their operation; its reqId links every line of that request, including the stack trace of an unexpected error. The gap is the web side: it logs with console.error and doesn't send an id, so the first TODO is generating the id in proxy.ts, forwarding it in the API client and printing it as a reference code on error pages.</aside>
+</section>
+<section class="slide" id="nfr-usability" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:32px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">6 · Usability · accessibility</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Brighte's palette, adjusted to pass</h2>
+</div>
+<table style="font-size:24px; line-height:1.35; color:#404148">
+<tr><th style="width:30%; color:#1e2028">Element</th><th style="width:30%; color:#1e2028">Brighte's colour</th><th style="width:40%; color:#1e2028">Ours</th></tr>
+<tr><td style="color:#1e2028; font-weight:600">Button label, white on green</td><td>#00c28c · 2.31:1 ✗</td><td>#00805c · 4.95:1 (AAA for its large bold text)</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Brand-coloured text</td><td>#00c28c · 2.31:1 ✗</td><td>#006045 · 7.61:1 AAA</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Checked checkbox fill</td><td>#00c28c · 2.31:1 ✗ (needs 3:1)</td><td>#00986e · 3.67:1</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Body and muted text</td><td>—</td><td>16.25:1 and 10.16:1 AAA</td></tr>
+<tr><td style="color:#1e2028; font-weight:600">Logo</td><td>#00c28c kept</td><td>Logos are exempt (WCAG 1.4.3)</td></tr>
+</table>
+<div style="display:flex; gap:24px">
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700; line-height:1.2; color:#1e2028">Keyboard</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Skip to main content is the first Tab stop; a visible 2px focus ring everywhere.</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700; line-height:1.2; color:#1e2028">Screen readers</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">Focus moves to the first error or the confirmation; live regions announce waits.</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:12px; background:#ffffff; border:1px solid #dddedf; border-radius:16px; padding:32px">
+<h3 style="font-size:32px; font-weight:700; line-height:1.2; color:#1e2028">Checked</h3>
+<p style="font-size:24px; line-height:1.4; color:#404148">axe (WCAG 2.1 AA) on every story and e2e page; a contrast test.</p>
+</div>
+</div>
+<aside class="notes">The palette started from the CSS custom properties on brighte.com.au. Brighte's green behind a white label measures 2.31:1, under the 4.5:1 AA minimum, so actions use a deeper green from the same family: 4.95:1, which is AA at any size and AAA for the 20 to 22 px bold button text. Text uses #006045 at 7:1 or more, AAA. The Foundations/Colors contrast story measures every pairing and fails the test run if one drops below its target. Touch targets are at least 44 by 44 px.</aside>
+</section>
+<section class="slide" id="nfr-devices" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">6 · Usability · mobile first</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Each device gets the layout it's used to</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:start">
+<img src="images/demo-dashboard-1.png" alt="Leads dashboard on a phone: leads as cards" style="width:250px; height:540px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px">
+<img src="images/demo-dashboard-3.png" alt="Leads dashboard on desktop: table with the selected lead beside it" style="width:760px; height:540px; object-fit:contain; border:1px solid #c4c5c7; border-radius:12px">
+<div style="flex:1; display:flex; flex-direction:column; gap:20px">
+<div style="display:flex; flex-direction:column; gap:6px"><h3 style="font-size:32px; font-weight:700">Phone</h3><p style="font-size:24px; line-height:1.4; color:#404148">Cards and a sort menu; a lead opens as its own page, with Back.</p></div>
+<div style="display:flex; flex-direction:column; gap:6px"><h3 style="font-size:32px; font-weight:700">Tablet</h3><p style="font-size:24px; line-height:1.4; color:#404148">A table with sortable headers; the lead still replaces the list.</p></div>
+<div style="display:flex; flex-direction:column; gap:6px"><h3 style="font-size:32px; font-weight:700">Desktop</h3><p style="font-size:24px; line-height:1.4; color:#404148">Table and lead side by side; × closes it, the list stays put.</p></div>
+</div>
+</div>
+<aside class="notes">Mobile first: unprefixed styles are the phone layout and larger screens add to it; nothing scrolls sideways at 320 px. The dashboard's two levels on small screens avoid a detail panel buried under a long list; from 1024 px the detail sits in a sticky column beside the table. Everything lives in the URL (search, filter, sort, page, selected lead), so Back works and the dashboard works without JavaScript. The register form stacks on mobile and sits beside the pitch on desktop.</aside>
+</section>
+<section class="slide" id="nfr-compat" data-transition="fade" style="background:#edfaf5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:40px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#006045">7 · Compatibility and portability</p>
+<h2 style="font-size:72px; font-weight:700; line-height:1.1">Modern browsers, any container host</h2>
+</div>
+<div style="display:flex; gap:32px; align-items:stretch">
+<div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#ffffff; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#1e2028">Browsers and devices</h3>
+<ul style="font-size:24px; line-height:1.45; color:#404148"><li>Chrome, Edge and Firefox 111+, Safari 16.4+ (Next.js 16 targets)</li><li>Tested: Chromium on desktop and an emulated Pixel 7; every story in Chromium</li><li>Forms and dashboard work without JavaScript</li><li>From 320 px wide; 44 px touch targets</li><li><b style="color:#000">TODO:</b> WebKit (Safari) and Firefox runs in the e2e suite</li></ul>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:16px; background:#1e2028; border-radius:16px; padding:36px">
+<h3 style="font-size:32px; font-weight:700; color:#f7f7f5">Runtimes and clouds</h3>
+<ul style="font-size:24px; line-height:1.45; color:#c4c5c7"><li>Node 24 LTS, pnpm; Postgres 17</li><li>All config from environment variables</li><li>JSON logs to stdout, live and ready checks</li><li>Stateless servers: ECS, Kubernetes or any container host</li><li><b style="color:#f7f7f5">TODO:</b> Dockerfiles for web and API</li></ul>
+</div>
+</div>
+<aside class="notes">Adding WebKit and Firefox is two more Playwright projects (an iPhone device runs WebKit), so Safari's form and focus behaviour is tested, not assumed. Portability follows twelve-factor habits: config in the environment, logs as event streams, disposable processes, and migrations as a separate step, which is what makes the AWS plan mostly infrastructure.</aside>
 </section>
 <section class="slide" id="improve" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
 <div style="display:flex; flex-direction:column; gap:16px">
@@ -264,36 +530,6 @@
 <tr><td style="color:#1e2028">One-command Docker run</td><td>docker compose up starts everything</td></tr>
 </table>
 <aside class="notes">Also worth doing: Postgres full-text search or a search service past millions of rows, CSV export and an audit trail of service-interest changes, and keeping Storybook-only Tailwind classes out of the production CSS.</aside>
-</section>
-<section class="slide" id="reliability" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:48px">
-<div style="display:flex; flex-direction:column; gap:16px">
-<p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Reliability · TODO</p>
-<h2 style="font-size:72px; font-weight:700; line-height:1.1">Only the screen is fire and forget</h2>
-</div>
-<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:24px">
-<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
-<p style="font-size:24px; font-weight:600; color:#006045">1 · Build first</p>
-<h3 style="font-size:32px; font-weight:700; line-height:1.2">Saved, but the answer is lost</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> a timeout says "couldn't send"; Try again then says "already registered".</p>
-<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> two wrong messages, and retries can't be automatic.</p>
-<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> an idempotency key per submission, then automatic retries.</p>
-</div>
-<div style="display:flex; flex-direction:column; gap:16px; background:#ffffff; border:1px solid #dddedf; border-top:8px solid #00805c; border-radius:16px; padding:32px">
-<p style="font-size:24px; font-weight:600; color:#006045">2 · Client side</p>
-<h3 style="font-size:32px; font-weight:700; line-height:1.2">The browser never sends it</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> tab closed in the second after "Thanks": lost.</p>
-<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> a confirmation for a registration that doesn't exist.</p>
-<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> keep it in localStorage until confirmed; resend on the next visit.</p>
-</div>
-<div style="display:flex; flex-direction:column; gap:16px; background:#edfaf5; border:1px solid #b9e3d3; border-top:8px solid #006045; border-radius:16px; padding:32px">
-<p style="font-size:24px; font-weight:600; color:#006045">3 · Matters most</p>
-<h3 style="font-size:32px; font-weight:700; line-height:1.2">The API or Postgres is down</h3>
-<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Today:</b> "couldn't send", details kept; the visitor must come back.</p>
-<p style="font-size:24px; line-height:1.4; color:#404148"><b style="color:#1e2028">Why:</b> some visitors won't; Postgres can't cover its own outage.</p>
-<p style="font-size:24px; line-height:1.4; color:#1e2028"><b>Fix:</b> Next publishes to Kafka when the API fails; an API consumer saves it later.</p>
-</div>
-</div>
-<aside class="notes">The confirmation shows before the server answers (useOptimistic), but it stays only once Postgres has committed the lead; anything else withdraws it with the reason and what was typed. So nothing the server accepted is lost. These are the gaps left. Gap 1 comes first because gaps 2 and 3 both need retries to be safe. For gap 3, Kafka runs with acks=all and an idempotent producer; the consumer commits its offset after the database commit, treats a replayed CONFLICT as done and sends validation failures to a dead-letter topic. Still to decide: queue only as a fallback, which keeps the duplicate-email and rate-limit feedback, or every registration. Details and checklist in docs/architecture.md.</aside>
 </section>
 <section class="slide" id="aws-target" data-transition="fade" style="background:#f7f7f5; color:#1e2028; font-family:'DM Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:16px">
 <p style="font-size:24px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:#00805c">Cloud-native on AWS</p>
