@@ -13,7 +13,10 @@ export function ChatLink({ current = false }: { current?: boolean }) {
       className="inline-flex min-h-11 items-center gap-2 rounded-control px-3 font-semibold text-fg-brand transition-[background-color] hover:bg-surface-brand focus-visible:focus-ring aria-[current=page]:bg-surface-brand"
     >
       <Icon name="sparkles" />
-      Chat<span className="hidden sm:inline"> with us</span>
+      {/* One element: the flex gap would otherwise also open up before " with us". */}
+      <span>
+        Chat<span className="hidden sm:inline"> with us</span>
+      </span>
     </Link>
   );
 }

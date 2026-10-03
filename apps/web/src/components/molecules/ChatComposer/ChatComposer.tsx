@@ -1,4 +1,4 @@
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import { Button } from "@/components/atoms/Button";
 import { FieldError } from "@/components/atoms/FieldError";
 import { Icon } from "@/components/atoms/Icon";
@@ -15,6 +15,8 @@ export type ChatComposerProps = {
   maxChars: number;
   /** Why the message can't be sent (e.g. too long). */
   error?: string;
+  /** Small controls on the right of the hint line, e.g. the model picker. */
+  toolbar?: ReactNode;
   ref?: Ref<HTMLTextAreaElement>;
 };
 
@@ -23,7 +25,7 @@ export type ChatComposerProps = {
  * box grows with the text (where the browser supports field-sizing). A character count appears near
  * the limit. While a reply streams, typing stays possible and Send becomes Stop.
  */
-export function ChatComposer({ id, value, onChange, onSend, onStop, streaming = false, maxChars, error, ref }: ChatComposerProps) {
+export function ChatComposer({ id, value, onChange, onSend, onStop, streaming = false, maxChars, error, toolbar, ref }: ChatComposerProps) {
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const countId = `${id}-count`;
@@ -75,16 +77,19 @@ export function ChatComposer({ id, value, onChange, onSend, onStop, streaming = 
           </Button>
         )}
       </div>
-      <div className="mt-1.5 flex justify-between gap-4 text-sm text-fg-muted">
+      <div className="mt-1 flex min-h-6 flex-wrap items-center justify-between gap-x-4 text-sm text-fg-muted">
         <p id={hintId}>
           Enter to send<span className="hidden sm:inline">, Shift+Enter for a new line</span>
         </p>
-        {showCount && (
-          <p id={countId} className={cn("shrink-0 tabular-nums", length > maxChars && "text-danger")}>
-            {length}/{maxChars}
-            <span className="sr-only"> characters</span>
-          </p>
-        )}
+        <div className="ml-auto flex items-center gap-3">
+          {showCount && (
+            <p id={countId} className={cn("shrink-0 tabular-nums", length > maxChars && "text-danger")}>
+              {length}/{maxChars}
+              <span className="sr-only"> characters</span>
+            </p>
+          )}
+          {toolbar}
+        </div>
       </div>
       {error && <FieldError id={errorId}>{error}</FieldError>}
     </form>

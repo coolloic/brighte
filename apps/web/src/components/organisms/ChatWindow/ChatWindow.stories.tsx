@@ -57,12 +57,12 @@ export const Conversation: Story = {
   },
 };
 
-/** Waiting for the first words: typing dots, busy log, locked picker, Stop button. */
+/** Waiting for the first words: typing dots, busy log, Stop button. The model can still be switched (for the next message). */
 export const Waiting: Story = {
   args: { messages: [...CONVERSATION, { id: "4", from: "assistant", text: "" }], streaming: true },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("log")).toHaveAttribute("aria-busy", "true");
-    await expect(canvas.getByRole("combobox", { name: "Model" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "Model: Claude Haiku 4.5, Anthropic" })).toBeEnabled();
     await expect(canvas.getByRole("button", { name: "Stop the reply" })).toBeInTheDocument();
   },
 };

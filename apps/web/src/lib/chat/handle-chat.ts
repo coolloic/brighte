@@ -75,8 +75,9 @@ export async function handleChat(request: Request, deps: ChatHandlerDeps): Promi
         if (next.done) controller.close();
         else controller.enqueue(encoder.encode(next.value));
       } catch (error) {
-        // Mid-reply: the page keeps what arrived and says the reply was cut off.
-        console.error(`Chat with ${provider}:${model} broke off:`, error);
+        // Mid-reply: the page keeps what arrived and says the reply was cut off. Not logged when the
+        // visitor stopped it or left: that isn't a failure.
+        if (!request.signal.aborted) console.error(`Chat with ${provider}:${model} broke off:`, error);
         controller.error(error);
       }
     },

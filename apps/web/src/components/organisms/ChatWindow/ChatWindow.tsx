@@ -20,7 +20,7 @@ export type ChatWindowProps = {
   suggestions?: string[];
   onSuggestion: (text: string) => void;
   messages: ChatMessage[];
-  /** A reply is streaming in: the log is busy (screen readers announce it once complete) and the picker is locked. */
+  /** A reply is streaming in: the log is busy (screen readers announce it once complete). */
   streaming?: boolean;
   /** Why the last message failed, with an optional Try again. */
   error?: string;
@@ -28,7 +28,7 @@ export type ChatWindowProps = {
   models: ModelOption[];
   model: string;
   onModelChange: (key: string) => void;
-  composer: Omit<ChatComposerProps, "id" | "streaming" | "ref">;
+  composer: Omit<ChatComposerProps, "id" | "streaming" | "ref" | "toolbar">;
   composerRef?: Ref<HTMLTextAreaElement>;
 };
 
@@ -36,9 +36,10 @@ export type ChatWindowProps = {
 const FOLLOW_THRESHOLD = 160;
 
 /**
- * A messaging-app style chat: header with the assistant and the model picker, the conversation
- * (newest at the bottom), and the message box, which sticks to the bottom of the screen. Presentational: the page
- * holds the conversation and talks to the server.
+ * A messaging-app style chat: header with the assistant, the conversation (newest at the bottom),
+ * and the message box, which sticks to the bottom of the screen. The model picker is a compact
+ * button under the message box, usable at any time (it applies to the next message).
+ * Presentational: the page holds the conversation and talks to the server.
  */
 export function ChatWindow({
   assistantName,
@@ -71,16 +72,13 @@ export function ChatWindow({
 
   return (
     <section aria-labelledby="chat-title" className="flex min-h-112 flex-col rounded-card border border-border bg-surface shadow-card">
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-border p-4">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-full bg-surface-brand text-fg-brand">
-            <Icon name="sparkles" />
-          </span>
-          <Heading level={2} size="sm" id="chat-title">
-            {assistantName}
-          </Heading>
-        </div>
-        <ModelPicker id="chat-model" options={models} value={model} onChange={onModelChange} disabled={streaming} className="w-full sm:w-64" />
+      <header className="flex items-center gap-3 border-b border-border p-4">
+        <span className="flex size-10 items-center justify-center rounded-full bg-surface-brand text-fg-brand">
+          <Icon name="sparkles" />
+        </span>
+        <Heading level={2} size="sm" id="chat-title">
+          {assistantName}
+        </Heading>
       </header>
 
       <div role="log" aria-label="Conversation" aria-busy={streaming} className="flex-1 space-y-3 p-4">
@@ -124,7 +122,14 @@ export function ChatWindow({
             }
           />
         )}
-        <ChatComposer id="chat-message" ref={composerRef} streaming={streaming} {...composer} />
+        <ChatComposer
+          id="chat-message"
+          ref={composerRef}
+          streaming={streaming}
+          // Applies to the next message, so it stays usable while a reply streams.
+          toolbar={<ModelPicker id="chat-model" options={models} value={model} onChange={onModelChange} />}
+          {...composer}
+        />
       </div>
     </section>
   );

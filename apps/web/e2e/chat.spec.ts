@@ -40,8 +40,18 @@ test.describe("chat page", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Chat with Brighte Eats");
     await expect(page.getByRole("main")).toBeVisible();
     // The models come from the provider's models API (here the mock's one model).
+    // A compact button under the message box opens the provider and model selects.
+    const picker = page.getByRole("button", { name: "Model: Claude Haiku 4.5, Anthropic" });
+    await expect(picker).toHaveAttribute("aria-expanded", "false");
+    await expectNoA11yViolations(page);
+    await picker.click();
+    await expect(page.getByRole("combobox", { name: "Provider" })).toHaveValue("anthropic");
     await expect(page.getByRole("combobox", { name: "Model" })).toHaveValue("anthropic:claude-haiku-4-5");
-    await expect(page.getByRole("option", { name: "Claude Haiku 4.5" })).toBeAttached();
+    // Escape closes it and puts focus back on the button.
+    await page.getByRole("combobox", { name: "Model" }).focus();
+    await page.keyboard.press("Escape");
+    await expect(picker).toHaveAttribute("aria-expanded", "false");
+    await expect(picker).toBeFocused();
     await expect(log(page)).toContainText("Hi! I can answer questions about Brighte Eats");
     await expectNoA11yViolations(page);
   });
@@ -102,6 +112,13 @@ test.describe("chat page", () => {
   test("stops a reply and keeps what arrived", async ({ page }) => {
     await sendMessage(page, "Tell me a long story [slow]");
     await expect(log(page)).toContainText("word1 ");
+    // The provider and model can be switched mid-reply (for the next message).
+    const picker = page.getByRole("button", { name: /^Model:/ });
+    await picker.click();
+    await expect(page.getByRole("combobox", { name: "Model" })).toBeEnabled();
+    // A click outside closes it again.
+    await page.getByRole("heading", { level: 1 }).click();
+    await expect(picker).toHaveAttribute("aria-expanded", "false");
     await page.getByRole("button", { name: "Stop the reply" }).click();
 
     await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
