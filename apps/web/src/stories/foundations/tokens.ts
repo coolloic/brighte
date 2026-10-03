@@ -70,6 +70,13 @@ export const ROLE_GROUPS: { group: string; roles: Role[] }[] = [
     ],
   },
   {
+    group: "Chat",
+    roles: [
+      { name: "bubble-own", maps: "green-950", utility: "bg-bubble-own", use: "The visitor's own chat messages" },
+      { name: "on-bubble-own", maps: "white", utility: "text-on-bubble-own", use: "Text in the visitor's chat messages" },
+    ],
+  },
+  {
     group: "Call to action and focus",
     roles: [
       { name: "action", maps: "green-800", utility: "bg-action", use: "Primary button background (white label passes)" },
@@ -111,6 +118,7 @@ export const CONTRAST_PAIRS: { fg: string; bg: string; min: 3 | 4.5 | 7; large?:
   { fg: "fg-brand", bg: "surface-brand", min: 7, use: "Links on brand sections" },
   { fg: "fg-inverse", bg: "fg", min: 7, use: "Inverse text (tooltips)" },
   { fg: "fg-inverse", bg: "surface-inverse", min: 7, use: "Text on dark panels" },
+  { fg: "on-bubble-own", bg: "bubble-own", min: 7, use: "The visitor's chat messages" },
   { fg: "on-action", bg: "action", min: 4.5, large: true, use: "Primary button label (20-22px bold)" },
   { fg: "on-action", bg: "action-hover", min: 4.5, large: true, use: "Primary button label on hover" },
   { fg: "border-strong", bg: "canvas", min: 3, use: "Input outline" },

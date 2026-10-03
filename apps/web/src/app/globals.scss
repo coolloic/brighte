@@ -134,6 +134,10 @@
   --color-action-hover: var(--color-green-900);
   --color-on-action: var(--color-white);
 
+  // Chat: the visitor's own message bubbles, in brand green with white text (AAA, 7:1 and up).
+  --color-bubble-own: var(--color-green-950);
+  --color-on-bubble-own: var(--color-white);
+
   // Keyboard focus ring
   --color-focus: var(--color-green-700);
   --color-focus-inverse: var(--color-white); // focus ring on dark panels (theme-dark): the green is under 3:1 there

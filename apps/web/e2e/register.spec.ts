@@ -186,7 +186,7 @@ test.describe("register page", () => {
   });
 });
 
-test("robots.txt allows crawling and points to a sitemap that lists only the public page", async ({ request, baseURL }) => {
+test("robots.txt allows crawling and points to a sitemap that lists only the public pages", async ({ request, baseURL }) => {
   const robots = await (await request.get("/robots.txt")).text();
   expect(robots).toContain("Allow: /");
   // /admin isn't disallowed: crawlers must be able to see its noindex.
@@ -195,6 +195,7 @@ test("robots.txt allows crawling and points to a sitemap that lists only the pub
 
   const sitemap = await (await request.get("/sitemap.xml")).text();
   expect(sitemap).toContain(`<loc>${baseURL}/</loc>`);
+  expect(sitemap).toContain(`<loc>${baseURL}/chat</loc>`);
   expect(sitemap).not.toContain("/admin");
 });
 

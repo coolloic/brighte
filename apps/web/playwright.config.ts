@@ -18,6 +18,8 @@ const apiPort = Number(process.env.API_PORT ?? 4001) + 100;
 // e2e/api-down.spec.ts. Set here so the test workers inherit it.
 const apiDownWebPort = webPort + 1;
 process.env.E2E_API_DOWN_URL = `http://localhost:${apiDownWebPort}`;
+// A mock Anthropic API (e2e/mock-llm.mjs) for the chat tests: no real model is ever called.
+const mockLlmPort = webPort + 2;
 // The e2e API itself, for tests that create data directly (e2e/support.ts).
 process.env.E2E_API_URL = `http://localhost:${apiPort}/graphql`;
 
@@ -38,6 +40,12 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: `exec node e2e/mock-llm.mjs`,
+      url: `http://localhost:${mockLlmPort}/health`,
+      env: { ...process.env, PORT: String(mockLlmPort) },
+      reuseExistingServer: false,
+    },
+    {
       // Call binaries directly (not via pnpm) and `exec` so Playwright can stop the servers on teardown.
       command: "cd ../api && node_modules/.bin/nest build && exec node --env-file-if-exists=.env dist/main.js",
       url: `http://localhost:${apiPort}`,
@@ -50,7 +58,19 @@ export default defineConfig({
     {
       command: `node_modules/.bin/next build && exec node_modules/.bin/next start --port ${webPort}`,
       url: `http://localhost:${webPort}`,
-      env: { ...process.env, API_URL: `http://localhost:${apiPort}/graphql`, WEB_TRUST_PROXY: "1", SITE_URL: `http://localhost:${webPort}` },
+      env: {
+        ...process.env,
+        API_URL: `http://localhost:${apiPort}/graphql`,
+        WEB_TRUST_PROXY: "1",
+        SITE_URL: `http://localhost:${webPort}`,
+        // Chat: only the mock Anthropic API, whatever keys the root .env holds. A low rate limit, for
+        // e2e/chat.spec.ts (each test is its own visitor, so tests don't share it).
+        ANTHROPIC_BASE_URL: `http://localhost:${mockLlmPort}`,
+        ANTHROPIC_API_KEY: "e2e",
+        OPENAI_API_KEY: "",
+        GEMINI_API_KEY: "",
+        CHAT_RATE_LIMIT: "3",
+      },
       reuseExistingServer: false,
       timeout: 180_000,
     },

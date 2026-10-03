@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import Link from "next/link";
 import { expect, fn, userEvent } from "storybook/test";
 import { RegistrationForm } from "@/components/organisms/RegistrationForm";
 import { SERVICE_OPTIONS } from "@/stories/fixtures/leads";
@@ -39,5 +40,13 @@ export const RegisterPage: Story = {
     // asynchronously, so check the wiring instead: it points at <main>, which can take focus.
     await expect(skip).toHaveAttribute("href", "#main");
     await expect(canvas.getByRole("main")).toHaveAttribute("tabindex", "-1");
+  },
+};
+
+/** A link on the right of the header (the register page links to the chat). */
+export const WithHeaderLink: Story = {
+  args: { headerActions: <Link href="/chat">Chat with us</Link> },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("banner")).toContainElement(canvas.getByRole("link", { name: "Chat with us" }));
   },
 };
