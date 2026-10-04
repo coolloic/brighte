@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChatTurn } from "../llm/types";
+import type { ChatTurn } from "../llm";
 import { chatRequestSchema, MAX_HISTORY, messageError, recentHistory } from "./messages";
 
 const user = (content = "Hi"): ChatTurn => ({ role: "user", content });

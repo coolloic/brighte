@@ -5,7 +5,7 @@ import { Icon } from "@/components/atoms/Icon";
 import { Label } from "@/components/atoms/Label";
 import { Select } from "@/components/atoms/Select";
 import { cn } from "@/lib/cn";
-import { modelKey, type ModelOption } from "@/lib/llm/types";
+import { modelKey, type ModelOption } from "@/lib/llm";
 
 export type ModelPickerProps = {
   id: string;

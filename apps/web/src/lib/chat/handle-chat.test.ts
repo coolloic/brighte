@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ChatRequest, LlmClient, ModelOption } from "../llm/types";
+import type { ChatRequest, LlmClient, ModelOption } from "../llm";
 import { handleChat, type ChatHandlerDeps } from "./handle-chat";
 
 const HAIKU: ModelOption = { provider: "anthropic", providerLabel: "Anthropic", id: "claude-haiku-4-5", label: "Claude Haiku 4.5" };

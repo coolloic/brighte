@@ -6,11 +6,9 @@ import { Text } from "@/components/atoms/Text";
 import { buttonVariants } from "@/components/atoms/Button";
 import { Alert } from "@/components/molecules/Alert";
 import { AppShell } from "@/components/templates/AppShell";
-import { chatConfig } from "@/lib/chat/config";
-import { getPersona } from "@/lib/chat/personas";
-import { modelCatalog } from "@/lib/llm/catalog";
-import { defaultModel } from "@/lib/llm/model-catalog";
-import { modelKey } from "@/lib/llm/types";
+import { chatConfig, getPersona } from "@/lib/chat/server";
+import { defaultModel, modelKey } from "@/lib/llm";
+import { modelCatalog } from "@/lib/llm/server";
 import { ChatLink } from "../_components/ChatLink";
 import { Chat } from "./_components/Chat";
 

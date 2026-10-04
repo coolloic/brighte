@@ -1,5 +1,5 @@
 import "server-only";
-import { chatConfig } from "../chat/config";
+import { chatConfig } from "../chat/server";
 import { createModelCatalog } from "./model-catalog";
 import { parseModelPatterns } from "./model-patterns";
 import { configuredClients } from "./registry";

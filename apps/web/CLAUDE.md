@@ -32,6 +32,19 @@ src/app/       # pages = routes. Fetch data here and pass it into templates/orga
 - Atoms and molecules are presentational: props in, markup out, no data fetching, no global state.
 - Before creating a new atom or molecule, check whether an existing one can be reused.
 
+## Barrels: each folder's public API
+
+Import another folder through its barrel, never its inner files.
+
+- **Components**: every component folder has an `index.ts` (`@/components/atoms/Button`).
+- **`src/lib/<feature>/`** has up to two barrels, split at the server/client boundary:
+  - `index.ts`: what is safe anywhere, the browser included (types, pure helpers): `import { modelKey } from "@/lib/llm"`.
+  - `server.ts`: what only the server may use (env, secrets, SDK clients). It starts with `import "server-only"`: `import { modelCatalog } from "@/lib/llm/server"`.
+  - Put an export in `index.ts` only if a Client Component may need it, and keep `index.ts` free of server-only imports, directly or through re-exports.
+- **Why two barrels, and why tree-shaking doesn't make one enough**: a barrel's re-exported modules are all loaded and their top-level code runs (this package has no `"sideEffects": false`). So one mixed barrel would pull SDKs into the browser bundle. Next also rejects a Client Component whose import graph reaches `server-only` before any tree-shaking, and dev, Vitest and Storybook don't tree-shake at all. With the split, a Client Component that imports `server.ts` by mistake fails the build loudly (verified).
+- **Inside a folder**, import sibling files directly (`./types`), never your own barrel: that is an import cycle. Unit tests import the file they test directly, so the `server-only` line in `server.ts` doesn't throw under Vitest.
+- **ESLint enforces it**: `LIB_BARRELS` in `eslint.config.mjs` lists the `src/lib` folders with barrels, and deep imports into them (`@/lib/llm/types`, `../llm/types`) are errors. Add a folder there when you give it barrels.
+
 ## Data: calling the API
 
 - Only the Next server calls the API. Server Components and Server Actions use the functions in `src/lib/api/` (server-only: they import `server-only`, so a Client Component importing them fails the build). The browser never calls the API, and `process.env` is read only there.

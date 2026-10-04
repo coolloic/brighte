@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { expect, fn, userEvent } from "storybook/test";
-import type { ModelOption } from "@/lib/llm/types";
+import type { ModelOption } from "@/lib/llm";
 import { ModelPicker, type ModelPickerProps } from "./ModelPicker";
 
 const OPTIONS: ModelOption[] = [

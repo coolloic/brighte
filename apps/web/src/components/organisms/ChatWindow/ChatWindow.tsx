@@ -8,7 +8,7 @@ import { Alert } from "@/components/molecules/Alert";
 import { ChatBubble } from "@/components/molecules/ChatBubble";
 import { ChatComposer, type ChatComposerProps } from "@/components/molecules/ChatComposer";
 import { ModelPicker } from "@/components/molecules/ModelPicker";
-import type { ModelOption } from "@/lib/llm/types";
+import type { ModelOption } from "@/lib/llm";
 
 export type ChatMessage = { id: string; from: "user" | "assistant"; text: string };
 

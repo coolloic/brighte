@@ -1,4 +1,4 @@
-import { DEFAULT_MODEL_PATTERNS } from "../llm/model-patterns";
+import { DEFAULT_MODEL_PATTERNS } from "../llm";
 
 type Env = Record<string, string | undefined>;
 

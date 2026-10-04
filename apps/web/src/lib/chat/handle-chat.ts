@@ -1,6 +1,5 @@
 import { clientIp } from "../api/client-ip";
-import type { ModelCatalog } from "../llm/model-catalog";
-import type { LlmClient, ProviderId } from "../llm/types";
+import type { LlmClient, ModelCatalog, ProviderId } from "../llm";
 import type { ChatErrorBody } from "./chat-error";
 import { chatRequestSchema } from "./messages";
 import type { RateLimitResult } from "./rate-limit";

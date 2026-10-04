@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, fn, userEvent } from "storybook/test";
-import type { ModelOption } from "@/lib/llm/types";
+import type { ModelOption } from "@/lib/llm";
 import { ChatWindow, type ChatMessage } from "./ChatWindow";
 
 const MODELS: ModelOption[] = [

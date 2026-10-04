@@ -7,6 +7,16 @@ import storybook from "eslint-plugin-storybook";
 // Import from src/ through the @/ alias (tsconfig paths), not long ../../ chains.
 const noDeepRelative = { group: ["../../*"], message: "Use the @/ alias (src/) instead of ../../ paths." };
 
+// Feature folders in src/lib with barrels (apps/web/CLAUDE.md, "Barrels"): from outside the folder,
+// import only its index.ts ("@/lib/llm") or its server.ts ("@/lib/llm/server"), never its files.
+// Covers "../llm/..." too, from sibling folders in src/lib. Files inside a folder import each other
+// directly ("./types"), which these patterns don't match.
+const LIB_BARRELS = ["chat", "llm"];
+const libBarrels = LIB_BARRELS.map((folder) => ({
+  group: [`@/lib/${folder}/*`, `!@/lib/${folder}/server`, `../${folder}/*`, `!../${folder}/server`],
+  message: `Import from the barrel: "@/lib/${folder}" (safe anywhere) or "@/lib/${folder}/server" (server only).`,
+}));
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
@@ -18,9 +28,9 @@ const eslintConfig = defineConfig([
       "jsx-a11y/label-has-associated-control": ["error", { controlComponents: ["Input", "Checkbox"], depth: 3 }],
     },
   },
-  { files: ["src/**"], rules: { "no-restricted-imports": ["error", { patterns: [noDeepRelative] }] } },
+  { files: ["src/**"], rules: { "no-restricted-imports": ["error", { patterns: [noDeepRelative, ...libBarrels] }] } },
   // Atomic design: a layer may only import from layers below it. These entries replace the rule
-  // above for their folders, so they repeat noDeepRelative.
+  // above for their folders, so they repeat noDeepRelative and libBarrels.
   ...[
     ["atoms", ["molecules", "organisms", "templates"]],
     ["molecules", ["organisms", "templates"]],
@@ -33,6 +43,7 @@ const eslintConfig = defineConfig([
         {
           patterns: [
             noDeepRelative,
+            ...libBarrels,
             ...higher.map((h) => ({
               group: [`@/components/${h}/*`, `**/${h}/*`],
               message: `Atomic design: ${layer} must not import from ${h}.`,

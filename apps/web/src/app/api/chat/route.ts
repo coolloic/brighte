@@ -1,9 +1,5 @@
-import { chatConfig } from "@/lib/chat/config";
-import { handleChat } from "@/lib/chat/handle-chat";
-import { getPersona } from "@/lib/chat/personas";
-import { createRateLimiter } from "@/lib/chat/rate-limit";
-import { modelCatalog } from "@/lib/llm/catalog";
-import { getClient } from "@/lib/llm/registry";
+import { chatConfig, createRateLimiter, getPersona, handleChat } from "@/lib/chat/server";
+import { getClient, modelCatalog } from "@/lib/llm/server";
 
 // Settings are read once, when the server starts (root .env).
 const config = chatConfig();

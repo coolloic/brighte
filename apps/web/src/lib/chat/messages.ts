@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PROVIDER_IDS, type ChatTurn } from "../llm/types";
+import { PROVIDER_IDS, type ChatTurn } from "../llm";
 
 // Shared by the chat route and the chat page (no server-only imports): the browser checks a
 // message with the same rules first, so a mistake never costs a request or a rate-limit hit.

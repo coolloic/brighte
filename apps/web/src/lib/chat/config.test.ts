@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_MODEL_PATTERNS } from "../llm/model-patterns";
+import { DEFAULT_MODEL_PATTERNS } from "../llm";
 import { chatConfig } from "./config";
 
 describe("chatConfig", () => {

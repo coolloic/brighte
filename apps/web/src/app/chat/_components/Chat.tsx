@@ -2,9 +2,8 @@
 
 import { useRef, useState } from "react";
 import { ChatWindow, type ChatMessage } from "@/components/organisms/ChatWindow";
-import { chatErrorMessage, type ChatErrorBody, type ChatErrorCode } from "@/lib/chat/chat-error";
-import { messageError, recentHistory } from "@/lib/chat/messages";
-import { modelKey, type ChatTurn, type ModelOption } from "@/lib/llm/types";
+import { chatErrorMessage, messageError, recentHistory, type ChatErrorBody, type ChatErrorCode } from "@/lib/chat";
+import { modelKey, type ChatTurn, type ModelOption } from "@/lib/llm";
 
 export type ChatProps = {
   assistantName: string;
