@@ -1,6 +1,6 @@
 // The chat route's error codes, and what the page says for each. Shared by both (no server-only imports).
 
-export type ChatErrorCode = "BAD_REQUEST" | "MODEL_UNAVAILABLE" | "RATE_LIMITED" | "PROVIDER_ERROR" | "NETWORK_ERROR" | "INTERRUPTED";
+export type ChatErrorCode = "BAD_REQUEST" | "FILES_TOO_LARGE" | "MODEL_UNAVAILABLE" | "RATE_LIMITED" | "PROVIDER_ERROR" | "NETWORK_ERROR" | "INTERRUPTED";
 
 export type ChatErrorBody = { code: ChatErrorCode; retryAfterSeconds?: number };
 
@@ -11,6 +11,8 @@ export function chatErrorMessage({ code, retryAfterSeconds }: ChatErrorBody): st
       const minutes = Math.max(1, Math.ceil((retryAfterSeconds ?? 60) / 60));
       return `You've sent a lot of messages. Please try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
     }
+    case "FILES_TOO_LARGE":
+      return "Those files are too big to send together. Remove some and try again.";
     case "MODEL_UNAVAILABLE":
       return "That model isn't available any more. Pick another one and try again.";
     case "INTERRUPTED":

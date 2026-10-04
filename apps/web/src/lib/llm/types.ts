@@ -5,7 +5,20 @@
 export const PROVIDER_IDS = ["anthropic", "openai", "gemini"] as const;
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
-export type ChatTurn = { role: "user" | "assistant"; content: string };
+export const IMAGE_MEDIA_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
+export type ImageMediaType = (typeof IMAGE_MEDIA_TYPES)[number];
+
+/**
+ * A file the visitor attached to a message. Images and PDFs are base64 (`data`, no data: prefix);
+ * text files are their text. Each provider's client maps these to its own content parts.
+ */
+export type Attachment =
+  | { kind: "image"; name: string; mediaType: ImageMediaType; data: string }
+  | { kind: "pdf"; name: string; data: string }
+  | { kind: "text"; name: string; text: string };
+
+/** One turn of the conversation. Only user turns carry attachments. */
+export type ChatTurn = { role: "user" | "assistant"; content: string; attachments?: Attachment[] };
 
 export type ChatRequest = {
   /** The provider's own model id, e.g. "claude-haiku-4-5". */

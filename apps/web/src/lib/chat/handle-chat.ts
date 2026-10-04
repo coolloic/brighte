@@ -1,7 +1,7 @@
 import { clientIp } from "../api";
 import type { LlmClient, ModelCatalog, ProviderId } from "../llm";
 import type { ChatErrorBody } from "./chat-error";
-import { chatRequestSchema } from "./messages";
+import { chatRequestSchema, type ChatRequestLimits } from "./messages";
 import type { RateLimitResult } from "./rate-limit";
 
 export type ChatHandlerDeps = {
@@ -9,11 +9,38 @@ export type ChatHandlerDeps = {
   getClient: (provider: ProviderId) => LlmClient | undefined;
   takeRateLimit: (key: string) => RateLimitResult;
   system: string;
-  maxMessageChars: number;
+  limits: ChatRequestLimits;
   maxOutputTokens: number;
   /** Proxies whose X-Forwarded-For entries are trusted (WEB_TRUST_PROXY, see client-ip.ts). */
   trustedHops: number;
 };
+
+/**
+ * The body as JSON, read up to `maxBytes`: a larger one is cut off as it arrives (not buffered
+ * whole first), and gives "too-large". Unreadable JSON gives "invalid".
+ */
+async function readJson(request: Request, maxBytes: number): Promise<{ json: unknown } | "too-large" | "invalid"> {
+  if (Number(request.headers.get("content-length") ?? 0) > maxBytes) return "too-large";
+  if (!request.body) return "invalid";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > maxBytes) {
+      await reader.cancel();
+      return "too-large";
+    }
+    chunks.push(value);
+  }
+  try {
+    return { json: JSON.parse(new TextDecoder().decode(Buffer.concat(chunks))) };
+  } catch {
+    return "invalid";
+  }
+}
 
 function errorResponse(status: number, body: ChatErrorBody, headers: Record<string, string> = {}) {
   return Response.json(body, { status, headers: { "cache-control": "no-store", ...headers } });
@@ -28,13 +55,11 @@ export async function handleChat(request: Request, deps: ChatHandlerDeps): Promi
   // JSON only: a cross-site page can't send that without a CORS preflight, which this route never allows.
   if (!request.headers.get("content-type")?.startsWith("application/json")) return errorResponse(415, { code: "BAD_REQUEST" });
 
-  let json: unknown;
-  try {
-    json = await request.json();
-  } catch {
-    return errorResponse(400, { code: "BAD_REQUEST" });
-  }
-  const parsed = chatRequestSchema(deps.maxMessageChars).safeParse(json);
+  // The files as base64 (4/3 of their size) plus room for the conversation's text.
+  const read = await readJson(request, Math.ceil((deps.limits.maxRequestBytes * 4) / 3) + 1024 * 1024);
+  if (read === "too-large") return errorResponse(413, { code: "FILES_TOO_LARGE" });
+  if (read === "invalid") return errorResponse(400, { code: "BAD_REQUEST" });
+  const parsed = chatRequestSchema(deps.limits).safeParse(read.json);
   if (!parsed.success) return errorResponse(400, { code: "BAD_REQUEST" });
   const { provider, model, messages } = parsed.data;
 

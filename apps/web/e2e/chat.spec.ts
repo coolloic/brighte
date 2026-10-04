@@ -128,4 +128,71 @@ test.describe("chat page", () => {
     await expect(page.getByRole("alert").filter({ hasText: "Try again" })).toHaveCount(0);
     await expect(alertWith(page, "The reply was cut off")).toHaveCount(0);
   });
+
+  test.describe("attaching files", () => {
+    // A real PNG header (the server checks content, not names) and a text file.
+    const png = { name: "storefront.png", mimeType: "image/png", buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]) };
+    const notes = { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("Open 9 to 5.") };
+    const fileInput = (page: Page) => page.locator('input[type="file"]');
+
+    test("sends files with a message, and keeps them in context for the next one", async ({ page }) => {
+      await fileInput(page).setInputFiles([png, notes]);
+      const chips = page.getByRole("list", { name: "Attached files" });
+      await expect(chips).toContainText("storefront.png");
+      await expect(chips).toContainText("notes.txt");
+      await expectNoA11yViolations(page);
+
+      await sendMessage(page, "What are these?");
+      // The mock reports what reached it: both files, and prompt caching asked for.
+      await expect(log(page)).toContainText("You said: What are these? [files: image, notes.txt; in context: 2; cached]");
+      await expect(log(page).getByRole("list", { name: "Attached files" })).toContainText("notes.txt");
+      await expect(page.getByRole("button", { name: "Remove notes.txt" })).toBeHidden();
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+
+      // A follow-up without files: the earlier ones are re-sent, so the model can still see them.
+      await sendMessage(page, "And the hours?");
+      await expect(log(page)).toContainText("You said: And the hours? [files: none; in context: 2; cached]");
+    });
+
+    test("sends files without any text", async ({ page }) => {
+      await fileInput(page).setInputFiles([notes]);
+      await page.getByRole("button", { name: "Send message" }).click();
+      await expect(log(page)).toContainText("[files: notes.txt; in context: 1; cached]");
+    });
+
+    test("a removed file isn't sent", async ({ page }) => {
+      await fileInput(page).setInputFiles([png, notes]);
+      await page.getByRole("button", { name: "Remove storefront.png" }).click();
+      await sendMessage(page, "Just the notes");
+      await expect(log(page)).toContainText("You said: Just the notes [files: notes.txt; in context: 1; cached]");
+    });
+
+    test("sends a large request whole: 9 MB of files, about 12 MB as base64", async ({ page }) => {
+      // Above the 10 MB a proxied request body is buffered to: /api/ routes are outside the proxy.
+      const pdf = (name: string) => ({ name, mimeType: "application/pdf", buffer: Buffer.concat([Buffer.from("%PDF-1.7\n"), Buffer.alloc(3 * 1024 * 1024 - 9)]) });
+      await fileInput(page).setInputFiles([pdf("a.pdf"), pdf("b.pdf"), pdf("c.pdf")]);
+      await sendMessage(page, "Three big ones");
+      await expect(log(page)).toContainText("You said: Three big ones [files: a.pdf, b.pdf, c.pdf; in context: 3; cached]");
+    });
+
+    test("explains files that can't be attached, and sends nothing for them", async ({ page }) => {
+      let requests = 0;
+      page.on("request", (request) => {
+        if (request.url().endsWith("/api/chat")) requests += 1;
+      });
+      await fileInput(page).setInputFiles([
+        { name: "setup.exe", mimeType: "application/octet-stream", buffer: Buffer.from("MZ program") },
+        // Named like an image, but isn't one.
+        { name: "photo.png", mimeType: "image/png", buffer: Buffer.from("not an image") },
+        { name: "huge.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(5 * 1024 * 1024 + 1) },
+      ]);
+
+      await expect(messageBox(page)).toHaveAccessibleDescription(/setup\.exe can't be attached/);
+      await expect(messageBox(page)).toHaveAccessibleDescription(/photo\.png can't be attached/);
+      await expect(messageBox(page)).toHaveAccessibleDescription(/huge\.pdf is too big: files can be up to 5 MB/);
+      await expect(page.getByRole("list", { name: "Attached files" })).toBeHidden();
+      expect(requests).toBe(0);
+    });
+  });
 });
+

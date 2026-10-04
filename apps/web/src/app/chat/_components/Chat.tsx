@@ -2,8 +2,21 @@
 
 import { useRef, useState } from "react";
 import { ChatWindow, type ChatMessage } from "@/components/organisms/ChatWindow";
-import { chatErrorMessage, messageError, recentHistory, type ChatErrorBody, type ChatErrorCode } from "@/lib/chat";
-import { modelKey, type ChatTurn, type ModelOption } from "@/lib/llm";
+import {
+  ATTACHMENT_ACCEPT,
+  attachmentBytes,
+  chatErrorMessage,
+  fitAttachments,
+  formatBytes,
+  messageError,
+  readAttachment,
+  recentHistory,
+  totalAttachmentBytes,
+  type AttachmentLimits,
+  type ChatErrorBody,
+  type ChatErrorCode,
+} from "@/lib/chat";
+import { modelKey, type Attachment, type ChatTurn, type ModelOption } from "@/lib/llm";
 
 export type ChatProps = {
   assistantName: string;
@@ -12,18 +25,33 @@ export type ChatProps = {
   models: ModelOption[];
   defaultModel: string;
   maxChars: number;
+  limits: AttachmentLimits;
 };
+
+/** A message as the page keeps it: with its files, which are re-sent while in context. */
+type Message = ChatMessage & { files?: Attachment[] };
+
+/** How a file shows in a chip: thumbnail for images, size for all. */
+const fileView = (attachment: Attachment) => ({
+  name: attachment.name,
+  kind: attachment.kind,
+  detail: formatBytes(attachmentBytes(attachment)),
+  previewSrc: attachment.kind === "image" ? `data:${attachment.mediaType};base64,${attachment.data}` : undefined,
+});
 
 type Failure = { message: string; retryable: boolean };
 
 const failure = (body: ChatErrorBody): Failure => ({ message: chatErrorMessage(body), retryable: body.code !== "RATE_LIMITED" });
 
 /**
- * The chat page's state: the conversation (in this tab only), the picked model, and one streaming
- * reply at a time. Sends the recent history to /api/chat and shows the reply as it arrives.
+ * The chat page's state: the conversation (in this tab only), the picked model, files waiting to be
+ * sent, and one streaming reply at a time. Sends the recent history, with its files, to /api/chat
+ * and shows the reply as it arrives. Files stay in the conversation (re-sent with each message, so
+ * the model can be asked about them later) until they fall outside the history or the size budget.
  */
-export function Chat({ assistantName, greeting, suggestions, models, defaultModel, maxChars }: ChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export function Chat({ assistantName, greeting, suggestions, models, defaultModel, maxChars, limits }: ChatProps) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [pending, setPending] = useState<{ id: string; attachment: Attachment }[]>([]);
   const [draft, setDraft] = useState("");
   const [draftError, setDraftError] = useState<string>();
   const [model, setModel] = useState(defaultModel);
@@ -33,7 +61,7 @@ export function Chat({ assistantName, greeting, suggestions, models, defaultMode
   const composer = useRef<HTMLTextAreaElement>(null);
 
   /** Streams the assistant's reply to `conversation` (which ends with the visitor's message). */
-  async function reply(conversation: ChatMessage[]) {
+  async function reply(conversation: Message[]) {
     const option = models.find((candidate) => modelKey(candidate) === model);
     if (!option) return;
     const replyId = crypto.randomUUID();
@@ -53,11 +81,11 @@ export function Chat({ assistantName, greeting, suggestions, models, defaultMode
 
     let received = "";
     try {
-      const turns: ChatTurn[] = conversation.map(({ from, text }) => ({ role: from, content: text }));
+      const turns: ChatTurn[] = conversation.map(({ from, text, files }) => ({ role: from, content: text, ...(files?.length && { attachments: files }) }));
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ provider: option.provider, model: option.id, messages: recentHistory(turns) }),
+        body: JSON.stringify({ provider: option.provider, model: option.id, messages: fitAttachments(recentHistory(turns), limits.maxRequestBytes) }),
         signal: controller.signal,
       });
       if (!response.ok || !response.body) {
@@ -90,7 +118,7 @@ export function Chat({ assistantName, greeting, suggestions, models, defaultMode
   }
 
   function send(text: string) {
-    const problem = messageError(text, maxChars);
+    const problem = messageError(text, maxChars, pending.length);
     setDraftError(problem);
     if (problem) {
       composer.current?.focus();
@@ -98,9 +126,36 @@ export function Chat({ assistantName, greeting, suggestions, models, defaultMode
     }
     // A message whose reply failed is replaced by the new one: turns must alternate.
     const base = messages.at(-1)?.from === "user" ? messages.slice(0, -1) : messages;
+    const files = pending.map((file) => file.attachment);
     setDraft("");
-    void reply([...base, { id: crypto.randomUUID(), from: "user", text: text.trim() }]);
+    setPending([]);
+    void reply([...base, { id: crypto.randomUUID(), from: "user", text: text.trim(), files, attachments: files.map(fileView) }]);
     composer.current?.focus();
+  }
+
+  /** Checks and reads picked, dropped or pasted files; the ones that can't be attached are explained. */
+  async function addFiles(files: File[]) {
+    const problems: string[] = [];
+    const accepted = [...pending];
+    for (const file of files) {
+      if (accepted.length >= limits.maxFiles) {
+        problems.push(`You can attach up to ${limits.maxFiles} files to a message.`);
+        break;
+      }
+      const result = await readAttachment(file, limits);
+      if ("error" in result) {
+        problems.push(result.error);
+        continue;
+      }
+      const together = totalAttachmentBytes([{ role: "user", content: "", attachments: [...accepted.map((p) => p.attachment), result.attachment] }]);
+      if (together > limits.maxRequestBytes) {
+        problems.push(`${file.name} doesn't fit: files can be up to ${formatBytes(limits.maxRequestBytes)} together.`);
+        continue;
+      }
+      accepted.push({ id: crypto.randomUUID(), attachment: result.attachment });
+    }
+    setPending(accepted);
+    setDraftError(problems.length ? problems.join(" ") : undefined);
   }
 
   return (
@@ -127,6 +182,10 @@ export function Chat({ assistantName, greeting, suggestions, models, defaultMode
         onStop: () => abort.current?.abort(),
         maxChars,
         error: draftError,
+        accept: ATTACHMENT_ACCEPT,
+        onAddFiles: (files) => void addFiles(files),
+        attachments: pending.map(({ id, attachment }) => ({ id, ...fileView(attachment) })),
+        onRemoveFile: (id) => setPending((current) => current.filter((file) => file.id !== id)),
       }}
     />
   );
