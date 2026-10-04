@@ -21,6 +21,13 @@ export type ChatComposerProps = {
 };
 
 /**
+ * Send/Stop: as tall as a one-line message box (one line of body text, 2 x 10px padding, 2 x 1px
+ * border; 46px on phones up to about 49px on desktop, as the text grows) and square. Set from the
+ * line height rather than stretched, so it keeps that size when the box grows to several lines.
+ */
+const actionButton = "aspect-square h-[calc(1lh+1.25rem+2px)] min-h-11 shrink-0 px-0 py-0 text-body";
+
+/**
  * Message box and Send button, as in messaging apps: Enter sends, Shift+Enter adds a line, and the
  * box grows with the text (where the browser supports field-sizing). A character count appears near
  * the limit. While a reply streams, typing stays possible and Send becomes Stop.
@@ -68,11 +75,11 @@ export function ChatComposer({ id, value, onChange, onSend, onStop, streaming = 
           )}
         />
         {streaming ? (
-          <Button variant="secondary" onClick={onStop} aria-label="Stop the reply" className="size-11 shrink-0 px-0">
+          <Button variant="secondary" onClick={onStop} aria-label="Stop the reply" className={actionButton}>
             <Icon name="stop" />
           </Button>
         ) : (
-          <Button type="submit" aria-label="Send message" className="size-11 shrink-0 px-0">
+          <Button type="submit" aria-label="Send message" className={actionButton}>
             <Icon name="send" />
           </Button>
         )}
