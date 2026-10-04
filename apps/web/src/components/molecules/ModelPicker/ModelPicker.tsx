@@ -74,7 +74,7 @@ export function ModelPicker({ id, options, value, onChange, className }: ModelPi
       <div
         id={panelId}
         hidden={!open}
-        className="absolute right-0 bottom-full z-10 mb-2 w-72 max-w-[calc(100vw-3rem)] space-y-3 rounded-card border border-border bg-surface p-4 shadow-card"
+        className="absolute right-0 bottom-full z-10 mb-2 w-72 max-w-[calc(100vw-3rem)] space-y-3 rounded-card border border-border bg-surface p-4 shadow-popover"
       >
         <div>
           <Label htmlFor={`${id}-provider`}>Provider</Label>

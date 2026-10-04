@@ -6,7 +6,7 @@ import { extendTailwindMerge } from "tailwind-merge";
 // lose, and `text-body` would be taken for a color and removed by `text-fg`.
 // Keep in step with --radius-*, --shadow-* and --text-* in globals.scss (cn.test.ts checks this).
 export const CUSTOM_RADIUS = ["control", "card"];
-export const CUSTOM_SHADOW = ["card", "bubble"];
+export const CUSTOM_SHADOW = ["card", "bubble", "popover"];
 export const CUSTOM_TEXT = ["body", "button", "lead", "heading-xl", "heading-lg", "heading-md", "heading-sm"];
 
 const twMerge = extendTailwindMerge({
