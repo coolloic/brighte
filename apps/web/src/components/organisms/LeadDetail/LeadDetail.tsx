@@ -53,8 +53,8 @@ export function LeadDetail({ lead, status = "ready", retryHref }: LeadDetailProp
 
   return (
     <article aria-labelledby="lead-name" className="rounded-card border border-border bg-surface p-5 shadow-card">
-      {/* lg:pr-9 leaves room for the dashboard's close button in the top-right corner (DashboardTemplate); break-words keeps a very long word inside the card. */}
-      <Heading level={2} size="lg" id="lead-name" className="break-words lg:pr-9">
+      {/* lg:pr-9 leaves room for the dashboard's close button in the top-right corner (DashboardTemplate); wrap-anywhere keeps a very long word inside the card. */}
+      <Heading level={2} size="lg" id="lead-name" className="wrap-anywhere lg:pr-9">
         {lead.name}
       </Heading>
       <p className="mt-1 text-sm text-fg-muted">
@@ -65,7 +65,7 @@ export function LeadDetail({ lead, status = "ready", retryHref }: LeadDetailProp
         {/* Its own row: addresses are often longer than half the card. */}
         <div className="sm:col-span-2">
           <dt className="text-sm text-fg-muted">Email</dt>
-          <dd className="break-words">
+          <dd className="wrap-anywhere">
             <a href={`mailto:${lead.email}`} className={contactLink}>
               <EmailAddress email={lead.email} />
             </a>

@@ -101,6 +101,43 @@ test.describe("leads dashboard", () => {
     await expect(page.getByRole("navigation", { name: "Pagination" }).getByText("Next")).toHaveAttribute("aria-disabled", "true");
   });
 
+  test("a very long name is cut off after 3 lines, shown whole in a popover, and never widens the page", async ({ page, isMobile }) => {
+    // The longest name the API accepts (70 characters), with no spaces to break at.
+    const lead = await registerLead({ name: `Long${uniqueToken()}`.padEnd(70, "x") });
+    await signInAsAdmin(page, `/admin?q=${encodeURIComponent(lead.name)}`);
+    const link = page.getByRole("link", { name: lead.name });
+    // The popover repeats the text for sighted users; screen readers get it from the link itself.
+    // In the table: the phone cards are in the page too, hidden from md up.
+    const popover = page.locator("table").locator('[aria-hidden="true"]').filter({ hasText: lead.name });
+
+    if (!isMobile) {
+      // At a tablet width the table's Name column is narrow enough to cut the name off.
+      await page.setViewportSize({ width: 768, height: 900 });
+      await link.hover();
+      await expect(popover).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(popover).toBeHidden();
+      // Keyboard focus on the name's link shows it too.
+      await page.mouse.move(0, 0);
+      await link.focus();
+      await page.keyboard.press("Shift+Tab");
+      await page.keyboard.press("Tab");
+      await expect(link).toBeFocused();
+      await expect(popover).toBeVisible();
+    }
+
+    // The detail shows the whole name, never cut off.
+    await link.click();
+    await expect(page.getByRole("heading", { level: 2, name: lead.name })).toBeVisible();
+
+    // Phone, tablet (where the table first shows, and was widest) and desktop.
+    for (const width of [375, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, `sideways scroll at ${width}px`).toBe(0);
+    }
+  });
+
   test("an unknown or malformed lead id shows 'Lead not found'", async ({ page }) => {
     await signInAsAdmin(page, "/admin?lead=not-a-lead-id");
     await expect(page.getByRole("complementary", { name: "Selected lead" })).toContainText("Lead not found");
