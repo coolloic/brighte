@@ -4,7 +4,7 @@ import { unstable_rethrow } from "next/navigation";
 import { startTransition, useActionState, useState } from "react";
 import { SignInForm, type SignInFormAlert } from "@/components/organisms/SignInForm";
 import { RetryCountdown } from "@/app/_components/RetryCountdown";
-import { SIGN_IN_CONNECTION_PROBLEM } from "@/lib/api/sign-in-feedback";
+import { SIGN_IN_CONNECTION_PROBLEM } from "@/lib/api";
 import { signInFromFormData, signInToFormData, validateSignIn, type SignInState, type SignInValues } from "@/lib/sign-in";
 
 const IDLE: SignInState = { status: "idle" };

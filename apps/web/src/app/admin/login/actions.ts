@@ -2,9 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { logIn } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/errors";
-import { NOT_ADMIN, signInFeedback } from "@/lib/api/sign-in-feedback";
+import { ApiError, NOT_ADMIN, signInFeedback } from "@/lib/api";
+import { logIn } from "@/lib/api/server";
 import { startSession } from "@/lib/session";
 import { safeNext, signInFromFormData, validateSignIn, type SignInState } from "@/lib/sign-in";
 

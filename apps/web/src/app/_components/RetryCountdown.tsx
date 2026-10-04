@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatWait } from "@/lib/api/registration-feedback";
+import { formatWait } from "@/lib/api";
 
 /**
  * "Please wait 53 seconds and try again", ticking down every second, then "You can try again now."

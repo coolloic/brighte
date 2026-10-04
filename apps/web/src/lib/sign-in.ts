@@ -1,5 +1,5 @@
 import { messagesByField, signInSchema } from "@brighte/validation";
-import type { SignInAlert } from "@/lib/api/sign-in-feedback";
+import type { SignInAlert } from "@/lib/api";
 
 // Shared by the sign-in Server Action and its client wrapper (no server-only imports).
 

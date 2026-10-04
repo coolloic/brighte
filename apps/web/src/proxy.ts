@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { renewToken } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError } from "@/lib/api";
+import { renewToken } from "@/lib/api/server";
 import { contentSecurityPolicy, STRICT_TRANSPORT_SECURITY } from "@/lib/security-headers";
 import { SESSION_COOKIE, sessionCookieOptions, shouldRenew } from "@/lib/session-cookie";
 import { siteUrl } from "@/lib/site";

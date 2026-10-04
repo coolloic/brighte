@@ -2,8 +2,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { getUser, type SessionUser } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError } from "@/lib/api";
+import { getUser, type SessionUser } from "@/lib/api/server";
 import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/session-cookie";
 import { safeNext } from "@/lib/sign-in";
 

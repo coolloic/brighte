@@ -1,5 +1,5 @@
 import { messagesByField, registrationSchema } from "@brighte/validation";
-import { withoutExample, type RegistrationFeedback, type RegistrationFieldName } from "./api/registration-feedback";
+import { withoutExample, type RegistrationFeedback, type RegistrationFieldName } from "./api";
 
 // Shared by the register page's Server Action and its client wrapper (no server-only imports).
 

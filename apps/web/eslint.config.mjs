@@ -9,11 +9,18 @@ const noDeepRelative = { group: ["../../*"], message: "Use the @/ alias (src/) i
 
 // Feature folders in src/lib with barrels (apps/web/CLAUDE.md, "Barrels"): from outside the folder,
 // import only its index.ts ("@/lib/llm") or its server.ts ("@/lib/llm/server"), never its files.
-// Covers "../llm/..." too, from sibling folders in src/lib. Files inside a folder import each other
-// directly ("./types"), which these patterns don't match.
-const LIB_BARRELS = ["chat", "llm"];
+// Covers relative paths too, from files in src/lib ("./api/...") and its folders ("../llm/...").
+// Files inside a folder import each other directly ("./types"), which these patterns don't match.
+const LIB_BARRELS = ["api", "chat", "llm"];
 const libBarrels = LIB_BARRELS.map((folder) => ({
-  group: [`@/lib/${folder}/*`, `!@/lib/${folder}/server`, `../${folder}/*`, `!../${folder}/server`],
+  group: [
+    `@/lib/${folder}/*`,
+    `!@/lib/${folder}/server`,
+    `./${folder}/*`,
+    `!./${folder}/server`,
+    `../${folder}/*`,
+    `!../${folder}/server`,
+  ],
   message: `Import from the barrel: "@/lib/${folder}" (safe anywhere) or "@/lib/${folder}/server" (server only).`,
 }));
 
