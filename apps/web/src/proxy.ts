@@ -47,8 +47,10 @@ export const config = {
   matcher: [
     {
       // Every page and Server Action, not static files. Prefetches are skipped (Next's CSP guidance):
-      // they're data for a later navigation, which runs this itself.
-      source: "/((?!_next/static|_next/image|images/|icon.png).*)",
+      // they're data for a later navigation, which runs this itself. Route handlers under /api/ are
+      // skipped too: they return data, not pages, so need no CSP nonce, and a proxied request's
+      // body is buffered only up to 10 MB (proxyClientMaxBodySize), which would cut off chat uploads.
+      source: "/((?!api/|_next/static|_next/image|images/|icon.png).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

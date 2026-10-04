@@ -2,6 +2,8 @@ import { DEFAULT_MODEL_PATTERNS } from "../llm";
 
 type Env = Record<string, string | undefined>;
 
+const MB = 1024 * 1024;
+
 /** A whole number of 1 or more from env; anything else (unset, 0, "abc", 1.5) falls back. */
 function positiveInt(env: Env, name: string, fallback: number): number {
   const value = Number(env[name]);
@@ -18,6 +20,11 @@ export function chatConfig(env: Env = process.env) {
     rateLimitWindowSeconds: positiveInt(env, "CHAT_RATE_LIMIT_WINDOW_SECONDS", 600),
     /** Longest message a visitor may send, in characters. */
     maxMessageChars: positiveInt(env, "CHAT_MAX_MESSAGE_CHARS", 1000),
+    /** Files a visitor may attach to one message, and their sizes (bytes). */
+    maxFiles: positiveInt(env, "CHAT_MAX_FILES", 3),
+    maxFileBytes: positiveInt(env, "CHAT_MAX_FILE_MB", 5) * MB,
+    /** All files in one request together, the whole history's (they are re-sent while in context). */
+    maxRequestBytes: positiveInt(env, "CHAT_MAX_REQUEST_MB", 10) * MB,
     /** Cap on each reply's length, in tokens: bounds the cost of one message. */
     maxOutputTokens: positiveInt(env, "CHAT_MAX_OUTPUT_TOKENS", 1024),
     /** Which discovered models visitors may pick (src/lib/llm/model-patterns.ts). */

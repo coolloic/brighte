@@ -5,12 +5,12 @@ import { Button } from "@/components/atoms/Button";
 import { Heading } from "@/components/atoms/Heading";
 import { Icon } from "@/components/atoms/Icon";
 import { Alert } from "@/components/molecules/Alert";
-import { ChatBubble } from "@/components/molecules/ChatBubble";
+import { ChatBubble, type ChatBubbleProps } from "@/components/molecules/ChatBubble";
 import { ChatComposer, type ChatComposerProps } from "@/components/molecules/ChatComposer";
 import { ModelPicker } from "@/components/molecules/ModelPicker";
 import type { ModelOption } from "@/lib/llm";
 
-export type ChatMessage = { id: string; from: "user" | "assistant"; text: string };
+export type ChatMessage = { id: string; from: "user" | "assistant"; text: string; attachments?: ChatBubbleProps["attachments"] };
 
 export type ChatWindowProps = {
   assistantName: string;
@@ -101,7 +101,7 @@ export function ChatWindow({
           </ul>
         )}
         {messages.map((message) => (
-          <ChatBubble key={message.id} from={message.from} author={message.from === "user" ? "You" : assistantName}>
+          <ChatBubble key={message.id} from={message.from} author={message.from === "user" ? "You" : assistantName} attachments={message.attachments}>
             {message.text}
           </ChatBubble>
         ))}

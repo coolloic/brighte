@@ -4,8 +4,11 @@
 export { createModelCatalog, defaultModel, type ModelCatalog, type ModelCatalogOptions } from "./model-catalog";
 export { DEFAULT_MODEL_PATTERNS, isAllowedModel, parseModelPatterns, type ModelPatterns } from "./model-patterns";
 export {
+  IMAGE_MEDIA_TYPES,
   PROVIDER_IDS,
   modelKey,
+  type Attachment,
+  type ImageMediaType,
   type ChatRequest,
   type ChatTurn,
   type LlmClient,

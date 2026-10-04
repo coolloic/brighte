@@ -47,6 +47,7 @@ export default async function ChatPage() {
             models={models}
             defaultModel={modelKey(initial)}
             maxChars={config.maxMessageChars}
+            limits={{ maxFiles: config.maxFiles, maxFileBytes: config.maxFileBytes, maxRequestBytes: config.maxRequestBytes }}
           />
         ) : (
           // No provider key set, or every provider's model list failed.

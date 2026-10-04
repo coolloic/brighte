@@ -45,3 +45,27 @@ export const Typing: Story = {
 export const LongWord: Story = {
   args: { children: "https://example.com/".concat("a".repeat(120)) },
 };
+
+const PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYPj/HwADAgH/1+4mRgAAAABJRU5ErkJggg==";
+
+/** Files sent with a message, above its text. */
+export const WithAttachments: Story = {
+  args: {
+    children: "What's on this menu?",
+    attachments: [
+      { name: "storefront.png", kind: "image", detail: "1.2 MB", previewSrc: PIXEL },
+      { name: "menu.pdf", kind: "pdf", detail: "820 KB" },
+    ],
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("list", { name: "Attached files" })).toHaveTextContent("menu.pdf");
+  },
+};
+
+/** Files alone: no text, and no typing indicator (that is only for a reply on its way). */
+export const AttachmentsOnly: Story = {
+  args: { children: "", attachments: [{ name: "menu.pdf", kind: "pdf", detail: "820 KB" }] },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByText("typing")).not.toBeInTheDocument();
+  },
+};

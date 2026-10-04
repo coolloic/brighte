@@ -88,3 +88,38 @@ export const ButtonMatchesBox: Story = {
     await expect(Math.round(send.width)).toBe(Math.round(send.height));
   },
 };
+
+const PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYPj/HwADAgH/1+4mRgAAAABJRU5ErkJggg==";
+
+/** Files waiting to be sent, as removable chips; the paperclip opens the file picker. */
+export const WithAttachments: Story = {
+  args: {
+    onAddFiles: fn(),
+    onRemoveFile: fn(),
+    accept: "image/png,application/pdf,.txt",
+    attachments: [
+      { id: "1", name: "storefront.png", kind: "image", detail: "1.2 MB", previewSrc: PIXEL },
+      { id: "2", name: "menu.pdf", kind: "pdf", detail: "820 KB" },
+    ],
+  },
+  play: async ({ args, canvas, canvasElement }) => {
+    await expect(canvas.getByRole("list", { name: "Attached files" })).toHaveTextContent("menu.pdf");
+    await userEvent.click(canvas.getByRole("button", { name: "Remove menu.pdf" }));
+    await expect(args.onRemoveFile).toHaveBeenCalledWith("2");
+
+    // The paperclip feeds the (hidden) file input; a picked file reaches onAddFiles.
+    await expect(canvas.getByRole("button", { name: "Attach files" })).toBeInTheDocument();
+    const input = canvasElement.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await expect(input).toHaveAttribute("accept", "image/png,application/pdf,.txt");
+    await userEvent.upload(input, new File(["Notes"], "notes.txt", { type: "text/plain" }));
+    await expect(args.onAddFiles).toHaveBeenCalledWith([expect.objectContaining({ name: "notes.txt" })]);
+  },
+};
+
+/** A file that can't be attached: the reason is announced (aria-live) and read with the box. */
+export const FileRefused: Story = {
+  args: { onAddFiles: fn(), error: "setup.exe can't be attached. You can attach images (PNG, JPEG, GIF, WebP), PDF, or text (.txt, .md, .csv, .json)." },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("textbox", { name: "Message" })).toHaveAccessibleDescription(/setup\.exe can't be attached/);
+  },
+};

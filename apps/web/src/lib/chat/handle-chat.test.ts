@@ -18,7 +18,7 @@ function deps(client: LlmClient, overrides: Partial<ChatHandlerDeps> = {}): Chat
     getClient: () => client,
     takeRateLimit: () => ({ ok: true }),
     system: "Be brief.",
-    maxMessageChars: 100,
+    limits: { maxMessageChars: 100, maxFiles: 2, maxFileBytes: 1000, maxRequestBytes: 1500 },
     maxOutputTokens: 256,
     trustedHops: 1,
     ...overrides,
@@ -32,6 +32,9 @@ function post(body: unknown, headers: Record<string, string> = {}) {
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
+
+// The first bytes of a real PNG.
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]).toString("base64");
 
 const valid = { provider: "anthropic", model: "claude-haiku-4-5", messages: [{ role: "user", content: "Hi" }] };
 
@@ -84,6 +87,35 @@ describe("handleChat", () => {
     expect(response.headers.get("retry-after")).toBe("42");
     expect(await response.json()).toEqual({ code: "RATE_LIMITED", retryAfterSeconds: 42 });
     expect(client.streamChat).not.toHaveBeenCalled();
+  });
+
+  it("passes a message's files to the model", async () => {
+    const client = fakeClient(() => reply("A menu."));
+    const files = [
+      { kind: "image", name: "photo.png", mediaType: "image/png", data: PNG },
+      { kind: "text", name: "notes.md", text: "# Notes" },
+    ];
+    const response = await handleChat(post({ ...valid, messages: [{ role: "user", content: "What is this?", attachments: files }] }), deps(client));
+
+    expect(response.status).toBe(200);
+    expect(client.streamChat).toHaveBeenCalledWith(expect.objectContaining({ messages: [{ role: "user", content: "What is this?", attachments: files }] }));
+  });
+
+  it("refuses a file whose content isn't what it claims", async () => {
+    const client = fakeClient(() => reply("never"));
+    const fake = { kind: "image", name: "photo.png", mediaType: "image/png", data: btoa("MZ this is a program") };
+    const response = await handleChat(post({ ...valid, messages: [{ role: "user", content: "Hi", attachments: [fake] }] }), deps(client));
+    expect(response.status).toBe(400);
+    expect(client.streamChat).not.toHaveBeenCalled();
+  });
+
+  it("refuses a body bigger than the file limits allow, before parsing it", async () => {
+    const client = fakeClient(() => reply("never"));
+    // maxRequestBytes 1500: the cap is its base64 size plus 1 MB for the conversation's text.
+    const huge = "x".repeat(2 * 1024 * 1024);
+    const response = await handleChat(post({ ...valid, messages: [{ role: "user", content: huge }] }), deps(client));
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ code: "FILES_TOO_LARGE" });
   });
 
   it("answers 502 when the provider fails before replying", async () => {

@@ -12,7 +12,7 @@ export function POST(request: Request) {
     getClient,
     takeRateLimit,
     system: getPersona(config.persona).system,
-    maxMessageChars: config.maxMessageChars,
+    limits: config,
     maxOutputTokens: config.maxOutputTokens,
     trustedHops: Number(process.env.WEB_TRUST_PROXY ?? 0),
   });

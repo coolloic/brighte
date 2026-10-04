@@ -27,11 +27,32 @@ describe("recentHistory", () => {
 });
 
 describe("chatRequestSchema", () => {
-  const schema = chatRequestSchema(10);
+  const schema = chatRequestSchema({ maxMessageChars: 10, maxFiles: 2, maxFileBytes: 20, maxRequestBytes: 30 });
+  const png = (bytes = 12) => Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(bytes - 8).fill(0)]).toString("base64");
+  const image = (bytes?: number) => ({ kind: "image", name: "a.png", mediaType: "image/png", data: png(bytes) });
+  const withFiles = (attachments: unknown[], content = "") => ({ ...valid, messages: [{ role: "user", content, attachments }] });
   const valid = { provider: "anthropic", model: "claude-haiku-4-5", messages: [user(), assistant(), user("Thanks")] };
 
   it("accepts a well-formed conversation", () => {
     expect(schema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts files, with or without text", () => {
+    expect(schema.safeParse(withFiles([image(), { kind: "text", name: "n.txt", text: "hello" }])).success).toBe(true);
+    expect(schema.safeParse(withFiles([image()], "What?")).success).toBe(true);
+  });
+
+  it.each([
+    ["too many files", withFiles([image(), image(), image()])],
+    ["a file over the size limit", withFiles([image(21)])],
+    ["files over the request limit together", { ...valid, messages: [{ role: "user", content: "a", attachments: [image(20)] }, assistant(), { role: "user", content: "b", attachments: [image(20)] }] }],
+    ["an image whose content isn't that type", withFiles([{ kind: "image", name: "a.png", mediaType: "image/jpeg", data: png() }])],
+    ["a PDF that isn't one", withFiles([{ kind: "pdf", name: "a.pdf", data: png() }])],
+    ["data that isn't base64", withFiles([{ kind: "pdf", name: "a.pdf", data: "%PDF-not base64!" }])],
+    ["files on an assistant turn", { ...valid, messages: [user(), { ...assistant(), attachments: [image()] }, user()] }],
+    ["an empty message without files", { ...valid, messages: [user("  ")] }],
+  ])("rejects %s", (_, body) => {
+    expect(schema.safeParse(body).success).toBe(false);
   });
 
   it.each([

@@ -1,4 +1,5 @@
 import { cva } from "class-variance-authority";
+import { FileChip, type FileChipProps } from "@/components/atoms/FileChip";
 import { Icon } from "@/components/atoms/Icon";
 import { cn } from "@/lib/cn";
 
@@ -17,14 +18,16 @@ export type ChatBubbleProps = {
   from: "user" | "assistant";
   /** Who sent it, for screen readers ("You", or the assistant's name): the side and color only show it visually. */
   author: string;
-  /** The message. Empty while waiting for the reply's first words, which shows a typing indicator. */
+  /** The message. An empty assistant message is a reply on its way: it shows a typing indicator. */
   children?: string;
+  /** Files sent with the message, shown above its text. */
+  attachments?: Pick<FileChipProps, "name" | "kind" | "detail" | "previewSrc">[];
   className?: string;
 };
 
 /** One chat message. Plain text: line breaks are kept, nothing is rendered as HTML. */
-export function ChatBubble({ from, author, children, className }: ChatBubbleProps) {
-  const typing = !children;
+export function ChatBubble({ from, author, children, attachments = [], className }: ChatBubbleProps) {
+  const typing = from === "assistant" && !children;
   return (
     <div className={cn("flex items-end gap-2", from === "user" && "justify-end", className)}>
       {from === "assistant" && (
@@ -34,6 +37,16 @@ export function ChatBubble({ from, author, children, className }: ChatBubbleProp
       )}
       <div className={bubbleVariants({ from })}>
         <span className="sr-only">{author}: </span>
+        {attachments.length > 0 && (
+          <ul aria-label="Attached files" className={cn("flex flex-wrap gap-1.5 whitespace-normal", children && "mb-2")}>
+            {attachments.map((file, index) => (
+              // Names can repeat; the list never reorders.
+              <li key={index} className="max-w-full">
+                <FileChip {...file} />
+              </li>
+            ))}
+          </ul>
+        )}
         {typing ? (
           <span className="flex h-6 items-center gap-1">
             <span className="sr-only">typing</span>

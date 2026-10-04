@@ -1,7 +1,9 @@
 // A stand-in for the Anthropic API, so the e2e chat tests never call (or pay for) a real model.
 // The web server's Anthropic SDK is pointed here with ANTHROPIC_BASE_URL (playwright.config.ts).
 // It lists one model and streams "You said: <message>". Markers in the message change that:
-// "[fail]" answers an API error, "[slow]" streams slowly (to test Stop).
+// "[fail]" answers an API error, "[slow]" streams slowly (to test Stop). When files were sent, the
+// reply says which (in this message, and how many in the whole context), and whether prompt
+// caching was asked for: "[files: photo.png, notes.txt; in context: 2; cached]".
 import { createServer } from "node:http";
 
 const MODEL = { type: "model", id: "claude-haiku-4-5", display_name: "Claude Haiku 4.5", created_at: "2025-10-01T00:00:00Z" };
@@ -24,8 +26,15 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/v1/messages") {
-    const { messages } = await readJson(request);
-    const text = String(messages.at(-1)?.content ?? "");
+    const body = await readJson(request);
+    const { messages } = body;
+    const blocksOf = (message) => (Array.isArray(message.content) ? message.content : [{ type: "text", text: message.content }]);
+    const isFile = (block) => block.type === "image" || block.type === "document";
+    const last = blocksOf(messages.at(-1));
+    const text = last.filter((block) => block.type === "text").map((block) => block.text).join(" ");
+    const files = last.filter(isFile).map((block) => block.title ?? `${block.type}`);
+    const inContext = messages.flatMap(blocksOf).filter(isFile).length;
+    const fileNote = inContext ? ` [files: ${files.join(", ") || "none"}; in context: ${inContext}${body.cache_control ? "; cached" : ""}]` : "";
     if (text.includes("[fail]")) {
       // 400: the SDK doesn't retry it, so the test sees the failure at once.
       response.writeHead(400, { "content-type": "application/json" });
@@ -39,7 +48,7 @@ const server = createServer(async (request, response) => {
     });
     send("content_block_start", { index: 0, content_block: { type: "text", text: "" } });
     const slow = text.includes("[slow]");
-    const words = slow ? Array.from({ length: 60 }, (_, i) => `word${i} `) : ["You said: ", text];
+    const words = slow ? Array.from({ length: 60 }, (_, i) => `word${i} `) : ["You said: ", text, fileNote];
     for (const word of words) {
       if (response.destroyed) return;
       send("content_block_delta", { index: 0, delta: { type: "text_delta", text: word } });

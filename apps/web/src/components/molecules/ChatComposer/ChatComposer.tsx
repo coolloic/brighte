@@ -1,6 +1,9 @@
-import type { ReactNode, Ref } from "react";
+"use client";
+
+import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { Button } from "@/components/atoms/Button";
 import { FieldError } from "@/components/atoms/FieldError";
+import { FileChip, type FileChipProps } from "@/components/atoms/FileChip";
 import { Icon } from "@/components/atoms/Icon";
 import { cn } from "@/lib/cn";
 
@@ -17,6 +20,16 @@ export type ChatComposerProps = {
   error?: string;
   /** Small controls on the right of the hint line, e.g. the model picker. */
   toolbar?: ReactNode;
+  /**
+   * Attaching files: the attach button, dropping files on the box, and pasting them. Without
+   * onAddFiles, none of this shows.
+   */
+  onAddFiles?: (files: File[]) => void;
+  /** For the file picker, e.g. "image/png,application/pdf,.txt". */
+  accept?: string;
+  /** Files attached to the next message, as removable chips. */
+  attachments?: (Omit<FileChipProps, "onRemove" | "className"> & { id: string })[];
+  onRemoveFile?: (id: string) => void;
   ref?: Ref<HTMLTextAreaElement>;
 };
 
@@ -30,9 +43,64 @@ const actionButton = "aspect-square h-[calc(1lh+1.25rem+2px)] min-h-11 shrink-0 
 /**
  * Message box and Send button, as in messaging apps: Enter sends, Shift+Enter adds a line, and the
  * box grows with the text (where the browser supports field-sizing). A character count appears near
- * the limit. While a reply streams, typing stays possible and Send becomes Stop.
+ * the limit. While a reply streams, typing stays possible and Send becomes Stop. Files can be
+ * attached with the paperclip button, by dropping them on the box, or by pasting them; they show as
+ * removable chips above it. The error line (too long, a file that can't be attached) is announced.
  */
-export function ChatComposer({ id, value, onChange, onSend, onStop, streaming = false, maxChars, error, toolbar, ref }: ChatComposerProps) {
+export function ChatComposer({
+  id,
+  value,
+  onChange,
+  onSend,
+  onStop,
+  streaming = false,
+  maxChars,
+  error,
+  toolbar,
+  onAddFiles,
+  accept,
+  attachments = [],
+  onRemoveFile,
+  ref,
+}: ChatComposerProps) {
+  const form = useRef<HTMLFormElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [dropping, setDropping] = useState(false);
+
+  // Drop files anywhere on the composer. Mouse-only by nature, so these are plain listeners rather
+  // than JSX props on the form: the attach button is the accessible way to add files.
+  const addFiles = useRef(onAddFiles);
+  useEffect(() => {
+    addFiles.current = onAddFiles;
+  });
+  const canAttach = Boolean(onAddFiles);
+  useEffect(() => {
+    const target = form.current;
+    if (!target || !canAttach) return;
+    const hasFiles = (event: DragEvent) => event.dataTransfer?.types.includes("Files") ?? false;
+    const onDragOver = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      setDropping(true);
+    };
+    const onDragLeave = (event: DragEvent) => {
+      if (!target.contains(event.relatedTarget as Node | null)) setDropping(false);
+    };
+    const onDrop = (event: DragEvent) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      setDropping(false);
+      addFiles.current?.([...(event.dataTransfer?.files ?? [])]);
+    };
+    target.addEventListener("dragover", onDragOver);
+    target.addEventListener("dragleave", onDragLeave);
+    target.addEventListener("drop", onDrop);
+    return () => {
+      target.removeEventListener("dragover", onDragOver);
+      target.removeEventListener("dragleave", onDragLeave);
+      target.removeEventListener("drop", onDrop);
+    };
+  }, [canAttach]);
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const countId = `${id}-count`;
@@ -41,15 +109,46 @@ export function ChatComposer({ id, value, onChange, onSend, onStop, streaming = 
 
   return (
     <form
+      ref={form}
       onSubmit={(event) => {
         event.preventDefault();
         if (!streaming) onSend();
       }}
     >
+      {attachments.length > 0 && (
+        <ul aria-label="Attached files" className="mb-2 flex flex-wrap gap-2">
+          {attachments.map(({ id: fileId, ...file }) => (
+            <li key={fileId} className="max-w-full">
+              <FileChip {...file} onRemove={onRemoveFile && (() => onRemoveFile(fileId))} />
+            </li>
+          ))}
+        </ul>
+      )}
       <label htmlFor={id} className="sr-only">
         Message
       </label>
-      <div className="flex items-end gap-2">
+      <div className={cn("flex items-end gap-2 rounded-control", dropping && "outline-2 outline-offset-4 outline-focus outline-dashed")}>
+        {onAddFiles && (
+          <>
+            <Button variant="ghost" aria-label="Attach files" onClick={() => fileInput.current?.click()} className={actionButton}>
+              <Icon name="paperclip" />
+            </Button>
+            {/* Opened by the button above; hidden, so it is not a second tab stop. */}
+            <input
+              ref={fileInput}
+              type="file"
+              multiple
+              accept={accept}
+              hidden
+              aria-label="Attach files"
+              onChange={(event) => {
+                if (event.target.files?.length) onAddFiles([...event.target.files]);
+                // The same file can be picked again after removing it.
+                event.target.value = "";
+              }}
+            />
+          </>
+        )}
         <textarea
           ref={ref}
           id={id}
@@ -60,6 +159,12 @@ export function ChatComposer({ id, value, onChange, onSend, onStop, streaming = 
           aria-describedby={[error && errorId, showCount && countId, hintId].filter(Boolean).join(" ")}
           placeholder="Type a message"
           onChange={(event) => onChange(event.target.value)}
+          onPaste={(event) => {
+            // Pasted files (e.g. a screenshot) are attached; pasted text goes in as usual.
+            if (!onAddFiles || event.clipboardData.files.length === 0) return;
+            event.preventDefault();
+            onAddFiles([...event.clipboardData.files]);
+          }}
           onKeyDown={(event) => {
             // Enter sends, unless Shift is held or an input method (e.g. Chinese, Japanese) is composing text.
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -98,7 +203,8 @@ export function ChatComposer({ id, value, onChange, onSend, onStop, streaming = 
           {toolbar}
         </div>
       </div>
-      {error && <FieldError id={errorId}>{error}</FieldError>}
+      {/* Announced when it appears: a file can be refused without focus being in the box. */}
+      <div aria-live="polite">{error && <FieldError id={errorId}>{error}</FieldError>}</div>
     </form>
   );
 }

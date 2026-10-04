@@ -1,5 +1,6 @@
 import "server-only";
 import { GoogleGenAI } from "@google/genai";
+import { toGeminiContents } from "../content";
 import type { ChatRequest, LlmClient, ModelInfo } from "../types";
 
 /** Google Gemini, through the official @google/genai SDK. */
@@ -26,8 +27,7 @@ export class GeminiClient implements LlmClient {
   async *streamChat({ model, system, messages, maxOutputTokens, signal }: ChatRequest): AsyncIterable<string> {
     const stream = await this.#sdk.models.generateContentStream({
       model,
-      // Gemini calls the assistant "model".
-      contents: messages.map(({ role, content }) => ({ role: role === "assistant" ? "model" : "user", parts: [{ text: content }] })),
+      contents: toGeminiContents(messages),
       config: { systemInstruction: system, maxOutputTokens, abortSignal: signal },
     });
     for await (const chunk of stream) {

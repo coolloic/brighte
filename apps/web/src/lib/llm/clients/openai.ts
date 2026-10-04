@@ -1,5 +1,6 @@
 import "server-only";
 import OpenAI from "openai";
+import { toOpenAIMessages } from "../content";
 import type { ChatRequest, LlmClient, ModelInfo } from "../types";
 
 /**
@@ -23,7 +24,7 @@ export class OpenAIClient implements LlmClient {
 
   async *streamChat({ model, system, messages, maxOutputTokens, signal }: ChatRequest): AsyncIterable<string> {
     const stream = await this.#sdk.chat.completions.create(
-      { model, stream: true, max_completion_tokens: maxOutputTokens, messages: [{ role: "system", content: system }, ...messages] },
+      { model, stream: true, max_completion_tokens: maxOutputTokens, messages: toOpenAIMessages(system, messages) },
       { signal },
     );
     for await (const chunk of stream) {
