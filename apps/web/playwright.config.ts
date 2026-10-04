@@ -20,6 +20,11 @@ const apiDownWebPort = webPort + 1;
 process.env.E2E_API_DOWN_URL = `http://localhost:${apiDownWebPort}`;
 // A mock Anthropic API (e2e/mock-llm.mjs) for the chat tests: no real model is ever called.
 const mockLlmPort = webPort + 2;
+// The chat tests expect the chat's default settings (src/lib/chat/config.ts): the persona, models
+// and limits. Any CHAT_* setting the root .env holds for local use is blanked for the web servers
+// (blank means default), so a local tweak (e.g. CHAT_PERSONA=general) can't fail the suite.
+// Blanked, not left out: Playwright starts web servers with its own environment merged in.
+const chatDefaults = Object.fromEntries(Object.keys(process.env).filter((key) => key.startsWith("CHAT_")).map((key) => [key, ""]));
 // The e2e API itself, for tests that create data directly (e2e/support.ts).
 process.env.E2E_API_URL = `http://localhost:${apiPort}/graphql`;
 
@@ -60,6 +65,7 @@ export default defineConfig({
       url: `http://localhost:${webPort}`,
       env: {
         ...process.env,
+        ...chatDefaults,
         API_URL: `http://localhost:${apiPort}/graphql`,
         WEB_TRUST_PROXY: "1",
         SITE_URL: `http://localhost:${webPort}`,
@@ -78,7 +84,7 @@ export default defineConfig({
       // Servers start in order, so the build above already exists.
       command: `exec node_modules/.bin/next start --port ${apiDownWebPort}`,
       url: `http://localhost:${apiDownWebPort}`,
-      env: { ...process.env, API_URL: "http://localhost:9/graphql" },
+      env: { ...process.env, ...chatDefaults, API_URL: "http://localhost:9/graphql" },
       reuseExistingServer: false,
       timeout: 60_000,
     },
