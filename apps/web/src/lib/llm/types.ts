@@ -20,6 +20,10 @@ export type Attachment =
 /** One turn of the conversation. Only user turns carry attachments. */
 export type ChatTurn = { role: "user" | "assistant"; content: string; attachments?: Attachment[] };
 
+export const EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
+/** How much a model thinks before answering: less is quicker and cheaper. */
+export type Effort = (typeof EFFORT_LEVELS)[number];
+
 export type ChatRequest = {
   /** The provider's own model id, e.g. "claude-haiku-4-5". */
   model: string;
@@ -27,6 +31,8 @@ export type ChatRequest = {
   /** Oldest first, starting with a user turn. */
   messages: ChatTurn[];
   maxOutputTokens: number;
+  /** Applied where the model supports it (a client leaves it out for models that don't). */
+  effort?: Effort;
   /** Aborted when the visitor leaves or stops the reply. */
   signal?: AbortSignal;
 };

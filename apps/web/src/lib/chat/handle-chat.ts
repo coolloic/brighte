@@ -1,5 +1,5 @@
 import { clientIp } from "../api";
-import type { LlmClient, ModelCatalog, ProviderId } from "../llm";
+import type { Effort, LlmClient, ModelCatalog, ProviderId } from "../llm";
 import type { ChatErrorBody } from "./chat-error";
 import { chatRequestSchema, type ChatRequestLimits } from "./messages";
 import type { RateLimitResult } from "./rate-limit";
@@ -11,6 +11,7 @@ export type ChatHandlerDeps = {
   system: string;
   limits: ChatRequestLimits;
   maxOutputTokens: number;
+  effort?: Effort;
   /** Proxies whose X-Forwarded-For entries are trusted (WEB_TRUST_PROXY, see client-ip.ts). */
   trustedHops: number;
 };
@@ -75,7 +76,7 @@ export async function handleChat(request: Request, deps: ChatHandlerDeps): Promi
   }
 
   const chunks = client
-    .streamChat({ model, system: deps.system, messages, maxOutputTokens: deps.maxOutputTokens, signal: request.signal })
+    .streamChat({ model, system: deps.system, messages, maxOutputTokens: deps.maxOutputTokens, effort: deps.effort, signal: request.signal })
     [Symbol.asyncIterator]();
   // Wait for the first chunk, so a provider failure (bad key, model retired, outage) is an error
   // status the page can explain, not a stream that breaks before saying anything.
