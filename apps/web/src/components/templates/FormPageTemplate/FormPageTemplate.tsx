@@ -12,12 +12,14 @@ export type FormPageTemplateProps = {
   highlights?: string[];
   /** The form, e.g. <RegistrationForm />. */
   children: ReactNode;
+  /** Right side of the header, e.g. a link to another page (AppShell). */
+  headerActions?: ReactNode;
 };
 
 /** Mobile: title, intro, form. From lg: headline, intro and highlights on the left; the form in a card on the right. */
-export function FormPageTemplate({ title, intro, highlights = [], children }: FormPageTemplateProps) {
+export function FormPageTemplate({ title, intro, highlights = [], children, headerActions }: FormPageTemplateProps) {
   return (
-    <AppShell>
+    <AppShell headerActions={headerActions}>
       <div className="grid gap-8 lg:grid-cols-[1fr_minmax(0,32rem)] lg:gap-16">
         <div className="lg:pt-6">
           <Heading level={1}>{title}</Heading>

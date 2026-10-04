@@ -15,7 +15,7 @@ const quality = {
 module.exports = {
   ci: {
     collect: {
-      url: [`http://localhost:${webPort}/`, `http://localhost:${webPort}/admin/login`],
+      url: [`http://localhost:${webPort}/`, `http://localhost:${webPort}/chat`, `http://localhost:${webPort}/admin/login`],
       numberOfRuns: 3,
       settings: { preset: "desktop" },
     },

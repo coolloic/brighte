@@ -8,6 +8,7 @@ import { FormPageTemplate } from "@/components/templates/FormPageTemplate";
 import { ApiError } from "@/lib/api/errors";
 import { getServiceOptions, type ServiceOption } from "@/lib/api/registration";
 import { siteUrl } from "@/lib/site";
+import { ChatLink } from "./_components/ChatLink";
 import { RegisterInterest } from "./_components/RegisterInterest";
 
 const TITLE = "Register your interest in Brighte Eats";
@@ -55,6 +56,7 @@ export default async function RegisterPage() {
       {/* Structured data for search engines. Raw JSON, so jsonLd() escapes "<". */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd() }} />
       <FormPageTemplate
+        headerActions={<ChatLink />}
         title={TITLE}
         intro="Tell us which services you'd use and we'll let you know as soon as Brighte Eats launches near you."
         highlights={["Delivery, pick-up and payment options", "Be first to hear when we launch", "No commitment: it takes a minute"]}

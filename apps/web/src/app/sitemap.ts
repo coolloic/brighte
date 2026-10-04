@@ -6,5 +6,8 @@ export const dynamic = "force-dynamic";
 
 /** /sitemap.xml: the public pages. Admin pages are private (noindex) and left out. */
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [{ url: new URL("/", siteUrl()).href, changeFrequency: "monthly", priority: 1 }];
+  return [
+    { url: new URL("/", siteUrl()).href, changeFrequency: "monthly", priority: 1 },
+    { url: new URL("/chat", siteUrl()).href, changeFrequency: "monthly", priority: 0.5 },
+  ];
 }

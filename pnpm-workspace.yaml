@@ -8,3 +8,5 @@ allowBuilds:
   "@apollo/protobufjs": false
   "@parcel/watcher": false
   esbuild: false
+  "@google/genai": false
+  protobufjs: false

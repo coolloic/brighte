@@ -1,0 +1,51 @@
+import { cva } from "class-variance-authority";
+import { Icon } from "@/components/atoms/Icon";
+import { cn } from "@/lib/cn";
+
+const bubbleVariants = cva("max-w-[85%] rounded-card px-4 py-2.5 break-words whitespace-pre-wrap sm:max-w-[75%]", {
+  variants: {
+    // The visitor's messages on the right in brand green; the assistant's on the left in grey, with a
+    // "tail" corner pointing at the sender, as in messaging apps.
+    from: {
+      user: "rounded-br-control bg-bubble-own text-on-bubble-own",
+      assistant: "rounded-bl-control border border-border bg-surface-muted text-fg",
+    },
+  },
+});
+
+export type ChatBubbleProps = {
+  from: "user" | "assistant";
+  /** Who sent it, for screen readers ("You", or the assistant's name): the side and color only show it visually. */
+  author: string;
+  /** The message. Empty while waiting for the reply's first words, which shows a typing indicator. */
+  children?: string;
+  className?: string;
+};
+
+/** One chat message. Plain text: line breaks are kept, nothing is rendered as HTML. */
+export function ChatBubble({ from, author, children, className }: ChatBubbleProps) {
+  const typing = !children;
+  return (
+    <div className={cn("flex items-end gap-2", from === "user" && "justify-end", className)}>
+      {from === "assistant" && (
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-brand text-fg-brand">
+          <Icon name="sparkles" className="size-4" />
+        </span>
+      )}
+      <div className={bubbleVariants({ from })}>
+        <span className="sr-only">{author}: </span>
+        {typing ? (
+          <span className="flex h-6 items-center gap-1">
+            <span className="sr-only">typing</span>
+            {/* Classes, not a style attribute: the CSP allows no inline styles. */}
+            {["", "[animation-delay:150ms]", "[animation-delay:300ms]"].map((delay) => (
+              <span key={delay} aria-hidden="true" className={cn("size-2 animate-bounce rounded-full bg-fg-muted motion-reduce:animate-none", delay)} />
+            ))}
+          </span>
+        ) : (
+          children
+        )}
+      </div>
+    </div>
+  );
+}
