@@ -40,6 +40,30 @@ export const Ready: Story = {
 };
 
 /**
+ * The longest name the API accepts (70 characters, here unbroken) and a long email are cut off
+ * after 3 lines (the whole text in a popover, see TruncatedText) instead of pushing the list wider
+ * than its container. The frame is a tablet-sized column, where the table first shows.
+ */
+export const LongValues: Story = {
+  args: {
+    leads: [
+      { ...LEADS[0], name: "x".repeat(70), email: `${"long-address-".repeat(5)}name@example.com.au` },
+      ...LEADS.slice(1),
+    ],
+  },
+  render: (args) => (
+    <div data-testid="frame" className="w-full max-w-2xl">
+      <LeadsTable {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("link", { name: "x".repeat(70) })).toBeInTheDocument();
+    const frame = canvas.getByTestId("frame");
+    await expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth);
+  },
+};
+
+/**
  * The whole row (or card) is the lead's link, not just the name. Hover it in Storybook to see the
  * highlight: CSS :hover needs a real pointer, which story tests don't have.
  */

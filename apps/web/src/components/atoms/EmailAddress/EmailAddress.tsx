@@ -6,7 +6,8 @@ export type EmailAddressProps = { email: string };
  * An email address that wraps at sensible points in narrow spaces: after the "@" and before each
  * ".", e.g. "grace.hopper@" / "example" / ".com.au", instead of mid-word. <wbr> marks the points,
  * so copying and screen readers still get the plain address. Put it in an element with
- * `break-words`, so a part too long for the space can still break.
+ * `wrap-anywhere`, so a part too long for the space can still break (also inside a table cell,
+ * where `break-words` wouldn't let the column shrink).
  */
 export function EmailAddress({ email }: EmailAddressProps) {
   const parts = email.split(/(?=\.)|(?<=@)/);

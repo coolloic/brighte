@@ -4,6 +4,7 @@ import { buttonVariants } from "@/components/atoms/Button";
 import { EmailAddress } from "@/components/atoms/EmailAddress";
 import { Icon } from "@/components/atoms/Icon";
 import { Skeleton } from "@/components/atoms/Skeleton";
+import { TruncatedText } from "@/components/atoms/TruncatedText";
 import { Alert } from "@/components/molecules/Alert";
 import { EmptyState } from "@/components/molecules/EmptyState";
 import { ServiceBadges } from "@/components/molecules/ServiceBadges";
@@ -202,13 +203,16 @@ export function LeadsTable({
               lead.id === selectedId ? "border-action bg-surface-brand" : "border-border bg-surface hover:bg-surface-muted",
             )}
           >
+            {/* Names and emails can be one long unbroken string: at most 3 lines, the rest in a popover (TruncatedText). */}
             <Link {...linkProps(lead)} className={cn(nameLink, "text-lg")}>
-              {lead.name}
+              <TruncatedText>{lead.name}</TruncatedText>
             </Link>
             <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
               <dt className="text-fg-muted">Email</dt>
-              <dd className="break-words text-fg">
-                <EmailAddress email={lead.email} />
+              <dd className="min-w-0 text-fg">
+                <TruncatedText>
+                  <EmailAddress email={lead.email} />
+                </TruncatedText>
               </dd>
               <dt className="text-fg-muted">Mobile</dt>
               <dd className="text-fg">{formatMobile(lead.mobile)}</dd>
@@ -241,11 +245,13 @@ export function LeadsTable({
             >
               <th scope="row" className="py-3 pr-4 pl-3 font-normal">
                 <Link {...linkProps(lead)} className={nameLink}>
-                  {lead.name}
+                  <TruncatedText>{lead.name}</TruncatedText>
                 </Link>
               </th>
-              <td className="py-3 pr-4 break-words text-fg">
-                <EmailAddress email={lead.email} />
+              <td className="py-3 pr-4 text-fg">
+                <TruncatedText>
+                  <EmailAddress email={lead.email} />
+                </TruncatedText>
               </td>
               <td className="py-3 pr-4 whitespace-nowrap text-fg">{formatMobile(lead.mobile)}</td>
               <td className="py-3 pr-4 text-fg">{lead.postcode}</td>
