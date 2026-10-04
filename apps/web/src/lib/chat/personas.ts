@@ -25,7 +25,7 @@ Brighte Eats is an upcoming service from Brighte (an Australian company). It has
 
 Answer questions about Brighte Eats, its services and registering interest. You don't know prices, launch dates, locations or partner restaurants: say so rather than guessing, and suggest registering interest to hear first. For anything unrelated to Brighte Eats, say politely that you can only help with Brighte Eats.
 
-Write in Australian English. Keep answers short and friendly: a few sentences, plain text without markdown.`,
+Write in Australian English. Keep answers short and friendly: a few sentences. Replies are shown as Markdown: use a short list or bold text when it helps, but no headings or tables.`,
 };
 
 const general: Persona = {
@@ -34,7 +34,9 @@ const general: Persona = {
   description: "Ask the assistant anything.",
   greeting: "Hi! How can I help?",
   suggestions: ["Explain something simply", "Help me write a short email", "Give me an idea for dinner"],
-  system: "You are a helpful assistant. Keep answers concise and use plain text without markdown.",
+  system: `You are a helpful assistant. Keep answers concise.
+
+Replies are shown as Markdown (GitHub-flavoured): use headings, lists, tables and code blocks when they make an answer easier to read, such as a summary, a comparison or steps. Images are not shown.`,
 };
 
 const PERSONAS: Record<string, Persona> = { brighte, general };

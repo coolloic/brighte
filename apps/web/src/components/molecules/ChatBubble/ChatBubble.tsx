@@ -1,14 +1,16 @@
 import { cva } from "class-variance-authority";
 import { FileChip, type FileChipProps } from "@/components/atoms/FileChip";
 import { Icon } from "@/components/atoms/Icon";
+import { Markdown } from "@/components/atoms/Markdown";
 import { cn } from "@/lib/cn";
 
-const bubbleVariants = cva("max-w-[85%] rounded-card px-4 py-2.5 break-words whitespace-pre-wrap shadow-bubble sm:max-w-[75%]", {
+const bubbleVariants = cva("max-w-[85%] rounded-card px-4 py-2.5 break-words shadow-bubble sm:max-w-[75%]", {
   variants: {
     // The visitor's messages on the right in brand green; the assistant's on the left in grey, with a
     // "tail" corner pointing at the sender, as in messaging apps.
     from: {
-      user: "rounded-br-control bg-bubble-own text-on-bubble-own",
+      // The visitor's text as typed (line breaks kept); the assistant's replies are Markdown.
+      user: "rounded-br-control whitespace-pre-wrap bg-bubble-own text-on-bubble-own",
       assistant: "rounded-bl-control border border-border bg-surface-muted text-fg",
     },
   },
@@ -25,7 +27,10 @@ export type ChatBubbleProps = {
   className?: string;
 };
 
-/** One chat message. Plain text: line breaks are kept, nothing is rendered as HTML. */
+/**
+ * One chat message. The visitor's is plain text with its line breaks; the assistant's is Markdown
+ * (lists, tables, code), with no raw HTML.
+ */
 export function ChatBubble({ from, author, children, attachments = [], className }: ChatBubbleProps) {
   const typing = from === "assistant" && !children;
   return (
@@ -55,6 +60,8 @@ export function ChatBubble({ from, author, children, attachments = [], className
               <span key={delay} aria-hidden="true" className={cn("size-2 animate-bounce rounded-full bg-fg-muted motion-reduce:animate-none", delay)} />
             ))}
           </span>
+        ) : from === "assistant" ? (
+          <Markdown>{children ?? ""}</Markdown>
         ) : (
           children
         )}
