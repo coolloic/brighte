@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { FormPageTemplate } from "@/components/templates/FormPageTemplate";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { safeNext } from "@/lib/sign-in";
 import { signInAction } from "./actions";

@@ -5,7 +5,7 @@ import { startTransition, useActionState, useOptimistic, useState, useSyncExtern
 import { RegistrationForm, type FormAlert } from "@/components/organisms/RegistrationForm";
 import type { ServiceOption } from "@/components/molecules/ServicePicker";
 import { registerAction } from "@/app/actions";
-import { CONNECTION_PROBLEM } from "@/lib/api/registration-feedback";
+import { CONNECTION_PROBLEM } from "@/lib/api";
 import {
   registrationFromFormData,
   registrationToFormData,

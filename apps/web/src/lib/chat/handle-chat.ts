@@ -1,4 +1,4 @@
-import { clientIp } from "../api/client-ip";
+import { clientIp } from "../api";
 import type { LlmClient, ModelCatalog, ProviderId } from "../llm";
 import type { ChatErrorBody } from "./chat-error";
 import { chatRequestSchema } from "./messages";

@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-import { registerInterest } from "@/lib/api/registration";
+import { registerInterest } from "@/lib/api/server";
 import { registrationFromFormData, type RegistrationState } from "@/lib/registration";
 
 /** Registers interest from the register page's form. The API validates everything. */
