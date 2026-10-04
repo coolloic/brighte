@@ -33,6 +33,9 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "jsx-a11y/label-has-associated-control": ["error", { controlComponents: ["Input", "Checkbox"], depth: 3 }],
+      // A scrollable box must be focusable for keyboard users (axe: scrollable-region-focusable), as a
+      // labelled <div role="region" tabIndex={0}>.
+      "jsx-a11y/no-noninteractive-tabindex": ["error", { tags: [], roles: ["tabpanel", "region"] }],
     },
   },
   { files: ["src/**"], rules: { "no-restricted-imports": ["error", { patterns: [noDeepRelative, ...libBarrels] }] } },

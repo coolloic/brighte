@@ -33,6 +33,29 @@ export const FromAssistant: Story = {
   },
 };
 
+/** The assistant's replies are Markdown: lists, emphasis and tables render as such. */
+export const AssistantMarkdown: Story = {
+  args: {
+    from: "assistant",
+    author: "Brighte Eats assistant",
+    children: "Brighte Eats will offer:\n\n- **Delivery** to your door\n- **Pick-up** from the restaurant\n- **Payment** in the app\n\n| Service | When |\n|---|---|\n| Delivery | At launch |\n| Pick-up | Later in 2027 |",
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("list")).toHaveTextContent("Delivery to your door");
+    await expect(canvas.getByText("Delivery", { selector: "strong" })).toBeInTheDocument();
+    await expect(canvas.getByRole("table")).toBeInTheDocument();
+  },
+};
+
+/** The visitor's text is never Markdown: what they typed shows as typed. */
+export const UserTextAsTyped: Story = {
+  args: { children: "**not bold**\n- not a list" },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByText(/\*\*not bold\*\*/)).toBeInTheDocument();
+    await expect(canvasElement.querySelector("strong, ul")).toBeNull();
+  },
+};
+
 /** Waiting for the reply's first words. */
 export const Typing: Story = {
   args: { from: "assistant", author: "Brighte Eats assistant", children: "" },

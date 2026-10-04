@@ -69,6 +69,19 @@ test.describe("chat page", () => {
     await expectNoA11yViolations(page);
   });
 
+  test("shows a Markdown reply as a list and table, and the visitor's text as typed", async ({ page }) => {
+    await sendMessage(page, "**Services?** [markdown]");
+
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    await expect(log(page)).toContainText("You: **Services?** [markdown]");
+    // "##" sits under the chat's h2.
+    await expect(log(page).getByRole("heading", { level: 4, name: "Services" })).toBeVisible();
+    await expect(log(page).getByRole("listitem").first()).toHaveText("Delivery to your door");
+    await expect(log(page).locator("strong")).toHaveText("Delivery");
+    await expect(log(page).getByRole("table")).toContainText("At launch");
+    await expectNoA11yViolations(page);
+  });
+
   test("sends a suggested question", async ({ page }) => {
     await page.getByRole("button", { name: "What is Brighte Eats?" }).click();
     await expect(log(page)).toContainText("You said: What is Brighte Eats?");

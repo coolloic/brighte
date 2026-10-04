@@ -25,6 +25,8 @@
     "openai": "^7.27.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "server-only": "^0.0.1",
     "tailwind-merge": "^3.7.0",
     "zod": "^4.6.5"
@@ -49,7 +51,6 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-storybook": "^10.6.0",
     "playwright": "^1.63.0",
-    "remark-gfm": "^4.0.1",
     "sass": "^1.105.0",
     "storybook": "^10.6.0",
     "stylelint": "^17.15.0",

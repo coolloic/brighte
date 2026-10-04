@@ -1,7 +1,8 @@
 // A stand-in for the Anthropic API, so the e2e chat tests never call (or pay for) a real model.
 // The web server's Anthropic SDK is pointed here with ANTHROPIC_BASE_URL (playwright.config.ts).
 // It lists one model and streams "You said: <message>". Markers in the message change that:
-// "[fail]" answers an API error, "[slow]" streams slowly (to test Stop). When files were sent, the
+// "[fail]" answers an API error, "[slow]" streams slowly (to test Stop), "[markdown]" replies with a
+// Markdown list and table, split mid-syntax across chunks as a real stream would be. When files were sent, the
 // reply says which (in this message, and how many in the whole context), and whether prompt
 // caching was asked for: "[files: photo.png, notes.txt; in context: 2; cached]".
 import { createServer } from "node:http";
@@ -48,7 +49,8 @@ const server = createServer(async (request, response) => {
     });
     send("content_block_start", { index: 0, content_block: { type: "text", text: "" } });
     const slow = text.includes("[slow]");
-    const words = slow ? Array.from({ length: 60 }, (_, i) => `word${i} `) : ["You said: ", text, fileNote];
+    const markdown = ["## Services\n\n- **Deli", "very** to your door\n- Pick-up\n\n| Service | When |\n|---|---|\n| Delivery | At launch |\n"];
+    const words = slow ? Array.from({ length: 60 }, (_, i) => `word${i} `) : text.includes("[markdown]") ? markdown : ["You said: ", text, fileNote];
     for (const word of words) {
       if (response.destroyed) return;
       send("content_block_delta", { index: 0, delta: { type: "text_delta", text: word } });
