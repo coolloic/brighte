@@ -2,7 +2,9 @@
 // The web server's Anthropic SDK is pointed here with ANTHROPIC_BASE_URL (playwright.config.ts).
 // It lists one model and streams "You said: <message>". Markers in the message change that:
 // "[fail]" answers an API error, "[slow]" streams slowly (to test Stop), "[markdown]" replies with a
-// Markdown list and table, split mid-syntax across chunks as a real stream would be. When files were sent, the
+// Markdown list and table, split mid-syntax across chunks as a real stream would be. "[match]" replies
+// with text and a match block whose JSON is split across chunks, "[match-broken]" with a match block
+// that never completes. When files were sent, the
 // reply says which (in this message, and how many in the whole context), and whether prompt
 // caching was asked for: "[files: photo.png, notes.txt; in context: 2; cached]".
 import { createServer } from "node:http";
@@ -15,6 +17,19 @@ async function readJson(request) {
   for await (const chunk of request) body += chunk;
   return JSON.parse(body);
 }
+
+const MATCH_JSON = JSON.stringify({
+  title: "Front-end Engineer · Acme",
+  score: 72,
+  items: [
+    { requirement: "React", status: "met", evidence: "8 years of React" },
+    { requirement: "GraphQL", status: "missing", suggestion: "Add it if you've used it." },
+  ],
+});
+const half = Math.floor(MATCH_JSON.length / 2);
+const MATCH_REPLY = ["Here's how you match.\n\n```match\n", MATCH_JSON.slice(0, half), MATCH_JSON.slice(half), "\n```\n\nWant me to tailor your CV?"];
+// Cut off mid-JSON, as when the reply hits the length cap.
+const MATCH_BROKEN_REPLY = ["Here's how you match.\n\n```match\n", MATCH_JSON.slice(0, half)];
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, "http://localhost");
@@ -50,7 +65,15 @@ const server = createServer(async (request, response) => {
     send("content_block_start", { index: 0, content_block: { type: "text", text: "" } });
     const slow = text.includes("[slow]");
     const markdown = ["## Services\n\n- **Deli", "very** to your door\n- Pick-up\n\n| Service | When |\n|---|---|\n| Delivery | At launch |\n"];
-    const words = slow ? Array.from({ length: 60 }, (_, i) => `word${i} `) : text.includes("[markdown]") ? markdown : ["You said: ", text, fileNote];
+    const words = slow
+      ? Array.from({ length: 60 }, (_, i) => `word${i} `)
+      : text.includes("[match-broken]")
+        ? MATCH_BROKEN_REPLY
+        : text.includes("[match]")
+          ? MATCH_REPLY
+          : text.includes("[markdown]")
+            ? markdown
+            : ["You said: ", text, fileNote];
     for (const word of words) {
       if (response.destroyed) return;
       send("content_block_delta", { index: 0, delta: { type: "text_delta", text: word } });

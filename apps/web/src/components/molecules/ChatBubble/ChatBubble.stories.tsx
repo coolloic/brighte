@@ -56,6 +56,44 @@ export const UserTextAsTyped: Story = {
   },
 };
 
+const MATCH_JSON = JSON.stringify({
+  title: "Front-end Engineer · Acme",
+  score: 72,
+  items: [
+    { requirement: "React", status: "met", evidence: "8 years" },
+    { requirement: "GraphQL", status: "missing", suggestion: "Add it if you've used it." },
+  ],
+});
+
+/** A ```match block in a reply renders as a match report, with the text around it. */
+export const WithMatchReport: Story = {
+  args: { from: "assistant", author: "CV coach", children: `Here's how you match.\n\n\`\`\`match\n${MATCH_JSON}\n\`\`\`\n\nWant me to tailor your CV?` },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 3, name: "Front-end Engineer · Acme" })).toBeInTheDocument();
+    await expect(canvas.getByText("72%").parentElement).toHaveTextContent("72% match");
+    await expect(canvas.getByText("Want me to tailor your CV?")).toBeInTheDocument();
+  },
+};
+
+/** While the block's JSON is still arriving: a placeholder, announced politely. */
+export const MatchReportStreaming: Story = {
+  args: { from: "assistant", author: "CV coach", streaming: true, children: `Here's how you match.\n\n\`\`\`match\n${MATCH_JSON.slice(0, 40)}` },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("status")).toHaveTextContent("Preparing match report…");
+  },
+};
+
+/** Invalid JSON once the reply has ended (e.g. cut off by the length cap): a short note, no raw JSON. */
+export const MatchReportBroken: Story = {
+  args: { from: "assistant", author: "CV coach", children: `Here's how you match.\n\n\`\`\`match\n${MATCH_JSON.slice(0, 40)}` },
+  play: async ({ canvas }) => {
+    // Says what to do next: a reply cut off by the length cap ends normally, so nothing else explains it.
+    await expect(canvas.getByText("This match report couldn't be shown. It may have been cut off: ask me to try again, or to check fewer requirements.")).toBeInTheDocument();
+    await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
+    await expect(canvas.queryByText(/"title"/)).not.toBeInTheDocument();
+  },
+};
+
 /** Waiting for the reply's first words. */
 export const Typing: Story = {
   args: { from: "assistant", author: "Brighte Eats assistant", children: "" },

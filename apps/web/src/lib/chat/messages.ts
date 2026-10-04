@@ -8,8 +8,8 @@ import { attachmentBytes, attachmentContentMatches, totalAttachmentBytes, type A
 /** Turns sent with each message: enough context for a chat, while bounding each request's cost. */
 export const MAX_HISTORY = 20;
 
-/** Longest earlier assistant reply accepted back from the browser (a reply is capped in tokens; this is generous). */
-const MAX_REPLY_CHARS = 16_000;
+/** Longest earlier assistant reply accepted back from the browser: a 4,096-token reply full of JSON fits. */
+const MAX_REPLY_CHARS = 40_000;
 
 /** What's wrong with a message the visitor typed, or undefined when it can be sent. Files alone are a message too. */
 export function messageError(text: string, maxChars: number, attachmentCount = 0): string | undefined {

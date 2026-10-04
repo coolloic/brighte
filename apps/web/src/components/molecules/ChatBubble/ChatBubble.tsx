@@ -1,7 +1,10 @@
 import { cva } from "class-variance-authority";
 import { FileChip, type FileChipProps } from "@/components/atoms/FileChip";
 import { Icon } from "@/components/atoms/Icon";
-import { Markdown } from "@/components/atoms/Markdown";
+import { Markdown, type MarkdownBlocks } from "@/components/atoms/Markdown";
+import { Skeleton } from "@/components/atoms/Skeleton";
+import { MatchReport } from "@/components/molecules/MatchReport";
+import { MATCH_BLOCK, parseMatchBlock } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 
 const bubbleVariants = cva("max-w-[85%] rounded-card px-4 py-2.5 break-words shadow-bubble sm:max-w-[75%]", {
@@ -24,14 +27,46 @@ export type ChatBubbleProps = {
   children?: string;
   /** Files sent with the message, shown above its text. */
   attachments?: Pick<FileChipProps, "name" | "kind" | "detail" | "previewSrc">[];
+  /** The reply is still arriving: an incomplete component block shows a placeholder, not an error. */
+  streaming?: boolean;
   className?: string;
 };
+
+/**
+ * A reply's ```match block. Its JSON is judged by whether it parses: an open fence runs to the end of
+ * the text, so a half-received block looks like a whole one.
+ */
+function MatchBlockView({ code, streaming }: { code: string; streaming: boolean }) {
+  const report = parseMatchBlock(code);
+  if (report) return <MatchReport {...report} />;
+  if (streaming) {
+    return (
+      <div role="status" className="my-2 space-y-2 rounded-card border border-border bg-surface p-4">
+        <p className="text-sm text-fg-muted">Preparing match report…</p>
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-2 w-full rounded-full" />
+        <Skeleton className="h-4 w-full" />
+      </div>
+    );
+  }
+  // Usually a reply cut off by the length cap: the stream ends normally, so nothing else says so.
+  return (
+    <p className="my-2 rounded-control border border-border bg-surface px-3 py-2 text-sm">
+      This match report couldn&apos;t be shown. It may have been cut off: ask me to try again, or to check fewer requirements.
+    </p>
+  );
+}
+
+// Module-level, so Markdown keeps reply blocks mounted while a reply streams in (a new object each
+// render would remount them on every chunk). They switch once, when the reply ends.
+const BLOCKS: MarkdownBlocks = { [MATCH_BLOCK]: (code) => <MatchBlockView code={code} streaming={false} /> };
+const STREAMING_BLOCKS: MarkdownBlocks = { [MATCH_BLOCK]: (code) => <MatchBlockView code={code} streaming /> };
 
 /**
  * One chat message. The visitor's is plain text with its line breaks; the assistant's is Markdown
  * (lists, tables, code), with no raw HTML.
  */
-export function ChatBubble({ from, author, children, attachments = [], className }: ChatBubbleProps) {
+export function ChatBubble({ from, author, children, attachments = [], streaming = false, className }: ChatBubbleProps) {
   const typing = from === "assistant" && !children;
   return (
     <div className={cn("flex items-end gap-2", from === "user" && "justify-end", className)}>
@@ -61,7 +96,7 @@ export function ChatBubble({ from, author, children, attachments = [], className
             ))}
           </span>
         ) : from === "assistant" ? (
-          <Markdown>{children ?? ""}</Markdown>
+          <Markdown blocks={streaming ? STREAMING_BLOCKS : BLOCKS}>{children ?? ""}</Markdown>
         ) : (
           children
         )}

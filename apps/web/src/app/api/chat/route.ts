@@ -1,8 +1,9 @@
-import { chatConfig, createRateLimiter, getPersona, handleChat } from "@/lib/chat/server";
+import { chatConfig, configuredPersona, createRateLimiter, handleChat } from "@/lib/chat/server";
 import { getClient, modelCatalog } from "@/lib/llm/server";
 
 // Settings are read once, when the server starts (root .env).
 const config = chatConfig();
+const persona = configuredPersona(config);
 const takeRateLimit = createRateLimiter({ limit: config.rateLimit, windowMs: config.rateLimitWindowSeconds * 1000 });
 
 /** The chatbot: streams the picked model's reply. The browser calls this; the provider API keys never leave the server. */
@@ -11,9 +12,9 @@ export function POST(request: Request) {
     catalog: modelCatalog,
     getClient,
     takeRateLimit,
-    system: getPersona(config.persona).system,
-    limits: config,
-    maxOutputTokens: config.maxOutputTokens,
+    system: persona.system,
+    limits: { ...config, maxMessageChars: persona.maxMessageChars },
+    maxOutputTokens: persona.maxOutputTokens,
     effort: config.effort,
     trustedHops: Number(process.env.WEB_TRUST_PROXY ?? 0),
   });

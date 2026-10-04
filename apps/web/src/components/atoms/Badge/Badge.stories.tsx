@@ -54,3 +54,25 @@ export const ServiceList: Story = {
     await expect(canvas.getByRole("list", { name: "Services" }).querySelectorAll("li")).toHaveLength(3);
   },
 };
+
+/** Status tones, e.g. a match report's Met / Partly / Missing. AAA text on each tint (Foundations / Colors). */
+export const Statuses: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-2">
+      <Badge tone="success">Met</Badge>
+      <Badge tone="warning">Partly</Badge>
+      <Badge tone="danger">Missing</Badge>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    for (const [text, tone] of [
+      ["Met", "success"],
+      ["Partly", "warning"],
+      ["Missing", "danger"],
+    ] as const) {
+      const badge = canvas.getByText(text);
+      await expect(getComputedStyle(badge).backgroundColor).toBe(rgb(`${tone}-surface`));
+      await expect(getComputedStyle(badge).color).toBe(rgb(tone));
+    }
+  },
+};

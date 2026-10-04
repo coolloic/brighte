@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect } from "storybook/test";
-import { Markdown } from "./Markdown";
+import { useState } from "react";
+import { expect, userEvent } from "storybook/test";
+import { Markdown, type MarkdownBlocks } from "./Markdown";
 
 const CV_SUMMARY = `# Candidate summary
 
@@ -87,4 +88,46 @@ export const Unsafe: Story = {
 /** A reply cut off mid-stream: unfinished syntax shows as plain text until the rest arrives. */
 export const Streaming: Story = {
   args: { children: "Here are her strengths:\n\n- **Design sys" },
+};
+
+/** Fenced blocks in a registered language render through their function; other languages stay code. */
+export const CustomBlock: Story = {
+  args: {
+    children: "Before.\n\n```shout\nhello\n```\n\n```ts\nconst a = 1;\n```\n\n```constructor\nnot a block\n```\n\nAfter.",
+    blocks: { shout: (code) => <p data-testid="shout">{code.trim().toUpperCase()}!</p> },
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByTestId("shout")).toHaveTextContent("HELLO!");
+    // Unregistered languages, including names every object has, are ordinary code blocks.
+    const pres = canvasElement.querySelectorAll("pre");
+    await expect(pres).toHaveLength(2);
+    await expect(pres[0]).toHaveTextContent("const a = 1;");
+    await expect(pres[1]).toHaveTextContent("not a block");
+    await expect(canvas.getByText("After.")).toBeInTheDocument();
+  },
+};
+
+const SHOUT_BLOCKS: MarkdownBlocks = { shout: (code) => <p data-testid="shout">{code.trim().toUpperCase()}!</p> };
+
+/** A streaming reply re-renders on every chunk: its code and component blocks must stay mounted (selection, live regions). */
+export const StableAcrossRerenders: Story = {
+  render: function Render() {
+    const [extra, setExtra] = useState("");
+    return (
+      <div className="max-w-xl">
+        <button type="button" onClick={() => setExtra((text) => `${text} more`)}>
+          Add text
+        </button>
+        <Markdown blocks={SHOUT_BLOCKS}>{`\`\`\`ts\nconst a = 1;\n\`\`\`\n\n\`\`\`shout\nhello\n\`\`\`\n\nStreaming${extra}`}</Markdown>
+      </div>
+    );
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const pre = canvasElement.querySelector("pre");
+    const shout = canvas.getByTestId("shout");
+    await userEvent.click(canvas.getByRole("button", { name: "Add text" }));
+    await expect(canvas.getByText("Streaming more")).toBeInTheDocument();
+    await expect(canvasElement.querySelector("pre")).toBe(pre);
+    await expect(canvas.getByTestId("shout")).toBe(shout);
+  },
 };

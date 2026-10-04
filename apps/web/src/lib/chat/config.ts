@@ -10,6 +10,12 @@ function positiveInt(env: Env, name: string, fallback: number): number {
   return env[name] && Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
+/** A whole number of 1 or more from env, or undefined (unset or invalid): for settings with another default. */
+function optionalPositiveInt(env: Env, name: string): number | undefined {
+  const value = Number(env[name]);
+  return env[name] && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
 export type ChatConfig = ReturnType<typeof chatConfig>;
 
 /** The chatbot's settings from the root .env (see .env.example). Read on each use, so tests can pass their own env. */
@@ -18,15 +24,15 @@ export function chatConfig(env: Env = process.env) {
     /** Messages one visitor may send per window (each costs API money). */
     rateLimit: positiveInt(env, "CHAT_RATE_LIMIT", 20),
     rateLimitWindowSeconds: positiveInt(env, "CHAT_RATE_LIMIT_WINDOW_SECONDS", 600),
-    /** Longest message a visitor may send, in characters. */
-    maxMessageChars: positiveInt(env, "CHAT_MAX_MESSAGE_CHARS", 1000),
+    /** Longest message a visitor may send, in characters. Unset: the persona's own (personas.ts). */
+    maxMessageChars: optionalPositiveInt(env, "CHAT_MAX_MESSAGE_CHARS"),
     /** Files a visitor may attach to one message, and their sizes (bytes). */
     maxFiles: positiveInt(env, "CHAT_MAX_FILES", 3),
     maxFileBytes: positiveInt(env, "CHAT_MAX_FILE_MB", 5) * MB,
     /** All files in one request together, the whole history's (they are re-sent while in context). */
     maxRequestBytes: positiveInt(env, "CHAT_MAX_REQUEST_MB", 10) * MB,
-    /** Cap on each reply's length, in tokens: bounds the cost of one message. */
-    maxOutputTokens: positiveInt(env, "CHAT_MAX_OUTPUT_TOKENS", 1024),
+    /** Cap on each reply's length, in tokens: bounds the cost of one message. Unset: the persona's own. */
+    maxOutputTokens: optionalPositiveInt(env, "CHAT_MAX_OUTPUT_TOKENS"),
     /**
      * How much models think before answering, where they support it (low, medium, high, xhigh, max):
      * low keeps replies quick, cheap and within CHAT_MAX_OUTPUT_TOKENS. Anything else falls back to low.

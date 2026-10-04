@@ -101,7 +101,13 @@ export function ChatWindow({
           </ul>
         )}
         {messages.map((message) => (
-          <ChatBubble key={message.id} from={message.from} author={message.from === "user" ? "You" : assistantName} attachments={message.attachments}>
+          <ChatBubble
+            key={message.id}
+            from={message.from}
+            author={message.from === "user" ? "You" : assistantName}
+            attachments={message.attachments}
+            streaming={streaming && message === latest && message.from === "assistant"}
+          >
             {message.text}
           </ChatBubble>
         ))}

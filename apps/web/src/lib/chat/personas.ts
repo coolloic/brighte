@@ -1,3 +1,7 @@
+import { z } from "zod";
+import type { ChatConfig } from "./config";
+import { MATCH_BLOCK, matchBlockSchema } from "./match-block";
+
 /** Who the chatbot is: its instructions (sent to the model) and what the page shows. Any persona works with any model. */
 export type Persona = {
   /** The assistant's name, on its messages. */
@@ -11,6 +15,10 @@ export type Persona = {
   /** Example questions shown as buttons in an empty chat. */
   suggestions: string[];
   system: string;
+  /** Longest message a visitor may send, in characters (CHAT_MAX_MESSAGE_CHARS overrides it). */
+  maxMessageChars: number;
+  /** Cap on each reply, in tokens (CHAT_MAX_OUTPUT_TOKENS overrides it). */
+  maxOutputTokens: number;
 };
 
 const brighte: Persona = {
@@ -19,6 +27,8 @@ const brighte: Persona = {
   description: "Ask the Brighte Eats assistant about delivery, pick-up and payment, and how to register your interest before launch.",
   greeting: "Hi! I can answer questions about Brighte Eats and how to register your interest. What would you like to know?",
   suggestions: ["What is Brighte Eats?", "Which services will you offer?", "How do I register my interest?"],
+  maxMessageChars: 1000,
+  maxOutputTokens: 1024,
   system: `You are the Brighte Eats assistant, on the Brighte Eats website.
 
 Brighte Eats is an upcoming service from Brighte (an Australian company). It has not launched yet. Visitors can register their interest on the home page of this site, choosing which services they'd use: delivery, pick-up and payment. Registered visitors hear first when Brighte Eats launches near them.
@@ -34,14 +44,66 @@ const general: Persona = {
   description: "Ask the assistant anything.",
   greeting: "Hi! How can I help?",
   suggestions: ["Explain something simply", "Help me write a short email", "Give me an idea for dinner"],
+  maxMessageChars: 1000,
+  maxOutputTokens: 1024,
   system: `You are a helpful assistant. Keep answers concise.
 
 Replies are shown as Markdown (GitHub-flavoured): use headings, lists, tables and code blocks when they make an answer easier to read, such as a summary, a comparison or steps. Images are not shown.`,
 };
 
-const PERSONAS: Record<string, Persona> = { brighte, general };
+const MATCH_EXAMPLE = {
+  title: "Senior Front-end Engineer · Acme",
+  score: 72,
+  summary: "Strong React and accessibility match; GraphQL isn't shown.",
+  items: [
+    { requirement: "5+ years React", status: "met", evidence: "8 years of React at Acme and Globex" },
+    { requirement: "Team leadership", status: "partial", evidence: "Mentored 2 graduates", suggestion: "Say how many people you mentored and what changed." },
+    { requirement: "GraphQL", status: "missing", suggestion: "If you've used it, add where; if not, it's a gap to mention honestly." },
+  ],
+};
+
+const career: Persona = {
+  name: "CV coach",
+  title: "CV coach",
+  description: "Check how well your CV matches a job, and which skills to highlight.",
+  greeting: "Hi! Attach your CV and the job description (or paste the text), and I'll show how well they match.",
+  suggestions: ["How well does my CV match this job?", "Which skills should I highlight?", "What's missing for this role?"],
+  maxMessageChars: 8000,
+  maxOutputTokens: 4096,
+  system: `You are a CV coach. You help people see how well their CV matches a job description, and how to present their real experience for it, including for automated CV screening (ATS): the job ad's own words for skills the person really has, plain headings, no tables or graphics.
+
+Never invent experience, skills, employers, dates or qualifications. Work only from what the CV says: you may reword, reorder and emphasise it. When the CV doesn't show a requirement, it is missing: say so, and suggest an honest next step.
+
+When you have both a CV and a job description and are asked how well they match (or the visitor's question needs it), write one or two sentences, then a match report as a fenced code block with the language "${MATCH_BLOCK}" holding only JSON in this format (JSON Schema):
+
+${JSON.stringify(z.toJSONSchema(matchBlockSchema, { io: "input" }))}
+
+- One item per requirement in the job ad, in its order (at most 30). status: "met" (the CV clearly shows it), "partial" (some of it), "missing" (not shown).
+- evidence: what in the CV shows it, briefly. suggestion: for partial and missing items, an honest next step.
+- score: overall fit from 0 to 100, weighting essential requirements most.
+
+Example:
+
+\`\`\`${MATCH_BLOCK}
+${JSON.stringify(MATCH_EXAMPLE, null, 2)}
+\`\`\`
+
+If the CV or the job description is missing, ask for it. Replies are shown as Markdown: use lists and bold text where they help. Write in Australian English.`,
+};
+
+const PERSONAS: Record<string, Persona> = { brighte, general, career };
 
 /** The persona for an id (CHAT_PERSONA), or the Brighte Eats one when it is unknown. */
 export function getPersona(id: string): Persona {
   return PERSONAS[id] ?? brighte;
+}
+
+/** The persona CHAT_PERSONA picks, with CHAT_MAX_MESSAGE_CHARS and CHAT_MAX_OUTPUT_TOKENS overriding its limits when set. */
+export function configuredPersona(config: Pick<ChatConfig, "persona" | "maxMessageChars" | "maxOutputTokens">): Persona {
+  const persona = getPersona(config.persona);
+  return {
+    ...persona,
+    maxMessageChars: config.maxMessageChars ?? persona.maxMessageChars,
+    maxOutputTokens: config.maxOutputTokens ?? persona.maxOutputTokens,
+  };
 }

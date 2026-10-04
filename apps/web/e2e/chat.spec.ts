@@ -82,6 +82,26 @@ test.describe("chat page", () => {
     await expectNoA11yViolations(page);
   });
 
+  test("shows a match block as a match report", async ({ page }) => {
+    await sendMessage(page, "How well do I fit? [match]");
+
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    await expect(log(page).getByRole("heading", { level: 3, name: "Front-end Engineer · Acme" })).toBeVisible();
+    await expect(log(page)).toContainText("72% match");
+    await expect(log(page)).toContainText("1 met · 1 missing");
+    await expect(log(page)).toContainText("Want me to tailor your CV?");
+    await expect(log(page).getByText("Preparing match report…")).toHaveCount(0);
+    await expectNoA11yViolations(page);
+  });
+
+  test("explains a match block it can't show", async ({ page }) => {
+    await sendMessage(page, "How well do I fit? [match-broken]");
+
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    await expect(log(page)).toContainText("This match report couldn't be shown. It may have been cut off: ask me to try again, or to check fewer requirements.");
+    await expect(log(page).getByText("Preparing match report…")).toHaveCount(0);
+  });
+
   test("sends a suggested question", async ({ page }) => {
     await page.getByRole("button", { name: "What is Brighte Eats?" }).click();
     await expect(log(page)).toContainText("You said: What is Brighte Eats?");

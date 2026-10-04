@@ -69,3 +69,12 @@ test("the CSP blocks nothing on the admin pages and the 404", async ({ page }) =
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sorry, we can't find that page");
   expect(await violations(page)).toEqual([]);
 });
+
+test("the CSP blocks nothing in the chat, including a match report", async ({ page }) => {
+  await page.goto("/chat");
+  // A match block is validated in the browser (Zod): it must not try eval, which the CSP refuses.
+  await page.getByRole("textbox", { name: "Message" }).fill("How well do I fit? [match]");
+  await page.getByRole("textbox", { name: "Message" }).press("Enter");
+  await expect(page.getByRole("heading", { level: 3, name: "Front-end Engineer · Acme" })).toBeVisible();
+  expect(await violations(page)).toEqual([]);
+});

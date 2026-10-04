@@ -10,6 +10,10 @@ const badgeVariants = cva("inline-flex items-center rounded-full px-3 py-1 text-
       neutral: "bg-surface-muted text-fg",
       // For badges on a brand-tinted background (e.g. a selected row), where the brand tint would vanish.
       outline: "bg-surface text-fg-brand ring-1 ring-action ring-inset",
+      // Statuses: text-safe shades on their own tints (AAA, checked in Foundations / Colors).
+      success: "bg-success-surface text-success",
+      warning: "bg-warning-surface text-warning",
+      danger: "bg-danger-surface text-danger",
     },
   },
   defaultVariants: { tone: "brand" },
