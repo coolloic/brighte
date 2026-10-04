@@ -2,7 +2,7 @@ import { cva } from "class-variance-authority";
 import { Icon } from "@/components/atoms/Icon";
 import { cn } from "@/lib/cn";
 
-const bubbleVariants = cva("max-w-[85%] rounded-card px-4 py-2.5 break-words whitespace-pre-wrap sm:max-w-[75%]", {
+const bubbleVariants = cva("max-w-[85%] rounded-card px-4 py-2.5 break-words whitespace-pre-wrap shadow-bubble sm:max-w-[75%]", {
   variants: {
     // The visitor's messages on the right in brand green; the assistant's on the left in grey, with a
     // "tail" corner pointing at the sender, as in messaging apps.

@@ -78,3 +78,13 @@ export const Streaming: Story = {
     await expect(args.onStop).toHaveBeenCalledTimes(1);
   },
 };
+
+/** Send is exactly as tall as the one-line message box, and square. */
+export const ButtonMatchesBox: Story = {
+  play: async ({ canvas }) => {
+    const box = canvas.getByRole("textbox", { name: "Message" }).getBoundingClientRect();
+    const send = canvas.getByRole("button", { name: "Send message" }).getBoundingClientRect();
+    await expect(Math.round(send.height)).toBe(Math.round(box.height));
+    await expect(Math.round(send.width)).toBe(Math.round(send.height));
+  },
+};
