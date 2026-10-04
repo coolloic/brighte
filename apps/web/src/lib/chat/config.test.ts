@@ -12,6 +12,7 @@ describe("chatConfig", () => {
       maxFileBytes: 5 * 1024 * 1024,
       maxRequestBytes: 10 * 1024 * 1024,
       maxOutputTokens: 1024,
+      effort: "low",
       modelPatterns: DEFAULT_MODEL_PATTERNS,
       modelsCacheSeconds: 3600,
       defaultModel: "anthropic:claude-haiku-4-5",
@@ -32,6 +33,11 @@ describe("chatConfig", () => {
     });
     expect(config).toMatchObject({ rateLimit: 5, rateLimitWindowSeconds: 60, maxMessageChars: 280, maxOutputTokens: 512 });
     expect(config).toMatchObject({ modelPatterns: "openai:gpt-5-mini", modelsCacheSeconds: 30, defaultModel: "openai:gpt-5-mini", persona: "general" });
+  });
+
+  it("reads the effort, falling back to low", () => {
+    expect(chatConfig({ CHAT_EFFORT: "high" }).effort).toBe("high");
+    expect(chatConfig({ CHAT_EFFORT: "extreme" }).effort).toBe("low");
   });
 
   it.each(["0", "-1", "1.5", "abc", ""])("falls back on an invalid number: %j", (value) => {

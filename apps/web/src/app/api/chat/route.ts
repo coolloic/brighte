@@ -14,6 +14,7 @@ export function POST(request: Request) {
     system: getPersona(config.persona).system,
     limits: config,
     maxOutputTokens: config.maxOutputTokens,
+    effort: config.effort,
     trustedHops: Number(process.env.WEB_TRUST_PROXY ?? 0),
   });
 }

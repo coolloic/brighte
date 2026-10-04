@@ -20,6 +20,7 @@ function deps(client: LlmClient, overrides: Partial<ChatHandlerDeps> = {}): Chat
     system: "Be brief.",
     limits: { maxMessageChars: 100, maxFiles: 2, maxFileBytes: 1000, maxRequestBytes: 1500 },
     maxOutputTokens: 256,
+    effort: "low",
     trustedHops: 1,
     ...overrides,
   };
@@ -49,7 +50,7 @@ describe("handleChat", () => {
     expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
     expect(await response.text()).toBe("Hello!");
     expect(client.streamChat).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "claude-haiku-4-5", system: "Be brief.", maxOutputTokens: 256, messages: valid.messages }),
+      expect.objectContaining({ model: "claude-haiku-4-5", system: "Be brief.", maxOutputTokens: 256, effort: "low", messages: valid.messages }),
     );
   });
 

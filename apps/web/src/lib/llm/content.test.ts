@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { textFilePart, toAnthropicMessages, toGeminiContents, toOpenAIMessages, turnsHaveFiles } from "./content";
+import { anthropicEffortLevels, textFilePart, toAnthropicMessages, toGeminiContents, toOpenAIMessages, turnsHaveFiles } from "./content";
 import type { ChatTurn } from "./types";
 
 const IMAGE = { kind: "image", name: "photo.png", mediaType: "image/png", data: "iVBORw0KGgo=" } as const;
@@ -66,6 +66,19 @@ describe("provider content mapping", () => {
 
   it("names a text file in a tag that its name can't break", () => {
     expect(textFilePart({ kind: "text", name: 'a"><b.txt', text: "hi" })).toBe('<file name="ab.txt">\nhi\n</file>');
+  });
+
+  it("reads a Claude model's effort levels from its capabilities", () => {
+    const level = (supported: boolean) => ({ supported });
+    const capabilities = (effort: object) => ({ effort }) as unknown as Parameters<typeof anthropicEffortLevels>[0];
+    expect(anthropicEffortLevels(capabilities({ supported: true, low: level(true), medium: level(true), high: level(true), xhigh: null, max: level(false) }))).toEqual([
+      "low",
+      "medium",
+      "high",
+    ]);
+    // Claude Haiku 4.5 and Sonnet 4.5: no effort, so none is sent.
+    expect(anthropicEffortLevels(capabilities({ supported: false, low: level(false) }))).toEqual([]);
+    expect(anthropicEffortLevels(null)).toEqual([]);
   });
 
   it("knows when a conversation has files (for prompt caching)", () => {

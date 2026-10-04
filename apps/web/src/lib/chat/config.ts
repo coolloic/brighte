@@ -1,4 +1,4 @@
-import { DEFAULT_MODEL_PATTERNS } from "../llm";
+import { DEFAULT_MODEL_PATTERNS, EFFORT_LEVELS, type Effort } from "../llm";
 
 type Env = Record<string, string | undefined>;
 
@@ -27,6 +27,11 @@ export function chatConfig(env: Env = process.env) {
     maxRequestBytes: positiveInt(env, "CHAT_MAX_REQUEST_MB", 10) * MB,
     /** Cap on each reply's length, in tokens: bounds the cost of one message. */
     maxOutputTokens: positiveInt(env, "CHAT_MAX_OUTPUT_TOKENS", 1024),
+    /**
+     * How much models think before answering, where they support it (low, medium, high, xhigh, max):
+     * low keeps replies quick, cheap and within CHAT_MAX_OUTPUT_TOKENS. Anything else falls back to low.
+     */
+    effort: (EFFORT_LEVELS as readonly string[]).includes(env.CHAT_EFFORT?.trim() ?? "") ? (env.CHAT_EFFORT!.trim() as Effort) : "low",
     /** Which discovered models visitors may pick (src/lib/llm/model-patterns.ts). */
     modelPatterns: env.CHAT_MODELS?.trim() || DEFAULT_MODEL_PATTERNS,
     /** How long the model list is kept before asking the providers again. */

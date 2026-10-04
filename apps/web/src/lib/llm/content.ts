@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { Content, Part } from "@google/genai";
 import type OpenAI from "openai";
-import type { Attachment, ChatTurn } from "./types";
+import { EFFORT_LEVELS, type Attachment, type ChatTurn, type Effort } from "./types";
 
 // Each provider's message format, from the common ChatTurn. Pure (type-only SDK imports), so the
 // mapping is unit-tested; the clients in ./clients call these. Files come before the text in a
@@ -12,6 +12,16 @@ export function textFilePart(attachment: Extract<Attachment, { kind: "text" }>):
   // The name can't end the tag early.
   const name = attachment.name.replace(/[<>"]/g, "");
   return `<file name="${name}">\n${attachment.text}\n</file>`;
+}
+
+/**
+ * The effort levels a Claude model accepts, from its capabilities in the models API. Models without
+ * effort (Claude Haiku 4.5, Sonnet 4.5) reject the setting, so they get none.
+ */
+export function anthropicEffortLevels(capabilities: Anthropic.ModelInfo["capabilities"]): Effort[] {
+  const effort = capabilities?.effort;
+  if (!effort?.supported) return [];
+  return EFFORT_LEVELS.filter((level) => effort[level]?.supported);
 }
 
 const hasFiles = (turn: ChatTurn) => turn.role === "user" && !!turn.attachments?.length;
