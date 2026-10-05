@@ -6,7 +6,7 @@ import { Text } from "@/components/atoms/Text";
 import { buttonVariants } from "@/components/atoms/Button";
 import { Alert } from "@/components/molecules/Alert";
 import { AppShell } from "@/components/templates/AppShell";
-import { chatConfig, getPersona } from "@/lib/chat/server";
+import { chatConfig, configuredPersona, getPersona } from "@/lib/chat/server";
 import { defaultModel, modelKey } from "@/lib/llm";
 import { modelCatalog } from "@/lib/llm/server";
 import { ChatLink } from "../_components/ChatLink";
@@ -28,7 +28,7 @@ export default async function ChatPage() {
   // Rendered per request: the CSP nonce (src/proxy.ts), and the model list may have changed.
   await connection();
   const config = chatConfig();
-  const persona = getPersona(config.persona);
+  const persona = configuredPersona(config);
   const models = await modelCatalog.list();
   const initial = defaultModel(models, config.defaultModel);
 
@@ -46,7 +46,7 @@ export default async function ChatPage() {
             suggestions={persona.suggestions}
             models={models}
             defaultModel={modelKey(initial)}
-            maxChars={config.maxMessageChars}
+            maxChars={persona.maxMessageChars}
             limits={{ maxFiles: config.maxFiles, maxFileBytes: config.maxFileBytes, maxRequestBytes: config.maxRequestBytes }}
           />
         ) : (

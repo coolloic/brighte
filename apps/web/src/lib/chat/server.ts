@@ -4,5 +4,5 @@ import "server-only";
 
 export { chatConfig, type ChatConfig } from "./config";
 export { handleChat, type ChatHandlerDeps } from "./handle-chat";
-export { getPersona, type Persona } from "./personas";
+export { configuredPersona, getPersona, type Persona } from "./personas";
 export { createRateLimiter, type RateLimitResult } from "./rate-limit";
