@@ -8,6 +8,7 @@ import { Alert } from "@/components/molecules/Alert";
 import { ChatBubble, type ChatBubbleProps } from "@/components/molecules/ChatBubble";
 import { ChatComposer, type ChatComposerProps } from "@/components/molecules/ChatComposer";
 import { ModelPicker } from "@/components/molecules/ModelPicker";
+import { blockContents, hasBlock, parseProfileBlock, PROFILE_BLOCK, TAILORED_BLOCK, type Profile } from "@/lib/chat";
 import type { ModelOption } from "@/lib/llm";
 
 export type ChatMessage = { id: string; from: "user" | "assistant"; text: string; attachments?: ChatBubbleProps["attachments"] };
@@ -58,6 +59,25 @@ export function ChatWindow({
 }: ChatWindowProps) {
   const messageCount = useRef(messages.length);
   const latest = messages.at(-1);
+  // Corrections give new versions: only the newest profile and the newest tailored CV stay open.
+  const newest = (language: string) => messages.findLast((message) => message.from === "assistant" && hasBlock(message.text, language))?.id;
+  const latestProfileId = newest(PROFILE_BLOCK);
+  const latestTailoredId = newest(TAILORED_BLOCK);
+  // A tailored CV's indexes point into the profile it was written from: the newest valid profile at or
+  // before its message (a broken one doesn't count). A newer valid profile after it means entries may
+  // have moved, so that tailored CV is flagged rather than re-indexed against the new one.
+  const profiles = new Map<string, { profile?: Profile; id?: string }>();
+  let current: { profile?: Profile; id?: string } = {};
+  for (const message of messages) {
+    const profile = message.from === "assistant" ? blockContents(message.text, PROFILE_BLOCK).map(parseProfileBlock).findLast(Boolean) : undefined;
+    if (profile) current = { profile, id: message.id };
+    profiles.set(message.id, current);
+  }
+  const newestProfileId = current.id;
+  const collapsed = (message: ChatMessage) =>
+    message.from !== "assistant"
+      ? []
+      : [PROFILE_BLOCK, TAILORED_BLOCK].filter((language) => hasBlock(message.text, language) && message.id !== (language === PROFILE_BLOCK ? latestProfileId : latestTailoredId));
 
   // Follow the conversation (the page scrolls, the composer sticks to the bottom): a new message
   // always scrolls into view; a growing reply does only while the visitor is reading at the bottom,
@@ -107,6 +127,9 @@ export function ChatWindow({
             author={message.from === "user" ? "You" : assistantName}
             attachments={message.attachments}
             streaming={streaming && message === latest && message.from === "assistant"}
+            collapse={collapsed(message)}
+            referenceProfile={profiles.get(message.id)?.profile}
+            profileChanged={profiles.get(message.id)?.id !== newestProfileId}
           >
             {message.text}
           </ChatBubble>

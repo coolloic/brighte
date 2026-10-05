@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect } from "storybook/test";
+import { useState } from "react";
+import { expect, userEvent } from "storybook/test";
 import { ChatBubble } from "./ChatBubble";
 
 const meta = {
@@ -91,6 +92,124 @@ export const MatchReportBroken: Story = {
     await expect(canvas.getByText("This match report couldn't be shown. It may have been cut off: ask me to try again, or to check fewer requirements.")).toBeInTheDocument();
     await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
     await expect(canvas.queryByText(/"title"/)).not.toBeInTheDocument();
+  },
+};
+
+const PROFILE_JSON = JSON.stringify({
+  basics: { name: "Jane Citizen", headline: "Front-end Engineer" },
+  work: [{ employer: "Acme Lending", position: "Senior Front-end Engineer", start: "2021-03", end: "present" }],
+});
+const PROFILE_REPLY = `Here's your profile.\n\n\`\`\`profile\n${PROFILE_JSON}\n\`\`\``;
+
+/** A ```profile block renders as a profile preview. */
+export const WithProfile: Story = {
+  args: { from: "assistant", author: "CV coach", children: PROFILE_REPLY },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 3, name: "Jane Citizen" })).toBeInTheDocument();
+    await expect(canvas.getByText("Mar 2021 – Present")).toBeInTheDocument();
+  },
+};
+
+/** An earlier profile in the conversation: collapsed behind a summary (opening it is checked in e2e). */
+export const ProfileCollapsed: Story = {
+  args: { from: "assistant", author: "CV coach", children: PROFILE_REPLY, collapse: ["profile"] },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByText("Earlier version of your profile")).toBeInTheDocument();
+    await expect(canvasElement.querySelector("details")).not.toHaveAttribute("open");
+    // A chevron shows that it opens (decorative: the summary's expanded state is announced anyway).
+    const summary = canvasElement.querySelector("summary")!;
+    await expect(summary.querySelector("svg[aria-hidden='true']")).not.toBeNull();
+    // Inside a closed <details>: present but not shown (jest-dom's toBeVisible knows closed details).
+    await expect(canvas.getByText("Jane Citizen")).not.toBeVisible();
+  },
+};
+
+export const ProfileStreaming: Story = {
+  args: { from: "assistant", author: "CV coach", streaming: true, children: `Here's your profile.\n\n\`\`\`profile\n${PROFILE_JSON.slice(0, 30)}` },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("status")).toHaveTextContent("Preparing your profile…");
+  },
+};
+
+export const ProfileBroken: Story = {
+  args: { from: "assistant", author: "CV coach", children: `Here's your profile.\n\n\`\`\`profile\n${PROFILE_JSON.slice(0, 30)}` },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("This profile couldn't be shown. It may have been cut off: ask me to try again.")).toBeInTheDocument();
+  },
+};
+
+/** While a reply streams, its blocks stay mounted as text is added (selection, live regions). */
+export const BlocksStayMounted: Story = {
+  render: function Render() {
+    const [extra, setExtra] = useState("");
+    return (
+      <div className="mx-auto w-full max-w-xl">
+        <button type="button" onClick={() => setExtra((text) => `${text} more`)}>
+          Add text
+        </button>
+        <ChatBubble from="assistant" author="CV coach" streaming>
+          {`${PROFILE_REPLY}\n\nAnything to fix${extra}`}
+        </ChatBubble>
+      </div>
+    );
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const card = canvasElement.querySelector("article");
+    await expect(card).not.toBeNull();
+    await userEvent.click(canvas.getByRole("button", { name: "Add text" }));
+    await expect(canvas.getByText("Anything to fix more")).toBeInTheDocument();
+    await expect(canvasElement.querySelector("article")).toBe(card);
+  },
+};
+
+const REFERENCE_PROFILE = {
+  basics: { name: "Jane Citizen" },
+  work: [{ employer: "Acme Lending", position: "Senior Front-end Engineer", start: "2021", end: "present", highlights: ["Led the React rebuild of the loan portal."] }],
+};
+const TAILORED_JSON = JSON.stringify({
+  job: { title: "Senior Front-end Engineer", employer: "Brightpath" },
+  work: [{ role: 0, highlights: [{ text: "Led the React and TypeScript rebuild of the loan portal.", from: [0] }] }],
+  skills: [{ keywords: ["React", "GraphQL"] }],
+});
+const TAILORED_REPLY = `Here's your CV tailored for the role.\n\n\`\`\`tailored\n${TAILORED_JSON}\n\`\`\``;
+
+/** A ```tailored block, checked against the reference profile. */
+export const WithTailoredCv: Story = {
+  args: { from: "assistant", author: "CV coach", children: TAILORED_REPLY, referenceProfile: REFERENCE_PROFILE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 3, name: "Tailored for Senior Front-end Engineer · Brightpath" })).toBeInTheDocument();
+    await expect(canvas.getByText("Not in your profile: GraphQL")).toBeInTheDocument();
+    await expect(canvas.getByText("Senior Front-end Engineer · Acme Lending")).toBeInTheDocument();
+  },
+};
+
+/** No valid profile in the conversation: nothing to check against. */
+export const TailoredWithoutProfile: Story = {
+  args: { from: "assistant", author: "CV coach", children: TAILORED_REPLY },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("This tailored CV needs your profile: ask me to read your CV first.")).toBeInTheDocument();
+  },
+};
+
+export const TailoredCollapsed: Story = {
+  args: { from: "assistant", author: "CV coach", children: TAILORED_REPLY, referenceProfile: REFERENCE_PROFILE, collapse: ["tailored"] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Earlier version of your tailored CV")).toBeInTheDocument();
+    await expect(canvas.getByText("Not in your profile: GraphQL")).not.toBeVisible();
+  },
+};
+
+export const TailoredStreaming: Story = {
+  args: { from: "assistant", author: "CV coach", streaming: true, children: `Here's your CV.\n\n\`\`\`tailored\n${TAILORED_JSON.slice(0, 30)}`, referenceProfile: REFERENCE_PROFILE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("status")).toHaveTextContent("Preparing your tailored CV…");
+  },
+};
+
+export const TailoredBroken: Story = {
+  args: { from: "assistant", author: "CV coach", children: `Here's your CV.\n\n\`\`\`tailored\n${TAILORED_JSON.slice(0, 30)}`, referenceProfile: REFERENCE_PROFILE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("This tailored CV couldn't be shown. It may have been cut off: ask me to try again.")).toBeInTheDocument();
   },
 };
 

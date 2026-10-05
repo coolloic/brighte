@@ -4,7 +4,10 @@
 // "[fail]" answers an API error, "[slow]" streams slowly (to test Stop), "[markdown]" replies with a
 // Markdown list and table, split mid-syntax across chunks as a real stream would be. "[match]" replies
 // with text and a match block whose JSON is split across chunks, "[match-broken]" with a match block
-// that never completes. When files were sent, the
+// that never completes. "[profile]" replies with a profile block split across chunks,
+// "[profile-broken]" with one that never completes. "[tailored]" replies with a tailored CV block
+// (one bullet without a source, one skill not in the profile), "[tailored-broken]" with one that never
+// completes. When files were sent, the
 // reply says which (in this message, and how many in the whole context), and whether prompt
 // caching was asked for: "[files: photo.png, notes.txt; in context: 2; cached]".
 import { createServer } from "node:http";
@@ -30,6 +33,51 @@ const half = Math.floor(MATCH_JSON.length / 2);
 const MATCH_REPLY = ["Here's how you match.\n\n```match\n", MATCH_JSON.slice(0, half), MATCH_JSON.slice(half), "\n```\n\nWant me to tailor your CV?"];
 // Cut off mid-JSON, as when the reply hits the length cap.
 const MATCH_BROKEN_REPLY = ["Here's how you match.\n\n```match\n", MATCH_JSON.slice(0, half)];
+const PROFILE_JSON = JSON.stringify({
+  basics: { name: "Jane Citizen", headline: "Front-end Engineer", email: "jane@example.com" },
+  work: [
+    {
+      employer: "Acme Lending",
+      position: "Senior Front-end Engineer",
+      start: "2021-03",
+      end: "present",
+      highlights: ["Led the React rebuild of the loan portal.", "Mentored 2 graduate engineers."],
+      skills: ["React", "TypeScript"],
+    },
+    { employer: "Globex Insurance", position: "Front-end Engineer", start: "2017", end: "2021" },
+  ],
+});
+const profileHalf = Math.floor(PROFILE_JSON.length / 2);
+const PROFILE_REPLY = ["Here's your profile.\n\n```profile\n", PROFILE_JSON.slice(0, profileHalf), PROFILE_JSON.slice(profileHalf), "\n```"];
+const PROFILE_BROKEN_REPLY = ["Here's your profile.\n\n```profile\n", PROFILE_JSON.slice(0, profileHalf)];
+const TAILORED_JSON = JSON.stringify({
+  job: { title: "Senior Front-end Engineer", employer: "Brightpath" },
+  headline: "Senior Front-end Engineer · React",
+  work: [
+    {
+      role: 0,
+      highlights: [
+        { text: "Led the React and TypeScript rebuild of the loan portal.", from: [0] },
+        { text: "Led a team of 10 engineers." },
+      ],
+    },
+  ],
+  skills: [{ keywords: ["React", "GraphQL"] }],
+});
+const tailoredHalf = Math.floor(TAILORED_JSON.length / 2);
+const TAILORED_REPLY = ["Here's your CV tailored for the role.\n\n```tailored\n", TAILORED_JSON.slice(0, tailoredHalf), TAILORED_JSON.slice(tailoredHalf), "\n```"];
+const TAILORED_BROKEN_REPLY = ["Here's your CV tailored for the role.\n\n```tailored\n", TAILORED_JSON.slice(0, tailoredHalf)];
+const MARKDOWN_REPLY = ["## Services\n\n- **Deli", "very** to your door\n- Pick-up\n\n| Service | When |\n|---|---|\n| Delivery | At launch |\n"];
+// Checked in order: a marker that contains another comes first.
+const MARKER_REPLIES = [
+  ["[match-broken]", MATCH_BROKEN_REPLY],
+  ["[match]", MATCH_REPLY],
+  ["[profile-broken]", PROFILE_BROKEN_REPLY],
+  ["[profile]", PROFILE_REPLY],
+  ["[tailored-broken]", TAILORED_BROKEN_REPLY],
+  ["[tailored]", TAILORED_REPLY],
+  ["[markdown]", MARKDOWN_REPLY],
+];
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url, "http://localhost");
@@ -64,16 +112,8 @@ const server = createServer(async (request, response) => {
     });
     send("content_block_start", { index: 0, content_block: { type: "text", text: "" } });
     const slow = text.includes("[slow]");
-    const markdown = ["## Services\n\n- **Deli", "very** to your door\n- Pick-up\n\n| Service | When |\n|---|---|\n| Delivery | At launch |\n"];
-    const words = slow
-      ? Array.from({ length: 60 }, (_, i) => `word${i} `)
-      : text.includes("[match-broken]")
-        ? MATCH_BROKEN_REPLY
-        : text.includes("[match]")
-          ? MATCH_REPLY
-          : text.includes("[markdown]")
-            ? markdown
-            : ["You said: ", text, fileNote];
+    const marked = MARKER_REPLIES.find(([marker]) => text.includes(marker));
+    const words = slow ? Array.from({ length: 60 }, (_, i) => `word${i} `) : marked ? marked[1] : ["You said: ", text, fileNote];
     for (const word of words) {
       if (response.destroyed) return;
       send("content_block_delta", { index: 0, delta: { type: "text_delta", text: word } });
