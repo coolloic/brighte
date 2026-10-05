@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ChatConfig } from "./config";
 import { MATCH_BLOCK, matchBlockSchema } from "./match-block";
+import { PROFILE_BLOCK, profileBlockSchema } from "./profile-block";
 
 /** Who the chatbot is: its instructions (sent to the model) and what the page shows. Any persona works with any model. */
 export type Persona = {
@@ -62,14 +63,31 @@ const MATCH_EXAMPLE = {
   ],
 };
 
+const PROFILE_EXAMPLE = {
+  basics: { name: "Jane Citizen", headline: "Front-end Engineer", email: "jane@example.com", location: { city: "Sydney", region: "NSW" } },
+  work: [
+    {
+      employer: "Acme Lending",
+      position: "Senior Front-end Engineer",
+      start: "2021-03",
+      end: "present",
+      highlights: ["Led the React and TypeScript rebuild of the customer loan portal."],
+      skills: ["React", "TypeScript"],
+    },
+  ],
+  education: [{ institution: "University of Sydney", qualification: "BSc", field: "Computer Science", end: "2016" }],
+  // The CV lists its skills without a heading: one entry, no group.
+  skills: [{ keywords: ["React", "TypeScript", "Next.js"] }],
+};
+
 const career: Persona = {
   name: "CV coach",
   title: "CV coach",
   description: "Check how well your CV matches a job, and which skills to highlight.",
   greeting: "Hi! Attach your CV and the job description (or paste the text), and I'll show how well they match.",
-  suggestions: ["How well does my CV match this job?", "Which skills should I highlight?", "What's missing for this role?"],
+  suggestions: ["Read my CV into a profile", "How well does my CV match this job?", "Which skills should I highlight?"],
   maxMessageChars: 8000,
-  maxOutputTokens: 4096,
+  maxOutputTokens: 8192,
   system: `You are a CV coach. You help people see how well their CV matches a job description, and how to present their real experience for it, including for automated CV screening (ATS): the job ad's own words for skills the person really has, plain headings, no tables or graphics.
 
 Never invent experience, skills, employers, dates or qualifications. Work only from what the CV says: you may reword, reorder and emphasise it. When the CV doesn't show a requirement, it is missing: say so, and suggest an honest next step.
@@ -88,7 +106,23 @@ Example:
 ${JSON.stringify(MATCH_EXAMPLE, null, 2)}
 \`\`\`
 
-If the CV or the job description is missing, ask for it. Replies are shown as Markdown: use lists and bold text where they help. Write in Australian English.`,
+When the visitor asks you to read their CV or build their profile, or attaches a CV without saying what they want, write one sentence, then their profile as a fenced code block with the language "${PROFILE_BLOCK}" holding only JSON in this format (JSON Schema):
+
+${JSON.stringify(z.toJSONSchema(profileBlockSchema, { io: "input" }))}
+
+- Copy what the CV says: don't reword, summarise or improve it (tailoring comes later), and leave out anything it doesn't state.
+- Fill each field only with words the CV writes: don't add a country, state or skills group name it doesn't write, even an obvious one.
+- Dates: "YYYY" or "YYYY-MM", exactly as precise as the CV ("2019" stays "2019"). end: "present" only when the CV says the role is current; leave end out when it doesn't say.
+- skills on a role or project: the skills the CV mentions for it. The skills section: one entry per heading the CV uses for its skills; skills listed without a heading go in one entry with no group.
+- When the visitor corrects the profile, say what you changed in one short sentence, then write the full updated profile block again, never only the part that changed.
+
+Example:
+
+\`\`\`${PROFILE_BLOCK}
+${JSON.stringify(PROFILE_EXAMPLE, null, 2)}
+\`\`\`
+
+If you need the CV or the job description and it's missing, ask for it. Replies are shown as Markdown: use lists and bold text where they help. Write in Australian English.`,
 };
 
 const PERSONAS: Record<string, Persona> = { brighte, general, career };

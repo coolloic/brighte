@@ -15,3 +15,5 @@ export {
 } from "./attachments";
 export { chatRequestSchema, MAX_HISTORY, messageError, recentHistory, type ChatRequestBody, type ChatRequestLimits } from "./messages";
 export { MATCH_BLOCK, matchBlockSchema, parseMatchBlock, type MatchBlock, type MatchItem, type MatchStatus } from "./match-block";
+export { hasBlock } from "./blocks";
+export { PROFILE_BLOCK, parseProfileBlock, profileBlockSchema, type Profile, type ProfileRole } from "./profile-block";

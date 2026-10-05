@@ -8,6 +8,7 @@ import { Alert } from "@/components/molecules/Alert";
 import { ChatBubble, type ChatBubbleProps } from "@/components/molecules/ChatBubble";
 import { ChatComposer, type ChatComposerProps } from "@/components/molecules/ChatComposer";
 import { ModelPicker } from "@/components/molecules/ModelPicker";
+import { hasBlock, PROFILE_BLOCK } from "@/lib/chat";
 import type { ModelOption } from "@/lib/llm";
 
 export type ChatMessage = { id: string; from: "user" | "assistant"; text: string; attachments?: ChatBubbleProps["attachments"] };
@@ -58,6 +59,8 @@ export function ChatWindow({
 }: ChatWindowProps) {
   const messageCount = useRef(messages.length);
   const latest = messages.at(-1);
+  // Corrections give new profiles: only the newest stays open, earlier ones collapse.
+  const latestProfileId = messages.findLast((message) => message.from === "assistant" && hasBlock(message.text, PROFILE_BLOCK))?.id;
 
   // Follow the conversation (the page scrolls, the composer sticks to the bottom): a new message
   // always scrolls into view; a growing reply does only while the visitor is reading at the bottom,
@@ -107,6 +110,7 @@ export function ChatWindow({
             author={message.from === "user" ? "You" : assistantName}
             attachments={message.attachments}
             streaming={streaming && message === latest && message.from === "assistant"}
+            collapseProfile={message.from === "assistant" && message.id !== latestProfileId && hasBlock(message.text, PROFILE_BLOCK)}
           >
             {message.text}
           </ChatBubble>
