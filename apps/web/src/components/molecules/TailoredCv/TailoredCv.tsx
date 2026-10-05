@@ -1,9 +1,15 @@
+import type { ReactNode } from "react";
 import { Icon } from "@/components/atoms/Icon";
 import { ProfilePreview } from "@/components/molecules/ProfilePreview";
 import type { TailoredBlock, TailorFlag, TailorResult } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 
-export type TailoredCvProps = TailorResult & { job: TailoredBlock["job"]; className?: string };
+export type TailoredCvProps = TailorResult & {
+  job: TailoredBlock["job"];
+  /** Under the things to check, e.g. the chat's PDF buttons. */
+  actions?: ReactNode;
+  className?: string;
+};
 
 function FlagList({ title, flags, tone }: { title: string; flags: TailorFlag[]; tone: "danger" | "warning" }) {
   if (flags.length === 0) return null;
@@ -28,7 +34,7 @@ function FlagList({ title, flags, tone }: { title: string; flags: TailorFlag[]; 
  * changes to review (each reworded bullet with its original, and what was left out). Presentational:
  * the data comes from tailorCv, which takes every fact from the profile.
  */
-export function TailoredCv({ job, cv, flags, reworded, leftOut, className }: TailoredCvProps) {
+export function TailoredCv({ job, cv, flags, reworded, leftOut, actions, className }: TailoredCvProps) {
   const blocking = flags.filter((flag) => flag.level === "blocking");
   const warnings = flags.filter((flag) => flag.level === "warning");
   const leftOutGroups: [string, string[]][] = [
@@ -52,6 +58,8 @@ export function TailoredCv({ job, cv, flags, reworded, leftOut, className }: Tai
           <FlagList title="Worth a look" flags={warnings} tone="warning" />
         </section>
       )}
+
+      {actions}
 
       <ProfilePreview {...cv} className="mt-3 border-0 p-0" />
 

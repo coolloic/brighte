@@ -17,6 +17,7 @@ import {
   type ChatErrorCode,
 } from "@/lib/chat";
 import { modelKey, type Attachment, type ChatTurn, type ModelOption } from "@/lib/llm";
+import { cvActions } from "./cv-files";
 
 export type ChatProps = {
   assistantName: string;
@@ -172,6 +173,7 @@ export function Chat({ assistantName, greeting, suggestions, models, defaultMode
       model={model}
       onModelChange={setModel}
       composerRef={composer}
+      cvActions={cvActions}
       composer={{
         value: draft,
         onChange: (value) => {

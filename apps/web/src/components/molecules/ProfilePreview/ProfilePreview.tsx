@@ -1,25 +1,13 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/atoms/Badge";
-import type { Profile } from "@/lib/chat";
+import { dateRange, educationDates, formatDate, type Profile } from "@/lib/chat";
 import { cn } from "@/lib/cn";
 
-export type ProfilePreviewProps = Profile & { className?: string };
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "2019" stays "2019", "2019-03" is "Mar 2019", "present" is "Present". */
-function formatDate(date: string) {
-  if (date === "present") return "Present";
-  const [year, month] = date.split("-");
-  return month ? `${MONTHS[Number(month) - 1]} ${year}` : year;
-}
-
-function dateRange(start?: string, end?: string) {
-  if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
-  if (start) return `From ${formatDate(start)}`;
-  if (end) return end === "present" ? "Present" : `Until ${formatDate(end)}`;
-  return undefined;
-}
+export type ProfilePreviewProps = Profile & {
+  /** Shown at the end of the card, e.g. the chat's file buttons. */
+  actions?: ReactNode;
+  className?: string;
+};
 
 /** The parts that are there (empty strings from the model count as absent), joined with " · ". */
 const join = (parts: (string | undefined)[]) => parts.filter(Boolean).join(" · ");
@@ -73,7 +61,7 @@ function NewTabLink({ href, children }: { href: string; children: ReactNode }) {
  * dates, highlights and skills per role; education; skills; certificates; projects; languages).
  * Empty sections are left out. Presentational: the data was checked by profileBlockSchema.
  */
-export function ProfilePreview({ basics, work, education, skills, certificates, projects, languages, className }: ProfilePreviewProps) {
+export function ProfilePreview({ basics, work, education, skills, certificates, projects, languages, actions, className }: ProfilePreviewProps) {
   const location = [basics.location?.city, basics.location?.region, basics.location?.country].filter(Boolean).join(", ");
   const contact = join([location, basics.email, basics.phone]);
 
@@ -124,8 +112,7 @@ export function ProfilePreview({ basics, work, education, skills, certificates, 
           <ul className="mt-1 space-y-2">
             {education.map((item, index) => {
               const title = [item.qualification, item.field].filter(Boolean).join(", ");
-              // An end year alone is when the qualification was completed: "2016", not "Until 2016".
-              const dates = item.start ? dateRange(item.start, item.end) : item.end && formatDate(item.end);
+              const dates = educationDates(item.start, item.end);
               const details = join([dates, item.grade]);
               return (
                 <li key={index}>
@@ -181,6 +168,7 @@ export function ProfilePreview({ basics, work, education, skills, certificates, 
           <p className="mt-1">{languages.map((item) => (item.fluency ? `${item.language} (${item.fluency})` : item.language)).join(", ")}</p>
         </Section>
       ) : null}
+      {actions}
     </article>
   );
 }

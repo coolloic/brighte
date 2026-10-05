@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
-import { expect, userEvent } from "storybook/test";
+import { expect, fn, userEvent } from "storybook/test";
 import { ChatBubble } from "./ChatBubble";
 
 const meta = {
@@ -101,10 +101,13 @@ const PROFILE_JSON = JSON.stringify({
 });
 const PROFILE_REPLY = `Here's your profile.\n\n\`\`\`profile\n${PROFILE_JSON}\n\`\`\``;
 
-/** A ```profile block renders as a profile preview. */
+const CV_ACTIONS = () => ({ downloadPdf: fn(async () => undefined), previewPdf: fn(async () => ({ error: "x" })), saveProfile: fn() });
+
+/** A ```profile block renders as a profile preview, with its file actions. */
 export const WithProfile: Story = {
-  args: { from: "assistant", author: "CV coach", children: PROFILE_REPLY },
+  args: { from: "assistant", author: "CV coach", children: PROFILE_REPLY, cvActions: CV_ACTIONS() },
   play: async ({ canvas }) => {
+    for (const name of ["Preview PDF", "Download PDF", "Save profile"]) await expect(canvas.getByRole("button", { name })).toBeEnabled();
     await expect(canvas.getByRole("heading", { level: 3, name: "Jane Citizen" })).toBeInTheDocument();
     await expect(canvas.getByText("Mar 2021 – Present")).toBeInTheDocument();
   },
@@ -175,11 +178,30 @@ const TAILORED_REPLY = `Here's your CV tailored for the role.\n\n\`\`\`tailored\
 
 /** A ```tailored block, checked against the reference profile. */
 export const WithTailoredCv: Story = {
-  args: { from: "assistant", author: "CV coach", children: TAILORED_REPLY, referenceProfile: REFERENCE_PROFILE },
+  args: { from: "assistant", author: "CV coach", children: TAILORED_REPLY, referenceProfile: REFERENCE_PROFILE, cvActions: CV_ACTIONS() },
   play: async ({ canvas }) => {
+    // Only a warning: the PDF can be made.
+    await expect(canvas.getByRole("button", { name: "Download PDF" })).toBeEnabled();
+    await expect(canvas.queryByRole("button", { name: "Save profile" })).not.toBeInTheDocument();
     await expect(canvas.getByRole("heading", { level: 3, name: "Tailored for Senior Front-end Engineer · Brightpath" })).toBeInTheDocument();
     await expect(canvas.getByText("Not in your profile: GraphQL")).toBeInTheDocument();
     await expect(canvas.getByText("Senior Front-end Engineer · Acme Lending")).toBeInTheDocument();
+  },
+};
+
+/** A blocking flag: no PDF until it's fixed, and the reason is said. */
+export const TailoredBlockedDownload: Story = {
+  args: {
+    from: "assistant",
+    author: "CV coach",
+    referenceProfile: REFERENCE_PROFILE,
+    cvActions: CV_ACTIONS(),
+    children: `Here's your CV.\n\n\`\`\`tailored\n${JSON.stringify({ job: { title: "Engineer" }, work: [{ role: 0, highlights: [{ text: "Led a team of 10." }] }] })}\n\`\`\``,
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("button", { name: "Download PDF" })).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "Preview PDF" })).toBeDisabled();
+    await expect(canvas.getByText("Fix 1 thing before downloading")).toBeInTheDocument();
   },
 };
 

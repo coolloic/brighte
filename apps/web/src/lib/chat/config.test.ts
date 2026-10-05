@@ -7,6 +7,7 @@ describe("chatConfig", () => {
     expect(chatConfig({})).toEqual({
       rateLimit: 20,
       rateLimitWindowSeconds: 600,
+      pdfRateLimit: 30,
       // Unset: the persona's own limits apply (personas.ts).
       maxMessageChars: undefined,
       maxFiles: 3,
@@ -34,6 +35,10 @@ describe("chatConfig", () => {
     });
     expect(config).toMatchObject({ rateLimit: 5, rateLimitWindowSeconds: 60, maxMessageChars: 280, maxOutputTokens: 512 });
     expect(config).toMatchObject({ modelPatterns: "openai:gpt-5-mini", modelsCacheSeconds: 30, defaultModel: "openai:gpt-5-mini", persona: "general" });
+  });
+
+  it("reads the PDF rate limit", () => {
+    expect(chatConfig({ CHAT_PDF_RATE_LIMIT: "5" }).pdfRateLimit).toBe(5);
   });
 
   it("reads the effort, falling back to low", () => {

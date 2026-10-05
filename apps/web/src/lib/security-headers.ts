@@ -23,6 +23,8 @@ export function contentSecurityPolicy({ nonce, development, https }: PolicyOptio
     "img-src 'self' blob: data:",
     "font-src 'self'",
     "object-src 'none'",
+    // The CV preview shows the PDF (a blob: URL the page made) in a frame.
+    "frame-src 'self' blob:",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",

@@ -24,6 +24,8 @@ export function chatConfig(env: Env = process.env) {
     /** Messages one visitor may send per window (each costs API money). */
     rateLimit: positiveInt(env, "CHAT_RATE_LIMIT", 20),
     rateLimitWindowSeconds: positiveInt(env, "CHAT_RATE_LIMIT_WINDOW_SECONDS", 600),
+    /** CV PDFs one visitor may make per window (CHAT_RATE_LIMIT_WINDOW_SECONDS). */
+    pdfRateLimit: positiveInt(env, "CHAT_PDF_RATE_LIMIT", 30),
     /** Longest message a visitor may send, in characters. Unset: the persona's own (personas.ts). */
     maxMessageChars: optionalPositiveInt(env, "CHAT_MAX_MESSAGE_CHARS"),
     /** Files a visitor may attach to one message, and their sizes (bytes). */

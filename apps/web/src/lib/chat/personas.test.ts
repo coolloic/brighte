@@ -63,6 +63,10 @@ describe("personas", () => {
     expect(system).toMatch(/opening summary .* goes in basics\.summary/i);
   });
 
+  it("restores a saved profile file as is", () => {
+    expect(getPersona("career").system).toMatch(/saved profile[\s\S]*unchanged[\s\S]*don't extract again/i);
+  });
+
   it("lets the env override a persona's limits", () => {
     expect(configuredPersona({ persona: "career", maxMessageChars: 2000, maxOutputTokens: undefined })).toMatchObject({
       maxMessageChars: 2000,
