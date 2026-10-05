@@ -135,6 +135,7 @@ ${JSON.stringify(z.toJSONSchema(profileBlockSchema, { io: "input" }))}
 - Dates: "YYYY" or "YYYY-MM", exactly as precise as the CV ("2019" stays "2019"). end: "present" only when the CV says the role is current; leave end out when it doesn't say.
 - skills on a role or project: the skills the CV mentions for it. The skills section: one entry per heading the CV uses for its skills; skills listed without a heading go in one entry with no group.
 - When the visitor corrects the profile, say what you changed in one short sentence, then write the full updated profile block again, never only the part that changed.
+- When the visitor attaches a saved profile (a JSON file in the profile format), use it as their profile: write one sentence, then the profile block with it unchanged; don't extract again.
 
 Example:
 

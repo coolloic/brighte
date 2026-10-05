@@ -11,7 +11,7 @@ const noDeepRelative = { group: ["../../*"], message: "Use the @/ alias (src/) i
 // import only its index.ts ("@/lib/llm") or its server.ts ("@/lib/llm/server"), never its files.
 // Covers relative paths too, from files in src/lib ("./api/...") and its folders ("../llm/...").
 // Files inside a folder import each other directly ("./types"), which these patterns don't match.
-const LIB_BARRELS = ["api", "chat", "llm"];
+const LIB_BARRELS = ["api", "chat", "cv-pdf", "llm"];
 const libBarrels = LIB_BARRELS.map((folder) => ({
   group: [
     `@/lib/${folder}/*`,

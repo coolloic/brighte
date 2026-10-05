@@ -9,6 +9,7 @@ import { ChatBubble, type ChatBubbleProps } from "@/components/molecules/ChatBub
 import { ChatComposer, type ChatComposerProps } from "@/components/molecules/ChatComposer";
 import { ModelPicker } from "@/components/molecules/ModelPicker";
 import { blockContents, hasBlock, parseProfileBlock, PROFILE_BLOCK, TAILORED_BLOCK, type Profile } from "@/lib/chat";
+import type { CvActions } from "@/lib/cv-pdf";
 import type { ModelOption } from "@/lib/llm";
 
 export type ChatMessage = { id: string; from: "user" | "assistant"; text: string; attachments?: ChatBubbleProps["attachments"] };
@@ -31,6 +32,8 @@ export type ChatWindowProps = {
   onModelChange: (key: string) => void;
   composer: Omit<ChatComposerProps, "id" | "streaming" | "ref" | "toolbar">;
   composerRef?: Ref<HTMLTextAreaElement>;
+  /** CV file actions (preview, download, save) for the profile and tailored CV cards. */
+  cvActions?: CvActions;
 };
 
 /** How close to the bottom (px) still counts as reading the latest message, so new text scrolls into view. */
@@ -56,6 +59,7 @@ export function ChatWindow({
   onModelChange,
   composer,
   composerRef,
+  cvActions,
 }: ChatWindowProps) {
   const messageCount = useRef(messages.length);
   const latest = messages.at(-1);
@@ -130,6 +134,7 @@ export function ChatWindow({
             collapse={collapsed(message)}
             referenceProfile={profiles.get(message.id)?.profile}
             profileChanged={profiles.get(message.id)?.id !== newestProfileId}
+            cvActions={cvActions}
           >
             {message.text}
           </ChatBubble>

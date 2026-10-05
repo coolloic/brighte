@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { alertWith, visitorIp } from "./support";
@@ -167,6 +168,60 @@ test.describe("chat page", () => {
     await sendMessage(page, "Tailor my CV [tailored-broken]");
     await expect(log(page)).toHaveAttribute("aria-busy", "false");
     await expect(log(page)).toContainText("This tailored CV couldn't be shown. It may have been cut off: ask me to try again.");
+  });
+
+  test.describe("CV files", () => {
+    test("downloads the profile as a PDF and saves it as JSON", async ({ page }) => {
+      await sendMessage(page, "Read my CV into a profile [profile]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      const profile = log(page).locator("article").filter({ has: page.getByRole("heading", { level: 3, name: "Jane Citizen" }) });
+
+      const pdfDownload = page.waitForEvent("download");
+      await profile.getByRole("button", { name: "Download PDF" }).click();
+      const pdf = await pdfDownload;
+      expect(pdf.suggestedFilename()).toBe("Jane-Citizen-CV.pdf");
+      const bytes = await readFile((await pdf.path())!);
+      expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+
+      const jsonDownload = page.waitForEvent("download");
+      await profile.getByRole("button", { name: "Save profile" }).click();
+      const json = await jsonDownload;
+      expect(json.suggestedFilename()).toBe("Jane-Citizen-profile.json");
+      const saved = JSON.parse(await readFile((await json.path())!, "utf8"));
+      expect(saved.basics.name).toBe("Jane Citizen");
+      expect(saved.work[0].employer).toBe("Acme Lending");
+    });
+
+    test("won't download a tailored CV with things to fix, and does once it's clean", async ({ page }) => {
+      await sendMessage(page, "Read my CV into a profile [profile]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      await sendMessage(page, "Tailor my CV [tailored]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      const blocked = log(page).locator("article").filter({ has: page.getByRole("heading", { level: 3, name: /^Tailored for/ }) });
+      await expect(blocked.getByRole("button", { name: "Download PDF" })).toBeDisabled();
+      await expect(blocked).toContainText("Fix 1 thing before downloading");
+
+      await sendMessage(page, "Fix it [tailored-clean]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      const clean = log(page).locator("article").filter({ has: page.getByRole("heading", { level: 3, name: /^Tailored for/ }) }).filter({ visible: true }).last();
+      const download = page.waitForEvent("download");
+      await clean.getByRole("button", { name: "Download PDF" }).click();
+      expect((await download).suggestedFilename()).toBe("Jane-Citizen-CV-Brightpath.pdf");
+    });
+
+    test("previews the PDF in a dialog", async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== "desktop", "Phones open a new tab instead");
+      await sendMessage(page, "Read my CV into a profile [profile]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      const preview = log(page).getByRole("button", { name: "Preview PDF" });
+      await preview.click();
+      const dialog = page.getByRole("dialog", { name: "CV preview" });
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator("iframe")).toHaveAttribute("src", /^blob:/);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect(preview).toBeFocused();
+    });
   });
 
   test("sends a suggested question", async ({ page }) => {

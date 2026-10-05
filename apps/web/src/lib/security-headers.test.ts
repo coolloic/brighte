@@ -10,6 +10,8 @@ describe("contentSecurityPolicy", () => {
     expect(csp["style-src"]).toBe("'self' 'nonce-abc'");
     expect(csp["frame-ancestors"]).toBe("'none'");
     expect(csp["object-src"]).toBe("'none'");
+    // The CV preview frames a PDF the page made (a blob: URL).
+    expect(csp["frame-src"]).toBe("'self' blob:");
     expect(csp["form-action"]).toBe("'self'");
     expect(csp).toHaveProperty("upgrade-insecure-requests");
     expect(JSON.stringify(csp)).not.toMatch(/unsafe-(inline|eval)/);

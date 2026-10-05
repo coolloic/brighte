@@ -87,3 +87,16 @@ test("the CSP blocks nothing in the chat, including a match report, a profile an
   await expect(page.getByRole("heading", { level: 3, name: "Tailored for Senior Front-end Engineer · Brightpath" })).toBeVisible();
   expect(await violations(page)).toEqual([]);
 });
+
+test("the CSP blocks nothing while previewing a CV PDF", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "The dialog preview is desktop-only");
+  await page.goto("/chat");
+  await page.getByRole("textbox", { name: "Message" }).fill("Read my CV into a profile [profile]");
+  await page.getByRole("textbox", { name: "Message" }).press("Enter");
+  await expect(page.getByRole("log", { name: "Conversation" })).toHaveAttribute("aria-busy", "false");
+  await page.getByRole("button", { name: "Preview PDF" }).click();
+  await expect(page.getByRole("dialog", { name: "CV preview" })).toBeVisible();
+  // Give the frame a moment to load the PDF viewer.
+  await page.waitForTimeout(1000);
+  expect(await violations(page)).toEqual([]);
+});

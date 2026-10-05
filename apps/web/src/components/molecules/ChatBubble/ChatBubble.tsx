@@ -6,6 +6,7 @@ import { FileChip, type FileChipProps } from "@/components/atoms/FileChip";
 import { Icon } from "@/components/atoms/Icon";
 import { Markdown, type MarkdownBlocks } from "@/components/atoms/Markdown";
 import { Skeleton } from "@/components/atoms/Skeleton";
+import { CvButtons } from "@/components/molecules/CvButtons";
 import { MatchReport } from "@/components/molecules/MatchReport";
 import { ProfilePreview } from "@/components/molecules/ProfilePreview";
 import { TailoredCv } from "@/components/molecules/TailoredCv";
@@ -22,6 +23,7 @@ import {
   type TailoredBlock,
 } from "@/lib/chat";
 import { cn } from "@/lib/cn";
+import type { CvActions } from "@/lib/cv-pdf";
 
 const bubbleVariants = cva("max-w-[85%] rounded-card px-4 py-2.5 break-words shadow-bubble sm:max-w-[75%]", {
   variants: {
@@ -51,11 +53,13 @@ export type ChatBubbleProps = {
   referenceProfile?: Profile;
   /** A newer profile came after the reference one: tailored CVs here ask to be redone. */
   profileChanged?: boolean;
+  /** The chat page's CV file actions: preview, download, save. */
+  cvActions?: CvActions;
   className?: string;
 };
 
 /** What a bubble's blocks need to know: set per bubble, read by the module-level block renderers. */
-type BlockContextValue = { streaming: boolean; collapse: readonly string[]; referenceProfile?: Profile; profileChanged?: boolean };
+type BlockContextValue = { streaming: boolean; collapse: readonly string[]; referenceProfile?: Profile; profileChanged?: boolean; cvActions?: CvActions };
 const BlockContext = createContext<BlockContextValue>({ streaming: false, collapse: [] });
 
 /** How a component block shows: its parser, its view, and what to say while it streams, when it fails, and when collapsed. */
@@ -81,7 +85,20 @@ const MATCH: BlockSpec<MatchBlock> = {
 const PROFILE: BlockSpec<Profile> = {
   language: PROFILE_BLOCK,
   parse: parseProfileBlock,
-  render: (profile) => <ProfilePreview {...profile} />,
+  render: (profile, { cvActions }) => (
+    <ProfilePreview
+      {...profile}
+      actions={
+        cvActions && (
+          <CvButtons
+            onDownload={() => cvActions.downloadPdf({ profile })}
+            onPreview={() => cvActions.previewPdf({ profile })}
+            onSave={() => cvActions.saveProfile(profile)}
+          />
+        )
+      }
+    />
+  ),
   preparing: "Preparing your profile…",
   failed: "This profile couldn't be shown. It may have been cut off: ask me to try again.",
   earlier: "Earlier version of your profile",
@@ -90,12 +107,29 @@ const PROFILE: BlockSpec<Profile> = {
 const TAILORED: BlockSpec<TailoredBlock> = {
   language: TAILORED_BLOCK,
   parse: parseTailoredBlock,
-  render: (block, { referenceProfile, profileChanged }) =>
-    referenceProfile ? (
-      <TailoredCv job={block.job} {...tailorCv(referenceProfile, block, { profileChanged })} />
-    ) : (
-      <p className="my-2 rounded-control border border-border bg-surface px-3 py-2 text-sm">This tailored CV needs your profile: ask me to read your CV first.</p>
-    ),
+  render: (block, { referenceProfile, profileChanged, cvActions }) => {
+    if (!referenceProfile) {
+      return <p className="my-2 rounded-control border border-border bg-surface px-3 py-2 text-sm">This tailored CV needs your profile: ask me to read your CV first.</p>;
+    }
+    const result = tailorCv(referenceProfile, block, { profileChanged });
+    const blocking = result.flags.filter((flag) => flag.level === "blocking").length;
+    const source = { profile: referenceProfile, tailored: block };
+    return (
+      <TailoredCv
+        job={block.job}
+        {...result}
+        actions={
+          cvActions && (
+            <CvButtons
+              onDownload={() => cvActions.downloadPdf(source)}
+              onPreview={() => cvActions.previewPdf(source)}
+              disabledReason={blocking === 0 ? undefined : blocking === 1 ? "Fix 1 thing before downloading" : `Fix ${blocking} things before downloading`}
+            />
+          )
+        }
+      />
+    );
+  },
   preparing: "Preparing your tailored CV…",
   failed: "This tailored CV couldn't be shown. It may have been cut off: ask me to try again.",
   earlier: "Earlier version of your tailored CV",
@@ -149,7 +183,7 @@ const NO_COLLAPSE: string[] = [];
  * One chat message. The visitor's is plain text with its line breaks; the assistant's is Markdown
  * (lists, tables, code), with no raw HTML.
  */
-export function ChatBubble({ from, author, children, attachments = [], streaming = false, collapse = NO_COLLAPSE, referenceProfile, profileChanged = false, className }: ChatBubbleProps) {
+export function ChatBubble({ from, author, children, attachments = [], streaming = false, collapse = NO_COLLAPSE, referenceProfile, profileChanged = false, cvActions, className }: ChatBubbleProps) {
   const typing = from === "assistant" && !children;
   return (
     <div className={cn("flex items-end gap-2", from === "user" && "justify-end", className)}>
@@ -179,7 +213,7 @@ export function ChatBubble({ from, author, children, attachments = [], streaming
             ))}
           </span>
         ) : from === "assistant" ? (
-          <BlockContext value={{ streaming, collapse, referenceProfile, profileChanged }}>
+          <BlockContext value={{ streaming, collapse, referenceProfile, profileChanged, cvActions }}>
             <Markdown blocks={BLOCKS}>{children ?? ""}</Markdown>
           </BlockContext>
         ) : (
