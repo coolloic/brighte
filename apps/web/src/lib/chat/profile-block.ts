@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { list, optional, parseJsonBlock, required, strings, text } from "./block-schema";
 
 // A "profile" block: a reply's fenced code block (```profile) holding a CV as structured JSON (a
 // subset of JSON Resume, plus skills per role), shown in the chat as a profile preview. It copies
@@ -7,17 +8,6 @@ import { z } from "zod";
 
 /** The code block language that marks a profile block. */
 export const PROFILE_BLOCK = "profile";
-
-const text = (max: number) => z.string().trim().max(max);
-const required = (max: number) => text(max).min(1);
-/** Optional; null (which models often write for "none") counts as left out. */
-const optional = <T extends z.ZodType>(schema: T) =>
-  schema
-    .nullish()
-    .transform((value) => value ?? undefined)
-    .optional();
-const list = <T extends z.ZodType>(item: T, max: number) => optional(z.array(item).max(max));
-const strings = (maxLength: number, maxItems: number) => list(required(maxLength), maxItems);
 
 /** "2019" or "2019-03": as precise as the CV gives it. */
 const date = z
@@ -48,7 +38,7 @@ export const profileBlockSchema = z.object({
     phone: optional(text(60)),
     location: optional(z.object({ city: optional(text(100)), region: optional(text(100)), country: optional(text(100)) })),
     links: list(z.object({ label: required(60), url }), 10),
-    summary: optional(text(2000)),
+    summary: optional(text(2000).describe("The CV's opening summary (profile, about me), not text under a role.")),
   }),
   work: list(
     z.object({
@@ -58,7 +48,7 @@ export const profileBlockSchema = z.object({
       start: optional(date),
       /** "present" for a current role (any case: CVs write "Present"); left out when the CV doesn't say. */
       end: optional(z.union([date, present])),
-      summary: optional(text(2000)),
+      summary: optional(text(2000).describe("Text under this role's heading that isn't a bullet point.")),
       highlights: strings(600, 20),
       /** The skills the CV mentions for this role. */
       skills: strings(60, 40),
@@ -94,26 +84,7 @@ export const profileBlockSchema = z.object({
 export type Profile = z.infer<typeof profileBlockSchema>;
 export type ProfileRole = NonNullable<Profile["work"]>[number];
 
-/**
- * The JSON with blank strings removed (as values and as list items): models write "" for "unknown",
- * which should leave a field out, not fail the profile. Done before parsing, not in the schema, so the
- * JSON Schema the model is taught stays exact.
- */
-function withoutBlanks(value: unknown): unknown {
-  if (typeof value === "string") return value.trim() === "" ? undefined : value;
-  if (Array.isArray(value)) return value.map(withoutBlanks).filter((item) => item !== undefined);
-  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, withoutBlanks(item)]));
-  return value;
-}
-
 /** The block's JSON, checked. Undefined when it isn't valid, or isn't complete yet while streaming. */
 export function parseProfileBlock(code: string): Profile | undefined {
-  let json: unknown;
-  try {
-    json = JSON.parse(code);
-  } catch {
-    return undefined;
-  }
-  const result = profileBlockSchema.safeParse(withoutBlanks(json));
-  return result.success ? result.data : undefined;
+  return parseJsonBlock(code, profileBlockSchema);
 }

@@ -107,3 +107,54 @@ export const ProfileVersions: Story = {
     await expect(canvas.getByText("Jane Citizn")).not.toBeVisible();
   },
 };
+
+const profileWith = (roles: { employer: string; position: string }[]) =>
+  `Here's your profile.\n\n\`\`\`profile\n${JSON.stringify({ basics: { name: "Jane Citizen" }, work: roles })}\n\`\`\``;
+const tailoredReply = (title: string, role: number) =>
+  `Here's your tailored CV.\n\n\`\`\`tailored\n${JSON.stringify({ job: { title }, work: [{ role }] })}\n\`\`\``;
+
+/** Profiles and tailored CVs interleaved: the newest of each is open; tailored CVs use the newest valid profile. */
+export const TailoredVersions: Story = {
+  args: {
+    assistantName: "CV coach",
+    messages: [
+      { id: "1", from: "user", text: "Read my CV" },
+      { id: "2", from: "assistant", text: profileWith([{ employer: "Acme", position: "Engineer" }, { employer: "Globex", position: "Developer" }]) },
+      { id: "3", from: "user", text: "Tailor it" },
+      { id: "4", from: "assistant", text: tailoredReply("Old job", 0) },
+      { id: "5", from: "user", text: "Drop Globex from my profile" },
+      { id: "6", from: "assistant", text: profileWith([{ employer: "Acme", position: "Engineer" }]) },
+      { id: "7", from: "user", text: "Tailor again" },
+      { id: "8", from: "assistant", text: tailoredReply("New job", 1) },
+    ],
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getAllByText("Earlier version of your profile")).toHaveLength(1);
+    await expect(canvas.getAllByText("Earlier version of your tailored CV")).toHaveLength(1);
+    await expect(canvas.getByText("Tailored for New job")).toBeVisible();
+    // Checked against the newest profile, which has no role 1 any more.
+    await expect(canvas.getByText("A role that isn't in your profile (number 2) was skipped.")).toBeVisible();
+  },
+};
+
+/** The profile gains a role at the top after tailoring: the tailored CV keeps the profile it was written from (the right employer) and asks to be redone. */
+export const ProfileCorrectedAfterTailoring: Story = {
+  args: {
+    assistantName: "CV coach",
+    messages: [
+      { id: "1", from: "user", text: "Read my CV" },
+      { id: "2", from: "assistant", text: profileWith([{ employer: "Acme", position: "Engineer" }]) },
+      { id: "3", from: "user", text: "Tailor it" },
+      { id: "4", from: "assistant", text: tailoredReply("Platform Engineer", 0) },
+      { id: "5", from: "user", text: "You missed my Initech role, it came first" },
+      { id: "6", from: "assistant", text: profileWith([{ employer: "Initech", position: "Developer" }, { employer: "Acme", position: "Engineer" }]) },
+    ],
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Tailored for Platform Engineer")).toBeVisible();
+    await expect(canvas.getByText("Your profile changed after this tailored CV. Ask me to tailor it again.")).toBeVisible();
+    const tailored = canvas.getByText("Tailored for Platform Engineer").closest("article")!;
+    await expect(tailored).toHaveTextContent("Engineer · Acme");
+    await expect(tailored).not.toHaveTextContent("Developer · Initech");
+  },
+};

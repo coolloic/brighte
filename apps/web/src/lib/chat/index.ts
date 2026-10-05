@@ -15,5 +15,7 @@ export {
 } from "./attachments";
 export { chatRequestSchema, MAX_HISTORY, messageError, recentHistory, type ChatRequestBody, type ChatRequestLimits } from "./messages";
 export { MATCH_BLOCK, matchBlockSchema, parseMatchBlock, type MatchBlock, type MatchItem, type MatchStatus } from "./match-block";
-export { hasBlock } from "./blocks";
+export { blockContents, hasBlock } from "./blocks";
 export { PROFILE_BLOCK, parseProfileBlock, profileBlockSchema, type Profile, type ProfileRole } from "./profile-block";
+export { parseTailoredBlock, TAILORED_BLOCK, tailoredBlockSchema, type TailoredBlock, type TailoredBullet } from "./tailored-block";
+export { tailorCv, type LeftOut, type RewordedBullet, type TailorFlag, type TailorResult } from "./tailor";

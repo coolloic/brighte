@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasBlock } from "./blocks";
+import { blockContents, hasBlock } from "./blocks";
 
 describe("hasBlock", () => {
   it("finds a fence line in the language", () => {
@@ -17,5 +17,16 @@ describe("hasBlock", () => {
     ["no fence", "Hello"],
   ])("ignores %s", (_, text) => {
     expect(hasBlock(text, "profile")).toBe(false);
+  });
+});
+
+describe("blockContents", () => {
+  it("returns each block's contents, closed or still open", () => {
+    const text = "Intro\n\n```profile\n{\"a\":1}\n```\n\nMiddle\n\n```profile\n{\"b\":";
+    expect(blockContents(text, "profile")).toEqual(['{"a":1}', '{"b":']);
+  });
+
+  it("ignores other languages", () => {
+    expect(blockContents("```match\n{}\n```", "profile")).toEqual([]);
   });
 });

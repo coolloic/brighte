@@ -112,7 +112,7 @@ export const WithProfile: Story = {
 
 /** An earlier profile in the conversation: collapsed behind a summary (opening it is checked in e2e). */
 export const ProfileCollapsed: Story = {
-  args: { from: "assistant", author: "CV coach", children: PROFILE_REPLY, collapseProfile: true },
+  args: { from: "assistant", author: "CV coach", children: PROFILE_REPLY, collapse: ["profile"] },
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByText("Earlier version of your profile")).toBeInTheDocument();
     await expect(canvasElement.querySelector("details")).not.toHaveAttribute("open");
@@ -159,6 +159,57 @@ export const BlocksStayMounted: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "Add text" }));
     await expect(canvas.getByText("Anything to fix more")).toBeInTheDocument();
     await expect(canvasElement.querySelector("article")).toBe(card);
+  },
+};
+
+const REFERENCE_PROFILE = {
+  basics: { name: "Jane Citizen" },
+  work: [{ employer: "Acme Lending", position: "Senior Front-end Engineer", start: "2021", end: "present", highlights: ["Led the React rebuild of the loan portal."] }],
+};
+const TAILORED_JSON = JSON.stringify({
+  job: { title: "Senior Front-end Engineer", employer: "Brightpath" },
+  work: [{ role: 0, highlights: [{ text: "Led the React and TypeScript rebuild of the loan portal.", from: [0] }] }],
+  skills: [{ keywords: ["React", "GraphQL"] }],
+});
+const TAILORED_REPLY = `Here's your CV tailored for the role.\n\n\`\`\`tailored\n${TAILORED_JSON}\n\`\`\``;
+
+/** A ```tailored block, checked against the reference profile. */
+export const WithTailoredCv: Story = {
+  args: { from: "assistant", author: "CV coach", children: TAILORED_REPLY, referenceProfile: REFERENCE_PROFILE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 3, name: "Tailored for Senior Front-end Engineer · Brightpath" })).toBeInTheDocument();
+    await expect(canvas.getByText("Not in your profile: GraphQL")).toBeInTheDocument();
+    await expect(canvas.getByText("Senior Front-end Engineer · Acme Lending")).toBeInTheDocument();
+  },
+};
+
+/** No valid profile in the conversation: nothing to check against. */
+export const TailoredWithoutProfile: Story = {
+  args: { from: "assistant", author: "CV coach", children: TAILORED_REPLY },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("This tailored CV needs your profile: ask me to read your CV first.")).toBeInTheDocument();
+  },
+};
+
+export const TailoredCollapsed: Story = {
+  args: { from: "assistant", author: "CV coach", children: TAILORED_REPLY, referenceProfile: REFERENCE_PROFILE, collapse: ["tailored"] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Earlier version of your tailored CV")).toBeInTheDocument();
+    await expect(canvas.getByText("Not in your profile: GraphQL")).not.toBeVisible();
+  },
+};
+
+export const TailoredStreaming: Story = {
+  args: { from: "assistant", author: "CV coach", streaming: true, children: `Here's your CV.\n\n\`\`\`tailored\n${TAILORED_JSON.slice(0, 30)}`, referenceProfile: REFERENCE_PROFILE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("status")).toHaveTextContent("Preparing your tailored CV…");
+  },
+};
+
+export const TailoredBroken: Story = {
+  args: { from: "assistant", author: "CV coach", children: `Here's your CV.\n\n\`\`\`tailored\n${TAILORED_JSON.slice(0, 30)}`, referenceProfile: REFERENCE_PROFILE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("This tailored CV couldn't be shown. It may have been cut off: ask me to try again.")).toBeInTheDocument();
   },
 };
 

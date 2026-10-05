@@ -142,6 +142,33 @@ test.describe("chat page", () => {
     await expect(log(page).getByText("Preparing your profile…")).toHaveCount(0);
   });
 
+  test("tailors the CV against the profile, flagging what's new", async ({ page }) => {
+    await sendMessage(page, "Read my CV into a profile [profile]");
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    await sendMessage(page, "Tailor my CV for this job [tailored]");
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+
+    await expect(log(page).getByRole("heading", { level: 3, name: "Tailored for Senior Front-end Engineer · Brightpath" })).toBeVisible();
+    await expect(log(page).getByRole("heading", { level: 4, name: "2 things to check" })).toBeVisible();
+    await expect(log(page).getByRole("list", { name: "Fix before downloading" })).toContainText("Led a team of 10 engineers.");
+    await expect(log(page).getByRole("list", { name: "Worth a look" })).toContainText("Not in your profile: GraphQL");
+    // Facts come from the profile. Checked inside the tailored CV: the profile above shows the same role.
+    const tailored = log(page).locator("article").filter({ has: page.getByRole("heading", { level: 3, name: /^Tailored for/ }) });
+    await expect(tailored.getByText("Senior Front-end Engineer · Acme Lending", { exact: true })).toBeVisible();
+    await tailored.getByText(/^Review changes:/).click();
+    await expect(tailored.getByText("Original: Led the React rebuild of the loan portal.")).toBeVisible();
+    await expect(tailored.getByText("Front-end Engineer · Globex Insurance")).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  test("explains a tailored CV it can't show", async ({ page }) => {
+    await sendMessage(page, "Read my CV into a profile [profile]");
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    await sendMessage(page, "Tailor my CV [tailored-broken]");
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    await expect(log(page)).toContainText("This tailored CV couldn't be shown. It may have been cut off: ask me to try again.");
+  });
+
   test("sends a suggested question", async ({ page }) => {
     await page.getByRole("button", { name: "What is Brighte Eats?" }).click();
     await expect(log(page)).toContainText("You said: What is Brighte Eats?");

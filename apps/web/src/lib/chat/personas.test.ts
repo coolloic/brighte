@@ -38,7 +38,29 @@ describe("personas", () => {
     expect(system).toMatch(/even an obvious one/i);
     expect(system).toMatch(/without a heading go in one entry with no group/i);
     expect(system).not.toContain('"group": "Front-end"');
-    expect(suggestions).toEqual(["Read my CV into a profile", "How well does my CV match this job?", "Which skills should I highlight?"]);
+    expect(suggestions).toEqual(["Read my CV into a profile", "How well does my CV match this job?", "Tailor my CV for this job"]);
+  });
+
+  it("teaches the career persona to tailor by reference, profile first", () => {
+    const { system } = getPersona("career");
+    expect(system).toContain("```tailored");
+    expect(system).toContain('"from"');
+    expect(system).toMatch(/build the profile first/i);
+    expect(system).toMatch(/never restate/i);
+    expect(system).toMatch(/0-based/i);
+  });
+
+  it("asks the career persona to really tailor, and to say what it changed", () => {
+    const { system } = getPersona("career");
+    expect(system).toMatch(/tailor, don't copy/i);
+    expect(system).toMatch(/what you emphasised and what you left out/i);
+  });
+
+  it("tells the career persona which summary is the CV's opening one", () => {
+    const { system } = getPersona("career");
+    // In the JSON Schema (from .describe()) and in the rules.
+    expect(system).toContain("The CV's opening summary");
+    expect(system).toMatch(/opening summary .* goes in basics\.summary/i);
   });
 
   it("lets the env override a persona's limits", () => {
