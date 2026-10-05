@@ -102,6 +102,32 @@ test.describe("chat page", () => {
     await expect(log(page).getByText("Preparing match report…")).toHaveCount(0);
   });
 
+  test("shows a profile, and collapses the earlier one after a correction", async ({ page }) => {
+    await sendMessage(page, "Read my CV into a profile [profile]");
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    await expect(log(page).getByRole("heading", { level: 3, name: "Jane Citizen" })).toBeVisible();
+    await expect(log(page)).toContainText("Mar 2021 – Present");
+
+    await sendMessage(page, "My Globex role ended in 2020 [profile]");
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    const earlier = log(page).getByText("Earlier version of your profile");
+    await expect(earlier).toHaveCount(1);
+    // Both replies hold a profile; only the newest is shown until the earlier one is opened.
+    const shownProfiles = log(page).locator("h3", { hasText: "Jane Citizen" }).filter({ visible: true });
+    await expect(shownProfiles).toHaveCount(1);
+    // A real click opens the earlier version.
+    await earlier.click();
+    await expect(shownProfiles).toHaveCount(2);
+    await expectNoA11yViolations(page);
+  });
+
+  test("explains a profile it can't show", async ({ page }) => {
+    await sendMessage(page, "Read my CV into a profile [profile-broken]");
+    await expect(log(page)).toHaveAttribute("aria-busy", "false");
+    await expect(log(page)).toContainText("This profile couldn't be shown. It may have been cut off: ask me to try again.");
+    await expect(log(page).getByText("Preparing your profile…")).toHaveCount(0);
+  });
+
   test("sends a suggested question", async ({ page }) => {
     await page.getByRole("button", { name: "What is Brighte Eats?" }).click();
     await expect(log(page)).toContainText("You said: What is Brighte Eats?");
