@@ -84,3 +84,26 @@ export const Failed: Story = {
 export const RateLimited: Story = {
   args: { messages: CONVERSATION, error: "You've sent a lot of messages. Please try again in 5 minutes." },
 };
+
+const profileReply = (name: string) => `Here's your profile.\n\n\`\`\`profile\n${JSON.stringify({ basics: { name } })}\n\`\`\``;
+
+/** Corrections give new profiles: only the newest is open; a later message without one doesn't change that. */
+export const ProfileVersions: Story = {
+  args: {
+    assistantName: "CV coach",
+    messages: [
+      { id: "1", from: "user", text: "Read my CV into a profile" },
+      { id: "2", from: "assistant", text: profileReply("Jane Citizn") },
+      { id: "3", from: "user", text: "My surname is spelt Citizen" },
+      { id: "4", from: "assistant", text: profileReply("Jane Citizen") },
+      { id: "5", from: "user", text: "Thanks" },
+      { id: "6", from: "assistant", text: "You're welcome!" },
+    ],
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getAllByText("Earlier version of your profile")).toHaveLength(1);
+    await expect(canvasElement.querySelectorAll("details:not([open])")).toHaveLength(1);
+    await expect(canvas.getByText("Jane Citizen")).toBeVisible();
+    await expect(canvas.getByText("Jane Citizn")).not.toBeVisible();
+  },
+};
