@@ -56,6 +56,20 @@ test.describe("chat page", () => {
     await expectNoA11yViolations(page);
   });
 
+  test("uses 90% of the screen width on desktop: header, chat and footer", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "A desktop layout; phones keep theirs");
+    // Wider than the other pages' 1152px cap, so 90% (1440px) can't match it by chance.
+    await page.setViewportSize({ width: 1600, height: 900 });
+    const target = 1600 * 0.9;
+    const width = async (locator: ReturnType<Page["locator"]>) => (await locator.boundingBox())!.width;
+    expect(await width(page.getByRole("banner").locator(":scope > div"))).toBeCloseTo(target, 0);
+    expect(await width(page.getByRole("main"))).toBeCloseTo(target, 0);
+    expect(await width(page.getByRole("contentinfo").locator(":scope > p"))).toBeCloseTo(target, 0);
+    // The chat card fills the main area (inside its side padding), not a narrow column.
+    const main = await page.getByRole("main").evaluate((el) => el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight));
+    expect(await width(page.getByRole("region", { name: "Brighte Eats assistant" }))).toBeCloseTo(main, 0);
+  });
+
   test("sends a message with Enter and streams the reply", async ({ page }) => {
     await sendMessage(page, "Which services will you offer?");
 

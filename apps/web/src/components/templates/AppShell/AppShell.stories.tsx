@@ -30,3 +30,6 @@ export const WithHeaderActions: Story = {
     await expect(canvas.getByRole("banner")).toContainElement(canvas.getByRole("button", { name: "Sign out" }));
   },
 };
+
+/** The chat's layout: on desktop, header, content and footer span 90% of the screen. */
+export const Wide: Story = { args: { wide: true } };

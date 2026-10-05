@@ -33,8 +33,9 @@ export default async function ChatPage() {
   const initial = defaultModel(models, config.defaultModel);
 
   return (
-    <AppShell headerActions={<ChatLink current />}>
-      <div className="mx-auto max-w-3xl">
+    <AppShell wide headerActions={<ChatLink current />}>
+      {/* A readable column on phones and tablets; the full 90% width on desktop. */}
+      <div className="mx-auto max-w-3xl lg:max-w-none">
         <Heading level={1}>{persona.title}</Heading>
         <Text size="lg" tone="muted" className="mt-3 mb-6">
           {persona.description}
