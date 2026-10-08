@@ -6,18 +6,22 @@ import { FileChip, type FileChipProps } from "@/components/atoms/FileChip";
 import { Icon } from "@/components/atoms/Icon";
 import { Markdown, type MarkdownBlocks } from "@/components/atoms/Markdown";
 import { Skeleton } from "@/components/atoms/Skeleton";
+import { CoverLetter } from "@/components/molecules/CoverLetter";
 import { CvButtons } from "@/components/molecules/CvButtons";
 import { MatchReport } from "@/components/molecules/MatchReport";
 import { ProfilePreview } from "@/components/molecules/ProfilePreview";
 import { TailoredCv } from "@/components/molecules/TailoredCv";
 import {
+  COVER_LETTER_BLOCK,
   MATCH_BLOCK,
+  parseCoverLetterBlock,
   parseMatchBlock,
   parseProfileBlock,
   parseTailoredBlock,
   PROFILE_BLOCK,
   TAILORED_BLOCK,
   tailorCv,
+  type CoverLetterBlock,
   type MatchBlock,
   type Profile,
   type TailoredBlock,
@@ -49,7 +53,7 @@ export type ChatBubbleProps = {
   streaming?: boolean;
   /** Block languages to show collapsed (earlier versions: a newer one follows), e.g. ["profile"]. */
   collapse?: string[];
-  /** The newest valid profile in the conversation: tailored CVs are checked against it. */
+  /** The newest valid profile at or before this message: tailored CVs are checked against it, and cover letters take their letterhead from it. */
   referenceProfile?: Profile;
   /** A newer profile came after the reference one: tailored CVs here ask to be redone. */
   profileChanged?: boolean;
@@ -135,6 +139,27 @@ const TAILORED: BlockSpec<TailoredBlock> = {
   earlier: "Earlier version of your tailored CV",
 };
 
+const COVER_LETTER: BlockSpec<CoverLetterBlock> = {
+  language: COVER_LETTER_BLOCK,
+  parse: parseCoverLetterBlock,
+  render: (letter, { referenceProfile, cvActions }) => {
+    if (!referenceProfile) {
+      return <p className="my-2 rounded-control border border-border bg-surface px-3 py-2 text-sm">This cover letter needs your profile: ask me to read your CV first.</p>;
+    }
+    const source = { profile: referenceProfile, coverLetter: letter };
+    return (
+      <CoverLetter
+        {...letter}
+        sender={referenceProfile.basics}
+        actions={cvActions && <CvButtons onDownload={() => cvActions.downloadPdf(source)} onPreview={() => cvActions.previewPdf(source)} />}
+      />
+    );
+  },
+  preparing: "Writing your cover letter…",
+  failed: "This cover letter couldn't be shown. It may have been cut off: ask me to try again.",
+  earlier: "Earlier version of your cover letter",
+};
+
 /**
  * A reply's component block. Its JSON is judged by whether it parses: an open fence runs to the end
  * of the text, so a half-received block looks like a whole one. An earlier version shows collapsed.
@@ -175,6 +200,7 @@ const BLOCKS: MarkdownBlocks = {
   [MATCH_BLOCK]: (code) => <BlockView code={code} spec={MATCH} />,
   [PROFILE_BLOCK]: (code) => <BlockView code={code} spec={PROFILE} />,
   [TAILORED_BLOCK]: (code) => <BlockView code={code} spec={TAILORED} />,
+  [COVER_LETTER_BLOCK]: (code) => <BlockView code={code} spec={COVER_LETTER} />,
 };
 
 const NO_COLLAPSE: string[] = [];

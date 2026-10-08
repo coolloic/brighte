@@ -9,7 +9,7 @@ describe("cvPdfErrorMessage", () => {
   it("explains blocking flags and unsupported characters", () => {
     expect(cvPdfErrorMessage({ code: "HAS_BLOCKING_FLAGS" })).toBe("Fix the things to check first.");
     expect(cvPdfErrorMessage({ code: "UNSUPPORTED_CHARACTERS", characters: ["✓", "中"] })).toBe(
-      "This CV has characters the PDF font can't show: ✓ 中. Ask me to replace them, then download again.",
+      "The PDF font can't show some characters here: ✓ 中. Ask me to replace them, then download again.",
     );
   });
   it("falls back to a generic message", () => {

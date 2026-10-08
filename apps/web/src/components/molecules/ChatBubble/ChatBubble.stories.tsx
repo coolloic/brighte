@@ -235,6 +235,55 @@ export const TailoredBroken: Story = {
   },
 };
 
+const COVER_LETTER_JSON = JSON.stringify({
+  job: { title: "Senior Front-end Engineer", employer: "Brightpath" },
+  greeting: "Dear Hiring Manager,",
+  paragraphs: ["At Acme Lending I led the React rebuild of the loan portal."],
+  closing: "Kind regards,",
+});
+const COVER_LETTER_REPLY = `It leads with your React rebuild.\n\n\`\`\`coverletter\n${COVER_LETTER_JSON}\n\`\`\``;
+
+/** A ```coverletter block: signed with the reference profile's name, with the PDF buttons. */
+export const WithCoverLetter: Story = {
+  args: { from: "assistant", author: "CV coach", children: COVER_LETTER_REPLY, referenceProfile: REFERENCE_PROFILE, cvActions: CV_ACTIONS() },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("heading", { level: 3, name: "Cover letter for Senior Front-end Engineer · Brightpath" })).toBeInTheDocument();
+    await expect(canvas.getAllByText("Jane Citizen")).toHaveLength(2);
+    await expect(canvas.getByRole("button", { name: "Download PDF" })).toBeEnabled();
+    await expect(canvas.queryByRole("button", { name: "Save profile" })).not.toBeInTheDocument();
+  },
+};
+
+/** No valid profile in the conversation: no name or contact details to put on it. */
+export const CoverLetterWithoutProfile: Story = {
+  args: { from: "assistant", author: "CV coach", children: COVER_LETTER_REPLY },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("This cover letter needs your profile: ask me to read your CV first.")).toBeInTheDocument();
+  },
+};
+
+export const CoverLetterCollapsed: Story = {
+  args: { from: "assistant", author: "CV coach", children: COVER_LETTER_REPLY, referenceProfile: REFERENCE_PROFILE, collapse: ["coverletter"] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("Earlier version of your cover letter")).toBeInTheDocument();
+    await expect(canvas.getByText("Dear Hiring Manager,")).not.toBeVisible();
+  },
+};
+
+export const CoverLetterStreaming: Story = {
+  args: { from: "assistant", author: "CV coach", streaming: true, children: `Here it is.\n\n\`\`\`coverletter\n${COVER_LETTER_JSON.slice(0, 30)}`, referenceProfile: REFERENCE_PROFILE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("status")).toHaveTextContent("Writing your cover letter…");
+  },
+};
+
+export const CoverLetterBroken: Story = {
+  args: { from: "assistant", author: "CV coach", children: `Here it is.\n\n\`\`\`coverletter\n${COVER_LETTER_JSON.slice(0, 30)}`, referenceProfile: REFERENCE_PROFILE },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("This cover letter couldn't be shown. It may have been cut off: ask me to try again.")).toBeInTheDocument();
+  },
+};
+
 /** Waiting for the reply's first words. */
 export const Typing: Story = {
   args: { from: "assistant", author: "CV coach", children: "" },

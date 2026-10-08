@@ -7,10 +7,20 @@ const profile = {
 };
 const tailored = (from?: number[]) => ({ job: { title: "Senior Engineer", employer: "Brightpath" }, work: [{ role: 0, highlights: [{ text: "Led the React rebuild of the portal.", from }] }] });
 
+const coverLetter = {
+  job: { title: "Senior Engineer", employer: "Brightpath" },
+  greeting: "Dear Hiring Manager,",
+  paragraphs: ["At Acme Lending I led the React rebuild."],
+  closing: "Kind regards,",
+};
+
 const deps = (overrides: Partial<CvPdfHandlerDeps> = {}): CvPdfHandlerDeps => ({
   takeRateLimit: () => ({ ok: true }),
   trustedHops: 1,
   render: vi.fn(async () => Buffer.from("%PDF-1.3 fake")),
+  renderCoverLetter: vi.fn(async () => Buffer.from("%PDF-1.3 letter")),
+  // 9 October 2026 in Sydney, though still the 8th in UTC.
+  now: () => new Date("2026-10-08T22:00:00Z"),
   ...overrides,
 });
 const post = (body: unknown, headers: Record<string, string> = {}) =>
@@ -45,6 +55,26 @@ describe("handleCvPdf", () => {
     expect(d.render).toHaveBeenCalledWith(expect.objectContaining({ work: [expect.objectContaining({ employer: "Acme Lending", highlights: ["Led the React rebuild of the portal."] })] }));
   });
 
+  it("renders a cover letter with the profile's letterhead, dated today in Australia", async () => {
+    const d = deps();
+    const response = await handleCvPdf(post({ profile, coverLetter }), d);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-disposition")).toBe('attachment; filename="Jane-Citizen-Cover-Letter-Brightpath.pdf"');
+    expect(Buffer.from(await response.arrayBuffer()).toString("latin1")).toBe("%PDF-1.3 letter");
+    expect(d.renderCoverLetter).toHaveBeenCalledWith({ name: "Jane Citizen" }, coverLetter, "9 October 2026");
+    expect(d.render).not.toHaveBeenCalled();
+  });
+
+  it("maps a cover letter's typographic characters, and refuses ones the font lacks", async () => {
+    const d = deps();
+    await handleCvPdf(post({ profile, coverLetter: { ...coverLetter, paragraphs: ["React → Next.js"] } }), d);
+    expect(d.renderCoverLetter).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ paragraphs: ["React -> Next.js"] }), expect.any(String));
+
+    const response = await handleCvPdf(post({ profile, coverLetter: { ...coverLetter, closing: "谢谢" } }), deps());
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({ code: "UNSUPPORTED_CHARACTERS", characters: ["谢"] });
+  });
+
   it("refuses a tailored CV with blocking flags", async () => {
     const response = await handleCvPdf(post({ profile, tailored: tailored() }), deps());
     expect(response.status).toBe(409);
@@ -60,6 +90,8 @@ describe("handleCvPdf", () => {
     ["an invalid profile", { profile: { basics: {} } }],
     ["an invalid tailored block", { profile, tailored: { work: [] } }],
     ["no profile", {}],
+    ["an invalid cover letter", { profile, coverLetter: { job: { title: "X" }, paragraphs: [] } }],
+    ["a cover letter and a tailored CV at once", { profile, tailored: tailored([0]), coverLetter }],
   ])("rejects %s", async (_, body) => {
     const response = await handleCvPdf(post(body), deps());
     expect(response.status).toBe(400);

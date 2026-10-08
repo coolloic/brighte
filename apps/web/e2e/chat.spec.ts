@@ -208,6 +208,25 @@ test.describe("chat page", () => {
       expect((await download).suggestedFilename()).toBe("Jane-Citizen-CV-Brightpath.pdf");
     });
 
+    test("writes a cover letter signed from the profile, and downloads it as a PDF", async ({ page }) => {
+      await sendMessage(page, "Read my CV into a profile [profile]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      await sendMessage(page, "Write a cover letter for this job [coverletter]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      const letter = log(page).locator("article").filter({ has: page.getByRole("heading", { level: 3, name: "Cover letter for Senior Front-end Engineer · Brightpath" }) });
+      await expect(letter).toContainText("Dear Hiring Manager,");
+      // The sender's details come from the profile, not the letter block.
+      await expect(letter).toContainText("jane@example.com");
+      await expectNoA11yViolations(page);
+
+      const download = page.waitForEvent("download");
+      await letter.getByRole("button", { name: "Download PDF" }).click();
+      const pdf = await download;
+      expect(pdf.suggestedFilename()).toBe("Jane-Citizen-Cover-Letter-Brightpath.pdf");
+      const bytes = await readFile((await pdf.path())!);
+      expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    });
+
     test("previews the PDF in a dialog", async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop", "Phones open a new tab instead");
       await sendMessage(page, "Read my CV into a profile [profile]");

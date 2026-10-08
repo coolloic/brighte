@@ -51,9 +51,9 @@ export function printable<T>(value: T): T {
   return value;
 }
 
-/** The CV's characters the PDF font can't show, each once, in order of appearance. */
-export function unsupportedCharacters(cv: Profile): string[] {
+/** The characters the PDF font can't show in a CV or letter (every string in it), each once, in order of appearance. */
+export function unsupportedCharacters(value: Profile | Record<string, unknown>): string[] {
   const found = new Set<string>();
-  for (const text of strings(cv)) for (const char of text) if (!supported(char)) found.add(char);
+  for (const text of strings(value)) for (const char of text) if (!supported(char)) found.add(char);
   return [...found];
 }

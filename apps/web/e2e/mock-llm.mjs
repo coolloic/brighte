@@ -7,7 +7,8 @@
 // that never completes. "[profile]" replies with a profile block split across chunks,
 // "[profile-broken]" with one that never completes. "[tailored]" replies with a tailored CV block
 // (one bullet without a source, one skill not in the profile), "[tailored-broken]" with one that never
-// completes. "[tailored-clean]" replies with one that has nothing blocking (its PDF can be made). When files were sent, the
+// completes. "[tailored-clean]" replies with one that has nothing blocking (its PDF can be made).
+// "[coverletter]" replies with a cover letter block split across chunks. When files were sent, the
 // reply says which (in this message, and how many in the whole context), and whether prompt
 // caching was asked for: "[files: photo.png, notes.txt; in context: 2; cached]".
 import { createServer } from "node:http";
@@ -83,6 +84,14 @@ const TAILORED_CLEAN_JSON = JSON.stringify({
   skills: [{ keywords: ["React"] }],
 });
 const TAILORED_CLEAN_REPLY = ["Here's your CV tailored for the role.\n\n```tailored\n", TAILORED_CLEAN_JSON, "\n```"];
+const COVER_LETTER_JSON = JSON.stringify({
+  job: { title: "Senior Front-end Engineer", employer: "Brightpath" },
+  greeting: "Dear Hiring Manager,",
+  paragraphs: ["I'm applying for the Senior Front-end Engineer role at Brightpath.", "At Acme Lending I led the React rebuild of the loan portal."],
+  closing: "Kind regards,",
+});
+const letterHalf = Math.floor(COVER_LETTER_JSON.length / 2);
+const COVER_LETTER_REPLY = ["It leads with your React rebuild.\n\n```coverletter\n", COVER_LETTER_JSON.slice(0, letterHalf), COVER_LETTER_JSON.slice(letterHalf), "\n```"];
 const MARKDOWN_REPLY = ["## Services\n\n- **Deli", "very** to your door\n- Pick-up\n\n| Service | When |\n|---|---|\n| Delivery | At launch |\n"];
 // Checked in order: a marker that contains another comes first.
 const MARKER_REPLIES = [
@@ -93,6 +102,7 @@ const MARKER_REPLIES = [
   ["[tailored-broken]", TAILORED_BROKEN_REPLY],
   ["[tailored-clean]", TAILORED_CLEAN_REPLY],
   ["[tailored]", TAILORED_REPLY],
+  ["[coverletter]", COVER_LETTER_REPLY],
   ["[markdown]", MARKDOWN_REPLY],
 ];
 

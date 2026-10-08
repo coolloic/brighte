@@ -18,6 +18,7 @@ export { MATCH_BLOCK, matchBlockSchema, parseMatchBlock, type MatchBlock, type M
 export { blockContents, hasBlock } from "./blocks";
 export { PROFILE_BLOCK, parseProfileBlock, profileBlockSchema, type Profile, type ProfileRole } from "./profile-block";
 export { parseTailoredBlock, TAILORED_BLOCK, tailoredBlockSchema, type TailoredBlock, type TailoredBullet } from "./tailored-block";
+export { COVER_LETTER_BLOCK, coverLetterBlockSchema, parseCoverLetterBlock, type CoverLetterBlock } from "./cover-letter-block";
 export { tailorCv, type LeftOut, type RewordedBullet, type TailorFlag, type TailorResult } from "./tailor";
 export { dateRange, educationDates, formatDate } from "./cv-format";
 export type { RateLimitResult } from "./rate-limit";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Profile } from "../chat";
 import { pdfBlockTops, pdfPageCount, pdfPagesText, pdfText, pdfTextLines } from "./pdf-text";
-import { renderCvPdf } from "./render";
+import { renderCoverLetterPdf, renderCvPdf } from "./render";
 
 /** A long CV: `roles` roles of `bullets` bullets of about `length` characters. */
 const long = (roles: number, bullets: number, length: number): Profile => ({
@@ -166,5 +166,44 @@ describe("renderCvPdf", () => {
     const pages = pdfPageCount(pdf);
     expect(pages).toBeGreaterThan(1);
     expect(pdfText(pdf)).toContain(`Page 1 of ${pages}`);
+  });
+});
+
+describe("renderCoverLetterPdf", () => {
+  const letter = {
+    job: { title: "Senior Front-end Engineer", employer: "Brightpath" },
+    recipient: "Priya Shah",
+    greeting: "Dear Priya,",
+    paragraphs: ["I'm applying for the Senior Front-end Engineer role.", "At Acme Lending I led the React rebuild of the loan portal."],
+    closing: "Kind regards,",
+  };
+
+  it("prints the letterhead from the profile, the date, the letter and the name to sign off", async () => {
+    const pdf = await renderCoverLetterPdf(cv.basics, letter, "9 October 2026");
+    expect(pdf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    const text = pdfText(pdf).replace(/\s+/g, " ");
+    for (const expected of [
+      "Jane Citizen",
+      "Sydney, NSW · jane@example.com",
+      "github.com/jane",
+      "9 October 2026",
+      "Priya Shah",
+      "Brightpath",
+      "Re: Senior Front-end Engineer · Brightpath",
+      "Dear Priya,",
+      "At Acme Lending I led the React rebuild of the loan portal.",
+      "Kind regards,",
+    ]) {
+      expect(text).toContain(expected);
+    }
+    // Signed with the profile's name after the closing.
+    expect(text.indexOf("Jane Citizen", text.indexOf("Kind regards,"))).toBeGreaterThan(0);
+    expect(pdfPageCount(pdf)).toBe(1);
+  });
+
+  it("runs a long letter onto a second page without failing", async () => {
+    const paragraphs = Array.from({ length: 8 }, (_, i) => `Paragraph ${i + 1}: ${"a well-described piece of relevant work ".repeat(45)}`.slice(0, 2000));
+    const pdf = await renderCoverLetterPdf(cv.basics, { ...letter, paragraphs }, "9 October 2026");
+    expect(pdfPageCount(pdf)).toBeGreaterThan(1);
   });
 });
