@@ -12,7 +12,7 @@ export type AppShellProps = {
 };
 
 /**
- * Page chrome shared by every page: skip link, header with the Brighte Eats wordmark, main landmark
+ * Page chrome shared by every page: skip link, header with the CV coach wordmark, main landmark
  * (the skip link's target) and footer.
  */
 export function AppShell({ headerActions, wide = false, children }: AppShellProps) {
@@ -29,14 +29,13 @@ export function AppShell({ headerActions, wide = false, children }: AppShellProp
       </a>
       <header className="border-b border-border">
         <div className={cn("mx-auto flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6", width)}>
-          {/* The logo is decorative, so the link is named here; the visible "Eats" is part of the name (WCAG 2.5.3). */}
+          {/* The mark is decorative: the visible text names the link. */}
           <Link
             href="/"
-            aria-label="Brighte Eats"
             className="flex items-center gap-2 rounded-control text-2xl font-bold tracking-tight text-fg focus-visible:focus-ring md:text-3xl"
           >
             <Logo />
-            <span>Eats</span>
+            <span>CV coach</span>
           </Link>
           {headerActions}
         </div>
@@ -46,7 +45,7 @@ export function AppShell({ headerActions, wide = false, children }: AppShellProp
         {children}
       </main>
       <footer className="border-t border-border">
-        <p className={cn("mx-auto px-4 py-6 text-sm text-fg-muted sm:px-6", width)}>Brighte Eats: register your interest before launch.</p>
+        <p className={cn("mx-auto px-4 py-6 text-sm text-fg-muted sm:px-6", width)}>CV coach: match your CV to a job, then tailor it.</p>
       </footer>
     </div>
   );

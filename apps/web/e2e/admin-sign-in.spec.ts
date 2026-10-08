@@ -19,7 +19,7 @@ test.describe("admin sign-in", () => {
   test("/admin sends a signed-out visitor to sign in; the page isn't indexed", async ({ page }) => {
     await page.goto("/admin");
     await expect(page).toHaveURL("/admin/login?next=%2Fadmin");
-    await expect(page).toHaveTitle("Admin sign in | Brighte Eats");
+    await expect(page).toHaveTitle("Admin sign in | CV coach");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Admin sign in");
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
     const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();

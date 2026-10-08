@@ -6,7 +6,7 @@ import { Heading } from "./Heading";
 const meta = {
   title: "Atoms/Heading",
   component: Heading,
-  args: { level: 1, children: "Register your interest in Brighte Eats" },
+  args: { level: 1, children: "Match your CV to the job" },
 } satisfies Meta<typeof Heading>;
 
 export default meta;

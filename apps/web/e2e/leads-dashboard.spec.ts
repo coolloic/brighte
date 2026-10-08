@@ -12,7 +12,7 @@ test.describe("leads dashboard", () => {
   test("lists leads newest first, with the filter and count; passes axe", async ({ page }) => {
     const lead = await registerLead();
     await signInAsAdmin(page);
-    await expect(page).toHaveTitle("Leads | Brighte Eats");
+    await expect(page).toHaveTitle("Leads | CV coach");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Leads");
     await expect(page.getByRole("link", { name: "All services" })).toHaveAttribute("aria-current", "page");
     await expect(page.getByText(/^\d+ leads?$/)).toBeVisible();

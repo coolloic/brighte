@@ -9,18 +9,18 @@ const MODELS: ModelOption[] = [
 ];
 
 const CONVERSATION: ChatMessage[] = [
-  { id: "1", from: "user", text: "Which services will you offer?" },
-  { id: "2", from: "assistant", text: "Brighte Eats will offer delivery, pick-up and payment. Register your interest to hear first when we launch near you." },
-  { id: "3", from: "user", text: "When do you launch?" },
+  { id: "1", from: "user", text: "Which skills should I lead with?" },
+  { id: "2", from: "assistant", text: "Lead with your React and accessibility work: the job ad asks for both first. Attach the job description for a full match report." },
+  { id: "3", from: "user", text: "What about GraphQL?" },
 ];
 
 const meta = {
   title: "Organisms/ChatWindow",
   component: ChatWindow,
   args: {
-    assistantName: "Brighte Eats assistant",
-    greeting: "Hi! I can answer questions about Brighte Eats. What would you like to know?",
-    suggestions: ["What is Brighte Eats?", "How do I register my interest?"],
+    assistantName: "CV coach",
+    greeting: "Hi! Attach your CV and the job description (or paste the text), and I'll show how well they match.",
+    suggestions: ["Read my CV into a profile", "How well does my CV match this job?"],
     onSuggestion: fn(),
     messages: [],
     models: MODELS,
@@ -42,18 +42,18 @@ type Story = StoryObj<typeof meta>;
 /** A new chat: the greeting and suggested questions. */
 export const Empty: Story = {
   play: async ({ args, canvas }) => {
-    await expect(canvas.getByRole("heading", { level: 2, name: "Brighte Eats assistant" })).toBeInTheDocument();
-    await userEvent.click(canvas.getByRole("button", { name: "What is Brighte Eats?" }));
-    await expect(args.onSuggestion).toHaveBeenCalledWith("What is Brighte Eats?");
+    await expect(canvas.getByRole("heading", { level: 2, name: "CV coach" })).toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "Read my CV into a profile" }));
+    await expect(args.onSuggestion).toHaveBeenCalledWith("Read my CV into a profile");
   },
 };
 
 /** Suggestions go once the visitor has said something. */
 export const Conversation: Story = {
-  args: { messages: [...CONVERSATION, { id: "4", from: "assistant", text: "We haven't announced a launch date yet." }] },
+  args: { messages: [...CONVERSATION, { id: "4", from: "assistant", text: "Your CV doesn't show GraphQL: add it only if you've used it." }] },
   play: async ({ canvas }) => {
     await expect(canvas.queryByRole("list", { name: "Suggested questions" })).not.toBeInTheDocument();
-    await expect(canvas.getByRole("log", { name: "Conversation" })).toHaveTextContent("You: When do you launch?");
+    await expect(canvas.getByRole("log", { name: "Conversation" })).toHaveTextContent("You: What about GraphQL?");
   },
 };
 

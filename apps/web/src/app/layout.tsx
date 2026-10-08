@@ -5,9 +5,9 @@ import "./globals.scss";
 export const metadata: Metadata = {
   // Makes relative URLs in metadata (canonical, Open Graph) absolute.
   metadataBase: siteUrl(),
-  title: { default: "Brighte Eats", template: "%s | Brighte Eats" },
-  description: "Brighte Eats: register your interest before launch.",
-  openGraph: { siteName: "Brighte Eats", locale: "en_AU", type: "website" },
+  title: { default: "CV coach", template: "%s | CV coach" },
+  description: "Check how well your CV matches a job, and tailor it without inventing anything.",
+  openGraph: { siteName: "CV coach", locale: "en_AU", type: "website" },
   twitter: { card: "summary" },
 };
 

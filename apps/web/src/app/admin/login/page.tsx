@@ -8,9 +8,9 @@ import { signInAction } from "./actions";
 import { SignIn } from "./_components/SignIn";
 
 export const metadata: Metadata = {
-  // The root layout adds " | Brighte Eats" to child routes.
+  // The root layout adds " | CV coach" to child routes.
   title: "Admin sign in",
-  description: "Sign in to see who has registered interest in Brighte Eats.",
+  description: "Sign in to the CV coach admin.",
 };
 
 export default async function SignInPage({ searchParams }: PageProps<"/admin/login">) {
@@ -26,7 +26,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/admin/log
   if (signedIn) redirect(next);
 
   return (
-    <FormPageTemplate title="Admin sign in" intro="For Brighte staff: see who has registered interest in Brighte Eats.">
+    <FormPageTemplate title="Admin sign in" intro="For CV coach admins only.">
       <SignIn action={signInAction.bind(null, next)} />
     </FormPageTemplate>
   );

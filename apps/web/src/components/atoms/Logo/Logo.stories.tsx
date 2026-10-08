@@ -14,7 +14,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const svg = canvasElement.querySelector("svg")!;
-    // Decorative: screen readers get the name from the surrounding link instead.
+    // Decorative: screen readers get the name from the wordmark text beside it.
     await expect(svg).toHaveAttribute("aria-hidden", "true");
     await expect(getComputedStyle(svg).color).toBe(`rgb(${readToken("logo")!.join(", ")})`);
   },

@@ -1,8 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import Link from "next/link";
 import { expect, fn, userEvent } from "storybook/test";
-import { RegistrationForm } from "@/components/organisms/RegistrationForm";
-import { SERVICE_OPTIONS } from "@/stories/fixtures/leads";
+import { SignInForm } from "@/components/organisms/SignInForm";
 import { FormPageTemplate } from "./FormPageTemplate";
 
 const meta = {
@@ -10,25 +9,22 @@ const meta = {
   component: FormPageTemplate,
   parameters: { layout: "fullscreen" },
   args: {
-    title: "Register your interest in Brighte Eats",
-    intro: "Tell us which services you'd use and we'll let you know as soon as Brighte Eats launches near you.",
-    highlights: ["Delivery, pick-up and payment options", "Be first to hear when we launch", "No commitment: it takes a minute"],
-    children: <RegistrationForm serviceOptions={SERVICE_OPTIONS} onSubmit={fn()} />,
+    title: "Admin sign in",
+    intro: "For CV coach admins only.",
+    children: <SignInForm onSubmit={fn()} />,
   },
 } satisfies Meta<typeof FormPageTemplate>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const RegisterPage: Story = {
+export const SignInPage: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole("banner")).toBeInTheDocument();
     await expect(canvas.getByRole("main")).toBeInTheDocument();
     await expect(canvas.getByRole("contentinfo")).toBeInTheDocument();
     await expect(canvas.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    await expect(canvas.getByRole("region", { name: "Register your interest in Brighte Eats" })).toContainElement(
-      canvas.getByRole("button", { name: "Register interest" }),
-    );
+    await expect(canvas.getByRole("region", { name: "Admin sign in" })).toContainElement(canvas.getByRole("button", { name: "Sign in" }));
 
     // The skip link is the first stop for keyboard users and appears when focused.
     await userEvent.tab();
@@ -43,10 +39,10 @@ export const RegisterPage: Story = {
   },
 };
 
-/** A link on the right of the header (the register page links to the chat). */
+/** A link on the right of the header. */
 export const WithHeaderLink: Story = {
-  args: { headerActions: <Link href="/chat">Chat with us</Link> },
+  args: { headerActions: <Link href="/">Back to the chat</Link> },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("banner")).toContainElement(canvas.getByRole("link", { name: "Chat with us" }));
+    await expect(canvas.getByRole("banner")).toContainElement(canvas.getByRole("link", { name: "Back to the chat" }));
   },
 };

@@ -6,7 +6,7 @@ import { Text } from "./Text";
 const meta = {
   title: "Atoms/Text",
   component: Text,
-  args: { children: "Tell us which services you're interested in and we'll be in touch when Brighte Eats launches." },
+  args: { children: "Tell us which job you're applying for and we'll show which of your skills to highlight." },
   render: (args) => (
     <div className="max-w-prose">
       <Text {...args} />
@@ -21,7 +21,7 @@ const rgb = (token: string) => `rgb(${readToken(token)!.join(", ")})`;
 
 export const Default: Story = {
   play: async ({ canvas }) => {
-    const text = canvas.getByText(/Tell us which services/);
+    const text = canvas.getByText(/Tell us which job/);
     await expect(text.tagName).toBe("P");
     // Fluid body size (text-body): 16px on mobile up to 18px on desktop, never below 16px.
     const fontSize = parseFloat(getComputedStyle(text).fontSize);
@@ -32,9 +32,9 @@ export const Default: Story = {
 };
 
 export const Muted: Story = {
-  args: { tone: "muted", size: "sm", children: "We'll only use your details to contact you about Brighte Eats." },
+  args: { tone: "muted", size: "sm", children: "Your CV is only used to answer you, and isn't stored." },
   play: async ({ canvas }) => {
-    await expect(getComputedStyle(canvas.getByText(/only use your details/)).color).toBe(rgb("fg-muted"));
+    await expect(getComputedStyle(canvas.getByText(/only used to answer you/)).color).toBe(rgb("fg-muted"));
   },
 };
 

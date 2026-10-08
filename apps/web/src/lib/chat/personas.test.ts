@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { configuredPersona, getPersona } from "./personas";
 
 describe("personas", () => {
-  it("falls back to the Brighte Eats persona for an unknown id", () => {
-    expect(getPersona("nope").name).toBe("Brighte Eats assistant");
+  it("falls back to the CV coach for an unknown id", () => {
+    expect(getPersona("nope").name).toBe("CV coach");
   });
 
   it.each([

@@ -59,7 +59,7 @@ export const ROLE_GROUPS: { group: string; roles: Role[] }[] = [
       { name: "fg-muted", maps: "neutral-700", utility: "text-fg-muted", use: "Hints, secondary text" },
       { name: "fg-inverse", maps: "white", utility: "text-fg-inverse", use: "Text on dark backgrounds" },
       { name: "fg-brand", maps: "green-950", utility: "text-fg-brand", use: "Links, secondary and ghost button labels" },
-      { name: "logo", maps: "green-500", utility: "text-logo", use: "The Brighte logo only (logos are exempt from contrast rules)" },
+      { name: "logo", maps: "green-500", utility: "text-logo", use: "The logo mark only (logos are exempt from contrast rules)" },
     ],
   },
   {

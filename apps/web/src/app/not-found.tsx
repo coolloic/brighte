@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/atoms/Button";
 import { Icon } from "@/components/atoms/Icon";
 import { StatusPageTemplate } from "@/components/templates/StatusPageTemplate";
 
-// The root layout adds " | Brighte Eats".
+// The root layout adds " | CV coach".
 export const metadata: Metadata = { title: "Page not found" };
 
 /**

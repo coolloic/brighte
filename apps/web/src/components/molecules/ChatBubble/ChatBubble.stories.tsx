@@ -6,7 +6,7 @@ import { ChatBubble } from "./ChatBubble";
 const meta = {
   title: "Molecules/ChatBubble",
   component: ChatBubble,
-  args: { from: "user", author: "You", children: "Which services will you offer?" },
+  args: { from: "user", author: "You", children: "Which skills should I lead with?" },
   parameters: { layout: "padded" },
   render: (args) => (
     <div className="mx-auto w-full max-w-xl">
@@ -22,15 +22,15 @@ type Story = StoryObj<typeof meta>;
 export const FromUser: Story = {
   play: async ({ canvas }) => {
     // The sender is spoken, not only shown by side and color.
-    await expect(canvas.getByText("Which services will you offer?").parentElement).toHaveTextContent("You: Which services will you offer?");
+    await expect(canvas.getByText("Which skills should I lead with?").parentElement).toHaveTextContent("You: Which skills should I lead with?");
   },
 };
 
 export const FromAssistant: Story = {
   args: {
     from: "assistant",
-    author: "Brighte Eats assistant",
-    children: "Brighte Eats will offer delivery, pick-up and payment.\n\nRegister your interest to hear first when we launch near you.",
+    author: "CV coach",
+    children: "Your CV shows strong React work.\n\nAttach the job description and I'll show how well they match.",
   },
 };
 
@@ -38,12 +38,12 @@ export const FromAssistant: Story = {
 export const AssistantMarkdown: Story = {
   args: {
     from: "assistant",
-    author: "Brighte Eats assistant",
-    children: "Brighte Eats will offer:\n\n- **Delivery** to your door\n- **Pick-up** from the restaurant\n- **Payment** in the app\n\n| Service | When |\n|---|---|\n| Delivery | At launch |\n| Pick-up | Later in 2027 |",
+    author: "CV coach",
+    children: "To lead with:\n\n- **Accessibility** across the loan portal\n- **React** rebuild you led\n- **Mentoring** two graduates\n\n| Requirement | Match |\n|---|---|\n| React | Met |\n| GraphQL | Missing |",
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("list")).toHaveTextContent("Delivery to your door");
-    await expect(canvas.getByText("Delivery", { selector: "strong" })).toBeInTheDocument();
+    await expect(canvas.getByRole("list")).toHaveTextContent("Accessibility across the loan portal");
+    await expect(canvas.getByText("Accessibility", { selector: "strong" })).toBeInTheDocument();
     await expect(canvas.getByRole("table")).toBeInTheDocument();
   },
 };
@@ -237,7 +237,7 @@ export const TailoredBroken: Story = {
 
 /** Waiting for the reply's first words. */
 export const Typing: Story = {
-  args: { from: "assistant", author: "Brighte Eats assistant", children: "" },
+  args: { from: "assistant", author: "CV coach", children: "" },
   play: async ({ canvas }) => {
     await expect(canvas.getByText("typing")).toBeInTheDocument();
   },

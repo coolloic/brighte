@@ -163,9 +163,9 @@ If you need the CV or the job description and it's missing, ask for it. Replies 
 
 const PERSONAS: Record<string, Persona> = { brighte, general, career };
 
-/** The persona for an id (CHAT_PERSONA), or the Brighte Eats one when it is unknown. */
+/** The persona for an id (CHAT_PERSONA), or the CV coach when it is unknown. */
 export function getPersona(id: string): Persona {
-  return PERSONAS[id] ?? brighte;
+  return PERSONAS[id] ?? career;
 }
 
 /** The persona CHAT_PERSONA picks, with CHAT_MAX_MESSAGE_CHARS and CHAT_MAX_OUTPUT_TOKENS overriding its limits when set. */

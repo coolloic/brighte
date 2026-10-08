@@ -15,7 +15,7 @@ import { LeadsControls } from "./_components/LeadsControls";
 import { PageSizeControl } from "./_components/PageSizeControl";
 import { signOutAction } from "./actions";
 
-// The root layout adds " | Brighte Eats".
+// The root layout adds " | CV coach".
 export const metadata: Metadata = { title: "Leads" };
 
 /**

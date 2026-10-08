@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-// Admin pages are for Brighte staff: keep them out of search results.
+// Admin pages are for admins only: keep them out of search results.
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
