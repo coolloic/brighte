@@ -5,7 +5,7 @@ import { Icon } from "@/components/atoms/Icon";
 import { StatusPageTemplate } from "@/components/templates/StatusPageTemplate";
 
 /**
- * Any page that fails: the API is down, or the browser lost its connection to this server mid-way.
+ * Any page that fails on the server, or whose request the browser lost mid-way.
  * Details stay in the server log. retry() fetches the page again (reset() would only re-render it).
  */
 export default function ErrorPage({ retry }: { error: Error & { digest?: string }; retry: () => void }) {

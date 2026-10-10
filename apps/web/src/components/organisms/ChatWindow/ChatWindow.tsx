@@ -8,7 +8,7 @@ import { Alert } from "@/components/molecules/Alert";
 import { ChatBubble, type ChatBubbleProps } from "@/components/molecules/ChatBubble";
 import { ChatComposer, type ChatComposerProps } from "@/components/molecules/ChatComposer";
 import { ModelPicker } from "@/components/molecules/ModelPicker";
-import { blockContents, hasBlock, parseProfileBlock, PROFILE_BLOCK, TAILORED_BLOCK, type Profile } from "@/lib/chat";
+import { blockContents, COVER_LETTER_BLOCK, hasBlock, parseProfileBlock, PROFILE_BLOCK, TAILORED_BLOCK, type Profile } from "@/lib/chat";
 import type { CvActions } from "@/lib/cv-pdf";
 import type { ModelOption } from "@/lib/llm";
 
@@ -32,12 +32,15 @@ export type ChatWindowProps = {
   onModelChange: (key: string) => void;
   composer: Omit<ChatComposerProps, "id" | "streaming" | "ref" | "toolbar">;
   composerRef?: Ref<HTMLTextAreaElement>;
-  /** CV file actions (preview, download, save) for the profile and tailored CV cards. */
+  /** CV file actions (preview, download, save) for the profile, tailored CV and cover letter cards. */
   cvActions?: CvActions;
 };
 
 /** How close to the bottom (px) still counts as reading the latest message, so new text scrolls into view. */
 const FOLLOW_THRESHOLD = 160;
+
+/** Blocks that get new versions on correction: earlier ones show collapsed. */
+const VERSIONED_BLOCKS = [PROFILE_BLOCK, TAILORED_BLOCK, COVER_LETTER_BLOCK];
 
 /**
  * A messaging-app style chat: header with the assistant, the conversation (newest at the bottom),
@@ -63,10 +66,9 @@ export function ChatWindow({
 }: ChatWindowProps) {
   const messageCount = useRef(messages.length);
   const latest = messages.at(-1);
-  // Corrections give new versions: only the newest profile and the newest tailored CV stay open.
+  // Corrections give new versions: only the newest profile, tailored CV and cover letter stay open.
   const newest = (language: string) => messages.findLast((message) => message.from === "assistant" && hasBlock(message.text, language))?.id;
-  const latestProfileId = newest(PROFILE_BLOCK);
-  const latestTailoredId = newest(TAILORED_BLOCK);
+  const latestIds = new Map(VERSIONED_BLOCKS.map((language) => [language, newest(language)]));
   // A tailored CV's indexes point into the profile it was written from: the newest valid profile at or
   // before its message (a broken one doesn't count). A newer valid profile after it means entries may
   // have moved, so that tailored CV is flagged rather than re-indexed against the new one.
@@ -81,7 +83,7 @@ export function ChatWindow({
   const collapsed = (message: ChatMessage) =>
     message.from !== "assistant"
       ? []
-      : [PROFILE_BLOCK, TAILORED_BLOCK].filter((language) => hasBlock(message.text, language) && message.id !== (language === PROFILE_BLOCK ? latestProfileId : latestTailoredId));
+      : VERSIONED_BLOCKS.filter((language) => hasBlock(message.text, language) && message.id !== latestIds.get(language));
 
   // Follow the conversation (the page scrolls, the composer sticks to the bottom): a new message
   // always scrolls into view; a growing reply does only while the visitor is reading at the bottom,

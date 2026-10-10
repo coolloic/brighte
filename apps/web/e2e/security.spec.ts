@@ -1,6 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { registerLead, signInAsAdmin, uniqueToken, visitorIp } from "./support";
+import { visitorIp } from "./support";
 
 // The web app's security headers (src/proxy.ts, next.config.ts), and that the strict CSP doesn't
 // block anything the app itself needs.
@@ -40,38 +39,14 @@ test("pages send the security headers, with a fresh CSP nonce each time", async 
   for (const tag of scripts) expect(tag).toContain(`nonce="${nonce(headers)}"`);
 });
 
-test("the CSP blocks nothing while registering", async ({ page }) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Register interest" }).click(); // browser-side validation
-  await expect(page.getByLabel("Full name")).toBeFocused();
-  await page.getByLabel("Full name").fill("Ada Lovelace");
-  await page.getByLabel("Email").fill(`e2e-${randomUUID()}@example.com`);
-  await page.getByLabel("Mobile number").fill("0412 345 678");
-  await page.getByLabel("Postcode").fill("2000");
-  await page.getByRole("checkbox", { name: "Delivery" }).check();
-  await page.getByRole("button", { name: "Register interest" }).click();
-  await expect(page.getByRole("heading", { name: "Thanks, you're registered" })).toBeFocused();
-  expect(await violations(page)).toEqual([]);
-});
-
-test("the CSP blocks nothing on the admin pages and the 404", async ({ page }) => {
-  const lead = await registerLead({ name: `Csp ${uniqueToken()}` });
-  await signInAsAdmin(page);
-  await page.getByRole("searchbox", { name: "Search leads" }).fill(lead.name);
-  await expect(page.getByRole("link", { name: lead.name })).toBeVisible();
-  await page.getByRole("link", { name: lead.name }).click();
-  await expect(page.getByRole("complementary", { name: "Selected lead" })).toContainText(lead.email);
-  await page.locator("header summary").click();
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
-  expect(await violations(page)).toEqual([]);
-
+test("the CSP blocks nothing on the 404", async ({ page }) => {
   await page.goto("/no-such-page");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sorry, we can't find that page");
   expect(await violations(page)).toEqual([]);
 });
 
 test("the CSP blocks nothing in the chat, including a match report, a profile and a tailored CV", async ({ page }) => {
-  await page.goto("/chat");
+  await page.goto("/");
   // A match block is validated in the browser (Zod): it must not try eval, which the CSP refuses.
   await page.getByRole("textbox", { name: "Message" }).fill("How well do I fit? [match]");
   await page.getByRole("textbox", { name: "Message" }).press("Enter");
@@ -90,7 +65,7 @@ test("the CSP blocks nothing in the chat, including a match report, a profile an
 
 test("the CSP blocks nothing while previewing a CV PDF", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "The dialog preview is desktop-only");
-  await page.goto("/chat");
+  await page.goto("/");
   await page.getByRole("textbox", { name: "Message" }).fill("Read my CV into a profile [profile]");
   await page.getByRole("textbox", { name: "Message" }).press("Enter");
   await expect(page.getByRole("log", { name: "Conversation" })).toHaveAttribute("aria-busy", "false");

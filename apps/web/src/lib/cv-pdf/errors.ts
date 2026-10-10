@@ -15,8 +15,8 @@ export function cvPdfErrorMessage({ code, retryAfterSeconds = 60, characters = [
     case "UNSUPPORTED_CHARACTERS":
       // Naming them: one "✓" is easy to fix once you know it's the problem.
       return characters.length
-        ? `This CV has characters the PDF font can't show: ${characters.join(" ")}. Ask me to replace them, then download again.`
-        : "This CV has characters the PDF font can't show. Ask me to replace them, then download again.";
+        ? `The PDF font can't show some characters here: ${characters.join(" ")}. Ask me to replace them, then download again.`
+        : "The PDF font can't show some characters here. Ask me to replace them, then download again.";
     case "RATE_LIMITED": {
       const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
       return `You've made a lot of PDFs. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;

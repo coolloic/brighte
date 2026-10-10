@@ -34,12 +34,11 @@ test.describe("when the API is down", () => {
     await expect(heading).toBeVisible();
   });
 
-  test("the register page explains it can't show the form, with a link to try again", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Register your interest in Brighte Eats");
-    await expect(alertWith(page, "We can't show the form right now")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Try again" })).toHaveAttribute("href", "/");
-    await expect(page.getByRole("button", { name: "Register interest" })).toHaveCount(0);
+  test("the home page (the chat) doesn't need the API", async ({ page }) => {
+    const response = await page.goto("/");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("CV coach");
+    await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
     await expectNoA11yViolations(page);
   });
 

@@ -2,4 +2,4 @@
 import "server-only";
 
 export { handleCvPdf, type CvPdfHandlerDeps } from "./handle-cv-pdf";
-export { renderCvPdf } from "./render";
+export { renderCoverLetterPdf, renderCvPdf } from "./render";

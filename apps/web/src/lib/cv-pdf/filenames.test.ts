@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cvFilename, profileFilename } from "./filenames";
+import { coverLetterFilename, cvFilename, profileFilename } from "./filenames";
 
 const jane = { basics: { name: "Jane Citizen" } };
 
@@ -12,6 +12,11 @@ describe("filenames", () => {
   it("names a tailored CV after the employer, else the job title", () => {
     expect(cvFilename(jane, { title: "Senior Engineer", employer: "Brightpath Fintech" })).toBe("Jane-Citizen-CV-Brightpath-Fintech.pdf");
     expect(cvFilename(jane, { title: "Senior Engineer" })).toBe("Jane-Citizen-CV-Senior-Engineer.pdf");
+  });
+
+  it("names a cover letter after the employer, else the job title", () => {
+    expect(coverLetterFilename(jane.basics, { title: "Senior Engineer", employer: "Brightpath Fintech" })).toBe("Jane-Citizen-Cover-Letter-Brightpath-Fintech.pdf");
+    expect(coverLetterFilename(jane.basics, { title: "Senior Engineer" })).toBe("Jane-Citizen-Cover-Letter-Senior-Engineer.pdf");
   });
 
   it("keeps letters in any script but collapses punctuation", () => {

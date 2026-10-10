@@ -37,9 +37,9 @@ export const ErrorWithRetry: Story = {
 };
 
 export const Success: Story = {
-  args: { tone: "success", title: "Thanks, you're registered", children: "We'll email you when Brighte Eats launches." },
+  args: { tone: "success", title: "Profile saved", children: "Attach the file to a new chat to pick up where you left off." },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole("status")).toHaveTextContent("Thanks, you're registered");
+    await expect(canvas.getByRole("status")).toHaveTextContent("Profile saved");
   },
 };
 

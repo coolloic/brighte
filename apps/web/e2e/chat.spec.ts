@@ -7,7 +7,7 @@ import { alertWith, visitorIp } from "./support";
 // visitor (playwright.config.ts). Every test is a different visitor, so rate limits don't carry over.
 test.beforeEach(async ({ page }) => {
   await page.setExtraHTTPHeaders({ "x-forwarded-for": visitorIp() });
-  await page.goto("/chat");
+  await page.goto("/");
 });
 
 const messageBox = (page: Page) => page.getByRole("textbox", { name: "Message" });
@@ -24,21 +24,20 @@ async function expectNoA11yViolations(page: Page) {
 }
 
 test.describe("chat page", () => {
-  test("is linked from the home page header", async ({ page }) => {
-    await page.goto("/");
-    // "Chat" on phones, "Chat with us" from sm up.
-    await page.getByRole("banner").getByRole("link", { name: /^Chat/ }).click();
-
-    await expect(page).toHaveURL("/chat");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Chat with Brighte Eats");
-    await expect(page.getByRole("banner").getByRole("link", { name: /^Chat/ })).toHaveAttribute("aria-current", "page");
+  test("is the home page, and the old /chat address leads to it", async ({ page }) => {
+    const response = await page.goto("/chat");
+    expect(response?.request().redirectedFrom()?.url()).toMatch(/\/chat$/);
+    await expect(page).toHaveURL("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("CV coach");
+    // The header's wordmark links home.
+    await expect(page.getByRole("banner").getByRole("link", { name: "CV coach" })).toHaveAttribute("href", "/");
   });
 
   test("has one h1, landmarks, SEO metadata and the model picker", async ({ page }) => {
-    await expect(page).toHaveTitle("Chat with Brighte Eats | Brighte Eats");
-    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /Brighte Eats assistant/);
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", new URL("/chat", page.url()).href);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Chat with Brighte Eats");
+    await expect(page).toHaveTitle("CV coach");
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /how well your CV matches a job/);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", new URL(page.url()).origin);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("CV coach");
     await expect(page.getByRole("main")).toBeVisible();
     // The models come from the provider's models API (here the mock's one model).
     // A compact button under the message box opens the provider and model selects.
@@ -53,7 +52,7 @@ test.describe("chat page", () => {
     await page.keyboard.press("Escape");
     await expect(picker).toHaveAttribute("aria-expanded", "false");
     await expect(picker).toBeFocused();
-    await expect(log(page)).toContainText("Hi! I can answer questions about Brighte Eats");
+    await expect(log(page)).toContainText("Hi! Attach your CV and the job description");
     await expectNoA11yViolations(page);
   });
 
@@ -68,7 +67,7 @@ test.describe("chat page", () => {
     expect(await width(page.getByRole("contentinfo").locator(":scope > p"))).toBeCloseTo(target, 0);
     // The chat card fills the main area (inside its side padding), not a narrow column.
     const main = await page.getByRole("main").evaluate((el) => el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight));
-    expect(await width(page.getByRole("region", { name: "Brighte Eats assistant" }))).toBeCloseTo(main, 0);
+    expect(await width(page.getByRole("region", { name: "CV coach" }))).toBeCloseTo(main, 0);
   });
 
   test("sends a message with Enter and streams the reply", async ({ page }) => {
@@ -209,6 +208,25 @@ test.describe("chat page", () => {
       expect((await download).suggestedFilename()).toBe("Jane-Citizen-CV-Brightpath.pdf");
     });
 
+    test("writes a cover letter signed from the profile, and downloads it as a PDF", async ({ page }) => {
+      await sendMessage(page, "Read my CV into a profile [profile]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      await sendMessage(page, "Write a cover letter for this job [coverletter]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      const letter = log(page).locator("article").filter({ has: page.getByRole("heading", { level: 3, name: "Cover letter for Senior Front-end Engineer · Brightpath" }) });
+      await expect(letter).toContainText("Dear Hiring Manager,");
+      // The sender's details come from the profile, not the letter block.
+      await expect(letter).toContainText("jane@example.com");
+      await expectNoA11yViolations(page);
+
+      const download = page.waitForEvent("download");
+      await letter.getByRole("button", { name: "Download PDF" }).click();
+      const pdf = await download;
+      expect(pdf.suggestedFilename()).toBe("Jane-Citizen-Cover-Letter-Brightpath.pdf");
+      const bytes = await readFile((await pdf.path())!);
+      expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    });
+
     test("previews the PDF in a dialog", async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop", "Phones open a new tab instead");
       await sendMessage(page, "Read my CV into a profile [profile]");
@@ -225,8 +243,8 @@ test.describe("chat page", () => {
   });
 
   test("sends a suggested question", async ({ page }) => {
-    await page.getByRole("button", { name: "What is Brighte Eats?" }).click();
-    await expect(log(page)).toContainText("You said: What is Brighte Eats?");
+    await page.getByRole("button", { name: "How well does my CV match this job?" }).click();
+    await expect(log(page)).toContainText("You said: How well does my CV match this job?");
   });
 
   test("checks the length in the browser and sends nothing when too long", async ({ page }) => {
@@ -234,9 +252,9 @@ test.describe("chat page", () => {
     page.on("request", (request) => {
       if (request.url().endsWith("/api/chat")) requests += 1;
     });
-    await sendMessage(page, "x".repeat(1001));
+    await sendMessage(page, "x".repeat(8001));
 
-    await expect(messageBox(page)).toHaveAccessibleDescription(/Keep your message to 1000 characters \(it has 1001\)/);
+    await expect(messageBox(page)).toHaveAccessibleDescription(/Keep your message to 8000 characters \(it has 8001\)/);
     await expect(messageBox(page)).toHaveAttribute("aria-invalid", "true");
     expect(requests).toBe(0);
   });

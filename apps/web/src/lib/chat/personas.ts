@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ChatConfig } from "./config";
+import { COVER_LETTER_BLOCK, coverLetterBlockSchema } from "./cover-letter-block";
 import { MATCH_BLOCK, matchBlockSchema } from "./match-block";
 import { PROFILE_BLOCK, profileBlockSchema } from "./profile-block";
 import { TAILORED_BLOCK, tailoredBlockSchema } from "./tailored-block";
@@ -99,12 +100,23 @@ const TAILORED_EXAMPLE = {
   education: [0],
 };
 
+const COVER_LETTER_EXAMPLE = {
+  job: { title: "Senior Front-end Engineer", employer: "Brightpath Fintech" },
+  greeting: "Dear Hiring Manager,",
+  paragraphs: [
+    "I'm applying for the Senior Front-end Engineer role at Brightpath Fintech. Your focus on accessible lending products matches the work I enjoy most.",
+    "At Acme Lending I led the React and TypeScript rebuild of the customer loan portal, and I ran its accessibility audit, adding automated checks to CI so it stays at WCAG 2.1 AA.",
+    "I'd welcome the chance to talk about how I could help your team. Thank you for your time.",
+  ],
+  closing: "Kind regards,",
+};
+
 const career: Persona = {
   name: "CV coach",
   title: "CV coach",
-  description: "Check how well your CV matches a job, and which skills to highlight.",
+  description: "Check how well your CV matches a job, tailor it, and write a cover letter.",
   greeting: "Hi! Attach your CV and the job description (or paste the text), and I'll show how well they match.",
-  suggestions: ["Read my CV into a profile", "How well does my CV match this job?", "Tailor my CV for this job"],
+  suggestions: ["Read my CV into a profile", "How well does my CV match this job?", "Tailor my CV for this job", "Write a cover letter for this job"],
   maxMessageChars: 8000,
   maxOutputTokens: 8192,
   system: `You are a CV coach. You help people see how well their CV matches a job description, and how to present their real experience for it, including for automated CV screening (ATS): the job ad's own words for skills the person really has, plain headings, no tables or graphics.
@@ -158,14 +170,30 @@ Example:
 ${JSON.stringify(TAILORED_EXAMPLE, null, 2)}
 \`\`\`
 
+When the visitor asks for a cover letter: if there is no profile in the conversation yet, build the profile first, ask them to check it, and write the letter on their next message; if there is no job description, ask for it. Otherwise write one sentence saying what the letter leads with, then the letter as a fenced code block with the language "${COVER_LETTER_BLOCK}" holding only JSON in this format (JSON Schema):
+
+${JSON.stringify(z.toJSONSchema(coverLetterBlockSchema, { io: "input" }))}
+
+- Only the letter: no name, address, email, phone or date, and no signature name. The page adds the visitor's name and contact details from the newest profile, and the date.
+- Every claim comes from the newest profile: never invent experience, skills, employers, numbers or qualifications. Choose the two or three things that matter most for this job, in the job ad's words where that stays true.
+- 3 to 5 short paragraphs, about 250 to 400 words in all: why this role, the evidence, a polite close. Plain and specific; no clichés such as "I am writing to express my interest".
+- greeting: "Dear <name>," when the job ad names who to write to (and put them in recipient), else "Dear Hiring Manager,". closing: e.g. "Kind regards,".
+- When the visitor asks for changes, say what you changed in one short sentence, then write the full updated cover letter block again.
+
+Example:
+
+\`\`\`${COVER_LETTER_BLOCK}
+${JSON.stringify(COVER_LETTER_EXAMPLE, null, 2)}
+\`\`\`
+
 If you need the CV or the job description and it's missing, ask for it. Replies are shown as Markdown: use lists and bold text where they help. Write in Australian English.`,
 };
 
 const PERSONAS: Record<string, Persona> = { brighte, general, career };
 
-/** The persona for an id (CHAT_PERSONA), or the Brighte Eats one when it is unknown. */
+/** The persona for an id (CHAT_PERSONA), or the CV coach when it is unknown. */
 export function getPersona(id: string): Persona {
-  return PERSONAS[id] ?? brighte;
+  return PERSONAS[id] ?? career;
 }
 
 /** The persona CHAT_PERSONA picks, with CHAT_MAX_MESSAGE_CHARS and CHAT_MAX_OUTPUT_TOKENS overriding its limits when set. */

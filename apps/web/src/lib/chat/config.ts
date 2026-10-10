@@ -47,6 +47,6 @@ export function chatConfig(env: Env = process.env) {
     /** The picker's starting model, "provider:model". */
     defaultModel: env.CHAT_DEFAULT_MODEL?.trim() || "anthropic:claude-haiku-4-5",
     /** Which persona answers (src/lib/chat/personas.ts). */
-    persona: env.CHAT_PERSONA?.trim() || "brighte",
+    persona: env.CHAT_PERSONA?.trim() || "career",
   };
 }

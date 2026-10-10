@@ -18,7 +18,7 @@ describe("chatConfig", () => {
       modelPatterns: DEFAULT_MODEL_PATTERNS,
       modelsCacheSeconds: 3600,
       defaultModel: "anthropic:claude-haiku-4-5",
-      persona: "brighte",
+      persona: "career",
     });
   });
 

@@ -1,7 +1,10 @@
-import type { Profile, TailoredBlock } from "../chat";
+import type { CoverLetterBlock, Profile, TailoredBlock } from "../chat";
 
-/** What a PDF is made from: the profile, and a tailored block when it's a tailored CV. */
-export type CvSource = { profile: Profile; tailored?: TailoredBlock };
+/**
+ * What a PDF is made from: the profile, plus a tailored block for a tailored CV, or a cover letter
+ * block for a cover letter (its letterhead comes from the profile).
+ */
+export type CvSource = { profile: Profile; tailored?: TailoredBlock; coverLetter?: CoverLetterBlock };
 
 /** What the chat's CV cards can do: provided by the chat page, used through ChatWindow and ChatBubble. */
 export type CvActions = {

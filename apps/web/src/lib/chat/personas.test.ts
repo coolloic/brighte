@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { configuredPersona, getPersona } from "./personas";
 
 describe("personas", () => {
-  it("falls back to the Brighte Eats persona for an unknown id", () => {
-    expect(getPersona("nope").name).toBe("Brighte Eats assistant");
+  it("falls back to the CV coach for an unknown id", () => {
+    expect(getPersona("nope").name).toBe("CV coach");
   });
 
   it.each([
@@ -38,7 +38,7 @@ describe("personas", () => {
     expect(system).toMatch(/even an obvious one/i);
     expect(system).toMatch(/without a heading go in one entry with no group/i);
     expect(system).not.toContain('"group": "Front-end"');
-    expect(suggestions).toEqual(["Read my CV into a profile", "How well does my CV match this job?", "Tailor my CV for this job"]);
+    expect(suggestions).toEqual(["Read my CV into a profile", "How well does my CV match this job?", "Tailor my CV for this job", "Write a cover letter for this job"]);
   });
 
   it("teaches the career persona to tailor by reference, profile first", () => {
@@ -61,6 +61,17 @@ describe("personas", () => {
     // In the JSON Schema (from .describe()) and in the rules.
     expect(system).toContain("The CV's opening summary");
     expect(system).toMatch(/opening summary .* goes in basics\.summary/i);
+  });
+
+  it("teaches the career persona the cover letter block: the letter only, every claim from the profile", () => {
+    const { system } = getPersona("career");
+    expect(system).toContain("```coverletter");
+    // The JSON Schema, generated from coverLetterBlockSchema.
+    expect(system).toContain('"paragraphs"');
+    expect(system).toContain('"closing"');
+    expect(system).toMatch(/no name, address, email, phone or date/i);
+    expect(system).toMatch(/every claim comes from the newest profile/i);
+    expect(system).toMatch(/full updated cover letter/i);
   });
 
   it("restores a saved profile file as is", () => {
