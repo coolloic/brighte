@@ -74,6 +74,13 @@ describe("personas", () => {
     expect(system).toMatch(/full updated cover letter/i);
   });
 
+  it("uses saved data (my data) as the visitor's own facts, and only what it is shown", () => {
+    const { system } = getPersona("career");
+    expect(system).toMatch(/saved profile \(they gave their email\)[\s\S]*profile block with it unchanged/i);
+    expect(system).toMatch(/saved data[\s\S]*same never-invent rules/i);
+    expect(system).toMatch(/never guess at what else might be saved/i);
+  });
+
   it("restores a saved profile file as is", () => {
     expect(getPersona("career").system).toMatch(/saved profile[\s\S]*unchanged[\s\S]*don't extract again/i);
   });

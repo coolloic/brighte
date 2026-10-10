@@ -1,5 +1,7 @@
 import { chatConfig, configuredPersona, createRateLimiter, handleChat } from "@/lib/chat/server";
 import { getClient, modelCatalog } from "@/lib/llm/server";
+import { getMyData, searchMyData } from "@/lib/api/server";
+import { recall } from "@/lib/my-data/server";
 
 // Settings are read once, when the server starts (root .env).
 const config = chatConfig();
@@ -17,5 +19,12 @@ export function POST(request: Request) {
     maxOutputTokens: persona.maxOutputTokens,
     effort: config.effort,
     trustedHops: Number(process.env.WEB_TRUST_PROXY ?? 0),
+    recall: config.myData
+      ? (messages, request) =>
+          recall(messages, {
+            getMyData: (email) => getMyData(email, request.headers),
+            searchMyData: (email, query, limit) => searchMyData(email, query, limit, request.headers),
+          })
+      : undefined,
   });
 }

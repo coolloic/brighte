@@ -27,6 +27,8 @@ export type ChatProps = {
   defaultModel: string;
   maxChars: number;
   limits: AttachmentLimits;
+  /** "My data" is on (MY_DATA=on): the cards offer "Save to my data". */
+  myData?: boolean;
 };
 
 /** A message as the page keeps it: with its files, which are re-sent while in context. */
@@ -50,7 +52,7 @@ const failure = (body: ChatErrorBody): Failure => ({ message: chatErrorMessage(b
  * and shows the reply as it arrives. Files stay in the conversation (re-sent with each message, so
  * the model can be asked about them later) until they fall outside the history or the size budget.
  */
-export function Chat({ assistantName, greeting, suggestions, models, defaultModel, maxChars, limits }: ChatProps) {
+export function Chat({ assistantName, greeting, suggestions, models, defaultModel, maxChars, limits, myData = false }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState<{ id: string; attachment: Attachment }[]>([]);
   const [draft, setDraft] = useState("");
@@ -173,7 +175,7 @@ export function Chat({ assistantName, greeting, suggestions, models, defaultMode
       model={model}
       onModelChange={setModel}
       composerRef={composer}
-      cvActions={cvActions}
+      cvActions={cvActions(myData)}
       composer={{
         value: draft,
         onChange: (value) => {

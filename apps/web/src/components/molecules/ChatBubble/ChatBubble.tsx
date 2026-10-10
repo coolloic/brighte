@@ -98,6 +98,7 @@ const PROFILE: BlockSpec<Profile> = {
             onDownload={() => cvActions.downloadPdf({ profile })}
             onPreview={() => cvActions.previewPdf({ profile })}
             onSave={() => cvActions.saveProfile(profile)}
+            onSaveToMyData={cvActions.saveToMyData && (() => cvActions.saveToMyData!({ profile }))}
           />
         )
       }
@@ -127,6 +128,7 @@ const TAILORED: BlockSpec<TailoredBlock> = {
             <CvButtons
               onDownload={() => cvActions.downloadPdf(source)}
               onPreview={() => cvActions.previewPdf(source)}
+              onSaveToMyData={cvActions.saveToMyData && (() => cvActions.saveToMyData!(source))}
               disabledReason={blocking === 0 ? undefined : blocking === 1 ? "Fix 1 thing before downloading" : `Fix ${blocking} things before downloading`}
             />
           )
@@ -151,7 +153,15 @@ const COVER_LETTER: BlockSpec<CoverLetterBlock> = {
       <CoverLetter
         {...letter}
         sender={referenceProfile.basics}
-        actions={cvActions && <CvButtons onDownload={() => cvActions.downloadPdf(source)} onPreview={() => cvActions.previewPdf(source)} />}
+        actions={
+          cvActions && (
+            <CvButtons
+              onDownload={() => cvActions.downloadPdf(source)}
+              onPreview={() => cvActions.previewPdf(source)}
+              onSaveToMyData={cvActions.saveToMyData && (() => cvActions.saveToMyData!(source))}
+            />
+          )
+        }
       />
     );
   },

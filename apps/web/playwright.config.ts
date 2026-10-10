@@ -56,7 +56,8 @@ export default defineConfig({
       url: `http://localhost:${apiPort}`,
       // 9-minute tokens are always inside the web's 10-minute renewal window, so admin requests
       // exercise session renewal (e2e/admin-session.spec.ts).
-      env: { ...process.env, PORT: String(apiPort), TRUST_PROXY: "1", JWT_EXPIRES_IN: "9m" },
+      // My data on, with the instant fake embedder: tests never download the model.
+      env: { ...process.env, PORT: String(apiPort), TRUST_PROXY: "1", JWT_EXPIRES_IN: "9m", MY_DATA: "on", EMBEDDINGS: "fake" },
       reuseExistingServer: false,
       timeout: 120_000,
     },
@@ -76,6 +77,7 @@ export default defineConfig({
         OPENAI_API_KEY: "",
         GEMINI_API_KEY: "",
         CHAT_RATE_LIMIT: "3",
+        MY_DATA: "on",
       },
       reuseExistingServer: false,
       timeout: 180_000,

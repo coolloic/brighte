@@ -46,6 +46,8 @@ export function chatConfig(env: Env = process.env) {
     modelsCacheSeconds: positiveInt(env, "CHAT_MODELS_CACHE_SECONDS", 3600),
     /** The picker's starting model, "provider:model". */
     defaultModel: env.CHAT_DEFAULT_MODEL?.trim() || "anthropic:claude-haiku-4-5",
+    /** "My data" (MY_DATA=on, local use only): save cards under the profile's email, and recall them in later chats. */
+    myData: env.MY_DATA?.trim().toLowerCase() === "on",
     /** Which persona answers (src/lib/chat/personas.ts). */
     persona: env.CHAT_PERSONA?.trim() || "career",
   };

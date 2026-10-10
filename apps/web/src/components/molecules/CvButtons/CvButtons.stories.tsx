@@ -101,3 +101,33 @@ export const PreviewOnPhone: Story = {
   },
 };
 
+
+/** "My data" on: Save to my data, which says where it was saved. */
+export const SaveToMyData: Story = {
+  args: { onSaveToMyData: fn(async () => ({ saved: "Saved to my data (jane@example.com). Give this email in a later chat to use it." })) },
+  play: async ({ args, canvas }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Save to my data" }));
+    await expect(args.onSaveToMyData).toHaveBeenCalled();
+    await expect(canvas.getByRole("status")).toHaveTextContent("Saved to my data (jane@example.com).");
+  },
+};
+
+/** Saving takes a moment: every button waits, and the wait is announced. */
+export const SavingToMyData: Story = {
+  args: { onSaveToMyData: fn(() => new Promise<never>(() => {})) },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Save to my data" }));
+    await expect(canvas.getByRole("status")).toHaveTextContent("Saving…");
+    await expect(canvas.getByRole("button", { name: "Save to my data" })).toHaveAttribute("aria-busy", "true");
+    await expect(canvas.getByRole("button", { name: "Download PDF" })).toBeDisabled();
+  },
+};
+
+/** The profile has no email: the reason, and what to do. */
+export const SaveToMyDataFailed: Story = {
+  args: { onSaveToMyData: fn(async () => ({ error: "Your profile has no email, which is how your data is saved." })) },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "Save to my data" }));
+    await expect(canvas.getByRole("status")).toHaveTextContent("Your profile has no email");
+  },
+};

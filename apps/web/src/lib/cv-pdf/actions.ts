@@ -13,4 +13,6 @@ export type CvActions = {
   /** Makes the PDF for a preview: its object URL (the caller revokes it), or an error message. */
   previewPdf(source: CvSource): Promise<{ url: string } | { error: string }>;
   saveProfile(profile: Profile): void;
+  /** Saves the card to "My data" (MY_DATA=on only): what to say when it worked, or an error message. */
+  saveToMyData?(source: CvSource): Promise<{ saved: string } | { error: string }>;
 };

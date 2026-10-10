@@ -1,5 +1,5 @@
 import { clientIp } from "../api";
-import type { Effort, LlmClient, ModelCatalog, ProviderId } from "../llm";
+import type { ChatTurn, Effort, LlmClient, ModelCatalog, ProviderId } from "../llm";
 import type { ChatErrorBody } from "./chat-error";
 import { chatRequestSchema, type ChatRequestLimits } from "./messages";
 import { readJson } from "./read-json";
@@ -15,6 +15,8 @@ export type ChatHandlerDeps = {
   effort?: Effort;
   /** Proxies whose X-Forwarded-For entries are trusted (WEB_TRUST_PROXY, see client-ip.ts). */
   trustedHops: number;
+  /** "My data" (MY_DATA=on): what the visitor saved, to add to the system prompt for this reply. Never throws. */
+  recall?: (messages: ChatTurn[], request: Request) => Promise<string | undefined>;
 };
 
 function errorResponse(status: number, body: ChatErrorBody, headers: Record<string, string> = {}) {
@@ -49,8 +51,11 @@ export async function handleChat(request: Request, deps: ChatHandlerDeps): Promi
     return errorResponse(429, { code: "RATE_LIMITED", retryAfterSeconds: limit.retryAfterSeconds }, { "retry-after": String(limit.retryAfterSeconds) });
   }
 
+  const recalled = await deps.recall?.(messages, request);
+  const system = recalled ? `${deps.system}\n\n${recalled}` : deps.system;
+
   const chunks = client
-    .streamChat({ model, system: deps.system, messages, maxOutputTokens: deps.maxOutputTokens, effort: deps.effort, signal: request.signal })
+    .streamChat({ model, system, messages, maxOutputTokens: deps.maxOutputTokens, effort: deps.effort, signal: request.signal })
     [Symbol.asyncIterator]();
   // Wait for the first chunk, so a provider failure (bad key, model retired, outage) is an error
   // status the page can explain, not a stream that breaks before saying anything.

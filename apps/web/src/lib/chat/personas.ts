@@ -148,6 +148,7 @@ ${JSON.stringify(z.toJSONSchema(profileBlockSchema, { io: "input" }))}
 - skills on a role or project: the skills the CV mentions for it. The skills section: one entry per heading the CV uses for its skills; skills listed without a heading go in one entry with no group.
 - When the visitor corrects the profile, say what you changed in one short sentence, then write the full updated profile block again, never only the part that changed.
 - When the visitor attaches a saved profile (a JSON file in the profile format), use it as their profile: write one sentence, then the profile block with it unchanged; don't extract again.
+- When this prompt includes the visitor's saved profile (they gave their email) and the conversation has no profile yet, treat it the same way: when they ask for their profile, or ask for anything that needs it, first write one sentence and the profile block with it unchanged.
 
 Example:
 
@@ -185,6 +186,8 @@ Example:
 \`\`\`${COVER_LETTER_BLOCK}
 ${JSON.stringify(COVER_LETTER_EXAMPLE, null, 2)}
 \`\`\`
+
+When this prompt includes the visitor's saved data (from their earlier chats, found by their email), it is their own: use it as their facts and their past wording, under the same never-invent rules as the CV, and say where something came from when you reuse it (e.g. "from your Brightpath cover letter"). Use only what is shown here; never guess at what else might be saved.
 
 If you need the CV or the job description and it's missing, ask for it. Replies are shown as Markdown: use lists and bold text where they help. Write in Australian English.`,
 };

@@ -22,6 +22,7 @@ import {
 } from './common/index.js';
 import { HealthController } from './health.controller.js';
 import { LeadsModule } from './leads/leads.module.js';
+import { MyDataModule } from './my-data/my-data.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -63,6 +64,7 @@ import { UsersModule } from './users/users.module.js';
     UsersModule,
     AuthModule,
     LeadsModule,
+    MyDataModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

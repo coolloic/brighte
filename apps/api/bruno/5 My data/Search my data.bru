@@ -1,0 +1,45 @@
+meta {
+  name: Search my data
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query SearchMyData($email: String!, $query: String!, $limit: Int) {
+    searchMyData(email: $email, query: $query, limit: $limit) {
+      text
+      score
+      document {
+        kind
+        title
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "email": "bruno-mydata@example.com",
+    "query": "coaching junior people",
+    "limit": 3
+  }
+}
+
+docs {
+  The saved chunks closest in meaning to the query, most similar first. With the local model, "coaching junior people" finds the mentoring bullet although they share no words.
+}
+
+tests {
+  test("returns chunks, most similar first", function () {
+    expect(res.body.errors).to.be.undefined;
+    const matches = res.body.data.searchMyData;
+    expect(matches.length).to.be.greaterThan(0);
+    for (let i = 1; i < matches.length; i++) expect(matches[i - 1].score).to.be.at.least(matches[i].score);
+  });
+}

@@ -72,6 +72,15 @@ type Mutation {
   createUser(input: CreateUserInput!): User!
 
   """
+  Delete everything saved for an email. Returns how many documents were deleted (0 when there were none).
+  
+  **Auth:** Public, and only when the API runs with `MY_DATA=on` (local use only: refused in production).
+  
+  **Errors:** `FORBIDDEN` (MY_DATA is off), `BAD_USER_INPUT` (invalid email), `TOO_MANY_REQUESTS`.
+  """
+  deleteMyData(email: String!): Int!
+
+  """
   Exchange email and password for an access token. Email is case-insensitive.
   
   **Auth:** Public.
@@ -111,6 +120,63 @@ type Mutation {
   **Errors:** `UNAUTHENTICATED` (missing, invalid or expired token; the account no longer exists; or the session has reached its limit).
   """
   renewToken: AuthPayload!
+
+  """
+  Save a document from the chat for an email: a profile version, a tailored CV or a cover letter, with its text in chunks. Each chunk is embedded (a local model) for `searchMyData`. Every profile saved is kept; the newest is the email's profile.
+  
+  **Auth:** Public, and only when the API runs with `MY_DATA=on` (local use only: refused in production).
+  
+  **Errors:** `FORBIDDEN` (MY_DATA is off), `BAD_USER_INPUT` (invalid email, title empty or over 200 characters, content not a JSON object or over 64 KB, or not 1 to 80 chunks of up to 2000 characters; `extensions.fields` names each), `TOO_MANY_REQUESTS`.
+  """
+  saveMyData(
+    """The text to embed and search, in chunks."""
+    chunks: [String!]!
+
+    """The document as a JSON object (the chat block)."""
+    content: String!
+
+    """The key: stored lowercase."""
+    email: String!
+    kind: MyDataKind!
+    title: String!
+  ): MyDataDocumentSummary!
+}
+
+"""
+What is saved for an email: the newest profile, and the other documents' summaries.
+"""
+type MyData {
+  """Saved tailored CVs and cover letters, newest first."""
+  documents: [MyDataDocumentSummary!]!
+
+  """The newest saved profile, as JSON. Null when no profile is saved."""
+  profile: String
+}
+
+"""A saved document, without its content."""
+type MyDataDocumentSummary {
+  createdAt: DateTime!
+  id: ID!
+  kind: MyDataKind!
+
+  """e.g. "Senior Engineer · Brightpath"."""
+  title: String!
+}
+
+"""What a saved document is."""
+enum MyDataKind {
+  COVER_LETTER
+  PROFILE
+  TAILORED_CV
+}
+
+"""A saved chunk of text close to the query."""
+type MyDataMatch {
+  document: MyDataDocumentSummary!
+
+  """Cosine similarity, from -1 to 1 (higher is closer)."""
+  score: Float!
+  text: String!
 }
 
 type Query {
@@ -154,6 +220,24 @@ type Query {
   **Errors:** `UNAUTHENTICATED` (missing, invalid or expired token, or the account no longer exists).
   """
   me: User!
+
+  """
+  What is saved for an email: the newest profile, and a list of the saved tailored CVs and cover letters. Null when nothing is saved.
+  
+  **Auth:** Public, and only when the API runs with `MY_DATA=on` (local use only: refused in production).
+  
+  **Errors:** `FORBIDDEN` (MY_DATA is off), `BAD_USER_INPUT` (invalid email), `TOO_MANY_REQUESTS`.
+  """
+  myData(email: String!): MyData
+
+  """
+  The saved chunks closest in meaning to `query`, most similar first, from the email's newest profile and all its tailored CVs and cover letters.
+  
+  **Auth:** Public, and only when the API runs with `MY_DATA=on` (local use only: refused in production).
+  
+  **Errors:** `FORBIDDEN` (MY_DATA is off), `BAD_USER_INPUT` (invalid email, `query` empty or over 2000 characters, `limit` outside 1–20), `TOO_MANY_REQUESTS`.
+  """
+  searchMyData(email: String!, limit: Int! = 6, query: String!): [MyDataMatch!]!
 
   """
   Service types a lead can choose, in display order. Retired types are left out.

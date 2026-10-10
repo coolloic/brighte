@@ -1,0 +1,47 @@
+meta {
+  name: Save profile
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation SaveMyData($email: String!, $kind: MyDataKind!, $title: String!, $content: String!, $chunks: [String!]!) {
+    saveMyData(email: $email, kind: $kind, title: $title, content: $content, chunks: $chunks) {
+      id
+      kind
+      title
+      createdAt
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "email": "bruno-mydata@example.com",
+    "kind": "PROFILE",
+    "title": "Bruno Citizen",
+    "content": "{\"basics\":{\"name\":\"Bruno Citizen\",\"email\":\"bruno-mydata@example.com\"}}",
+    "chunks": [
+      "Bruno Citizen · Front-end Engineer",
+      "Senior Engineer · Acme Lending\n- Ran the WCAG audit and fixed screen reader issues across the loan portal",
+      "Engineer · Globex\n- Mentored two graduate developers through their first year"
+    ]
+  }
+}
+
+docs {
+  Needs the API running with `MY_DATA=on` (local use only); otherwise every request in this folder gets `FORBIDDEN`. Public: no token. The chunks are embedded by the local model (the first call downloads it).
+}
+
+tests {
+  test("saves the profile", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.saveMyData.kind).to.equal("PROFILE");
+  });
+}

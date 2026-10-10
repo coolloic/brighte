@@ -54,6 +54,20 @@ describe("handleChat", () => {
     );
   });
 
+  it("adds what recall finds (my data) to the system prompt for this reply", async () => {
+    const client = fakeClient(() => reply("ok"));
+    const recall = vi.fn(async () => "From the visitor's saved data: React rebuild.");
+    await (await handleChat(post(valid), deps(client, { recall }))).text();
+    expect(recall).toHaveBeenCalledWith(valid.messages, expect.any(Request));
+    expect(client.streamChat).toHaveBeenCalledWith(expect.objectContaining({ system: "Be brief.\n\nFrom the visitor's saved data: React rebuild." }));
+  });
+
+  it("keeps the persona's system prompt alone when recall finds nothing", async () => {
+    const client = fakeClient(() => reply("ok"));
+    await (await handleChat(post(valid), deps(client, { recall: async () => undefined }))).text();
+    expect(client.streamChat).toHaveBeenCalledWith(expect.objectContaining({ system: "Be brief." }));
+  });
+
   it.each([
     ["not JSON", post("{", {})],
     ["an invalid body", post({ ...valid, messages: [{ role: "user", content: "x".repeat(101) }] })],

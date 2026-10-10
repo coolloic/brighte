@@ -1,0 +1,34 @@
+meta {
+  name: Delete my data
+  type: graphql
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation DeleteMyData($email: String!) {
+    deleteMyData(email: $email)
+  }
+}
+
+body:graphql:vars {
+  {
+    "email": "bruno-mydata@example.com"
+  }
+}
+
+docs {
+  Deletes everything saved for the email (documents and chunks) and returns how many documents went.
+}
+
+tests {
+  test("deletes what Save profile stored", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(res.body.data.deleteMyData).to.be.at.least(1);
+  });
+}

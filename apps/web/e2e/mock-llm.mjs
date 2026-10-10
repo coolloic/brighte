@@ -8,7 +8,8 @@
 // "[profile-broken]" with one that never completes. "[tailored]" replies with a tailored CV block
 // (one bullet without a source, one skill not in the profile), "[tailored-broken]" with one that never
 // completes. "[tailored-clean]" replies with one that has nothing blocking (its PDF can be made).
-// "[coverletter]" replies with a cover letter block split across chunks. When files were sent, the
+// "[coverletter]" replies with a cover letter block split across chunks. "[recall]" says what saved
+// data ("My data") the system prompt carried: whether it had the saved profile, and how many chunks. When files were sent, the
 // reply says which (in this message, and how many in the whole context), and whether prompt
 // caching was asked for: "[files: photo.png, notes.txt; in context: 2; cached]".
 import { createServer } from "node:http";
@@ -138,9 +139,12 @@ const server = createServer(async (request, response) => {
       message: { id: "msg_mock", type: "message", role: "assistant", model: MODEL.id, content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } },
     });
     send("content_block_start", { index: 0, content_block: { type: "text", text: "" } });
+    const system = typeof body.system === "string" ? body.system : JSON.stringify(body.system ?? "");
+    const savedChunks = (system.split("From the visitor's saved data")[1] ?? "").split("\n").filter((line) => line.startsWith("- [")).length;
+    const recallReply = text.includes("[recall]") && [`Recall: saved profile ${system.includes("The visitor's saved profile") ? "yes" : "no"}, ${savedChunks} saved chunks.`];
     const slow = text.includes("[slow]");
     const marked = MARKER_REPLIES.find(([marker]) => text.includes(marker));
-    const words = slow ? Array.from({ length: 60 }, (_, i) => `word${i} `) : marked ? marked[1] : ["You said: ", text, fileNote];
+    const words = recallReply || (slow ? Array.from({ length: 60 }, (_, i) => `word${i} `) : marked ? marked[1] : ["You said: ", text, fileNote]);
     for (const word of words) {
       if (response.destroyed) return;
       send("content_block_delta", { index: 0, delta: { type: "text_delta", text: word } });
