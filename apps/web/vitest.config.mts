@@ -7,12 +7,14 @@ import { defineConfig } from "vitest/config";
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  // The app's @/ imports (tsconfig paths), for the evals, which live outside src.
+  resolve: { alias: { "@": path.join(dirname, "src") } },
   test: {
     projects: [
       // Plain unit tests for non-UI code: src/**/*.test.ts, in Node.
       {
         extends: true,
-        test: { name: "unit", include: ["src/**/*.test.ts"], environment: "node" },
+        test: { name: "unit", include: ["src/**/*.test.ts", "evals/**/*.test.ts"], environment: "node" },
       },
       // Every story is a test: it must render, pass its play function, and have no WCAG 2.1 AA violations.
       {

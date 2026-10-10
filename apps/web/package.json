@@ -13,7 +13,8 @@
     "storybook": "dotenv -e ../../.env -- sh -c 'storybook dev --port ${STORYBOOK_PORT:-6006} \"$@\"' sh",
     "build-storybook": "storybook build",
     "test:e2e": "playwright test",
-    "lighthouse": "lhci collect && lhci assert && lhci upload"
+    "lighthouse": "lhci collect && lhci assert && lhci upload",
+    "eval": "dotenv -e ../../.env -- vitest run --config vitest.eval.config.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",
