@@ -227,6 +227,35 @@ test.describe("chat page", () => {
       expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     });
 
+    test("saves the profile to my data, and a new chat recalls it from the email alone", async ({ page }) => {
+      await sendMessage(page, "Read my CV into a profile [profile]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      const profile = log(page).locator("article").filter({ has: page.getByRole("heading", { level: 3, name: "Jane Citizen" }) });
+      await profile.getByRole("button", { name: "Save to my data" }).click();
+      await expect(profile.getByRole("status")).toContainText("Saved to my data (jane@example.com).");
+
+      // A new chat: nothing in the tab, only the email.
+      await page.reload();
+      await sendMessage(page, "My email is jane@example.com [recall]");
+      await expect(log(page)).toContainText(/Recall: saved profile yes, [1-9]\d* saved chunks\./);
+    });
+
+    test("saves a cover letter to my data", async ({ page }) => {
+      await sendMessage(page, "Read my CV into a profile [profile]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      await sendMessage(page, "Write a cover letter for this job [coverletter]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      const letter = log(page).locator("article").filter({ has: page.getByRole("heading", { level: 3, name: /^Cover letter for/ }) });
+      await letter.getByRole("button", { name: "Save to my data" }).click();
+      await expect(letter.getByRole("status")).toContainText("Saved to my data (jane@example.com).");
+      await expectNoA11yViolations(page);
+    });
+
+    test("doesn't recall anything without an email", async ({ page }) => {
+      await sendMessage(page, "What do you know about me? [recall]");
+      await expect(log(page)).toContainText("Recall: saved profile no, 0 saved chunks.");
+    });
+
     test("previews the PDF in a dialog", async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop", "Phones open a new tab instead");
       await sendMessage(page, "Read my CV into a profile [profile]");

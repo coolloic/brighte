@@ -69,6 +69,7 @@ export default async function HomePage() {
             defaultModel={modelKey(initial)}
             maxChars={persona.maxMessageChars}
             limits={{ maxFiles: config.maxFiles, maxFileBytes: config.maxFileBytes, maxRequestBytes: config.maxRequestBytes }}
+            myData={config.myData}
           />
         ) : (
           // No provider key set, or every provider's model list failed.

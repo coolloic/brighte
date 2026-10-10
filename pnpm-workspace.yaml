@@ -10,3 +10,5 @@ allowBuilds:
   esbuild: false
   "@google/genai": false
   protobufjs: false
+  # Ships its native binaries in the package; the install script only fetches optional GPU builds.
+  onnxruntime-node: false

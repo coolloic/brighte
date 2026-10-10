@@ -1,0 +1,42 @@
+meta {
+  name: Get my data
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query MyData($email: String!) {
+    myData(email: $email) {
+      profile
+      documents {
+        id
+        kind
+        title
+        createdAt
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "email": "bruno-mydata@example.com"
+  }
+}
+
+docs {
+  The newest saved profile (as JSON) and the saved tailored CVs and cover letters. `null` when nothing is saved.
+}
+
+tests {
+  test("returns the profile saved by Save profile", function () {
+    expect(res.body.errors).to.be.undefined;
+    expect(JSON.parse(res.body.data.myData.profile).basics.name).to.equal("Bruno Citizen");
+  });
+}

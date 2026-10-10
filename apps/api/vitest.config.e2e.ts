@@ -12,6 +12,9 @@ export default defineConfig({
       RATE_LIMIT_PER_MINUTE: '10000',
       RATE_LIMIT_LOGIN_PER_MINUTE: '10000',
       RATE_LIMIT_REGISTER_PER_MINUTE: '10000',
+      // My data on, with the instant fake embedder: tests never download the model.
+      MY_DATA: 'on',
+      EMBEDDINGS: 'fake',
     },
   },
 });

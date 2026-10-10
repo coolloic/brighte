@@ -11,7 +11,7 @@ pnpm + Turborepo monorepo:
 | Storybook     | `apps/web` component library                             | 6006 (`STORYBOOK_PORT`) |
 | Postgres 17   | `docker-compose.yml`                                      | 5435 (`POSTGRES_PORT`) |
 
-**Contents:** [How to run](#how-to-run) · [The CV coach chat](#the-cv-coach-chat) · [Frontend](#frontend) · [Why I chose Postgres, NestJS and Next.js](#why-i-chose-postgres-nestjs-and-nextjs) · [Project history](#project-history) · [Data modelling trade-offs](#data-modelling-trade-offs) · [Validation strategy](#validation-strategy--client-vs-server) · [Leads API](#leads-api) · [Authentication](#authentication) · [Security](#security) · [Observability](#observability-api) · [Database migrations](#database-migrations) · [Testing](#testing) · [API collection (Bruno)](#api-collection-bruno) · [What I'd change at 10× scale](#what-id-change-at-10-scale) · [TODOs / known gaps](#todos--known-gaps) · [AI Assistance](#ai-assistance)
+**Contents:** [How to run](#how-to-run) · [The CV coach chat](#the-cv-coach-chat) · [My data (RAG)](#my-data-rag) · [Frontend](#frontend) · [Why I chose Postgres, NestJS and Next.js](#why-i-chose-postgres-nestjs-and-nextjs) · [Project history](#project-history) · [Data modelling trade-offs](#data-modelling-trade-offs) · [Validation strategy](#validation-strategy--client-vs-server) · [Leads API](#leads-api) · [Authentication](#authentication) · [Security](#security) · [Observability](#observability-api) · [Database migrations](#database-migrations) · [Testing](#testing) · [API collection (Bruno)](#api-collection-bruno) · [What I'd change at 10× scale](#what-id-change-at-10-scale) · [TODOs / known gaps](#todos--known-gaps) · [AI Assistance](#ai-assistance)
 
 **Diagrams:** [docs/architecture.md](docs/architecture.md): the [database ER diagram](docs/architecture.md#database-er-diagram), the [system architecture](docs/architecture.md#system-architecture) and the [main request flows](docs/architecture.md#request-flows) (Mermaid, rendered by GitHub). They and the [slides](docs/slides/index.html) describe the Brighte Eats version.
 
@@ -87,6 +87,20 @@ The profile, tailored CV and cover letter each have **Preview PDF** and **Downlo
 
 Design notes for each step are in `docs/superpowers/specs/2026-10-05-chat-*.md`.
 
+## My data (RAG)
+
+Off by default. With `MY_DATA=on` in the root `.env` (read by the web and the API; restart `pnpm dev`), the profile, tailored CV and cover letter cards get a **Save to my data** button. It stores the card in Postgres under the profile's **email**, split into chunks of text, each with an embedding. In a later chat, give the same email ("my email is jane@example.com") and the coach gets, for each reply, your newest saved profile (when the chat has none yet) and the saved chunks closest to your message: "use the accessibility paragraph from my Brightpath letter" works.
+
+**Local use only.** The email is the only key: there is no sign-in, so anyone who can reach the app could load or delete any stored email's data. The API refuses to start with `MY_DATA=on` when `NODE_ENV=production`. Deploying it would need email verification or sign-in first.
+
+- **Storage:** Postgres with [pgvector](https://github.com/pgvector/pgvector) (`docker-compose.yml` runs `pgvector/pgvector:pg17`). `my_data_documents` (email, kind, title, the block as JSON; every profile version is kept, the newest is current) and `my_data_chunks` (text and a `vector(384)` embedding, HNSW cosine index). Migration `2026.10.11T00.00.00.create-my-data.ts`.
+- **Embeddings:** a local model in the API process, `all-MiniLM-L6-v2` through [transformers.js](https://github.com/huggingface/transformers.js): no key, no cost, nothing leaves the machine. It downloads once (~25 MB) on first use (`EMBEDDINGS_CACHE_DIR` sets where); tests use a deterministic fake (`EMBEDDINGS=fake`).
+- **API** (`apps/api/src/my-data`): `saveMyData`, `myData`, `searchMyData` and `deleteMyData`, public and refused with `FORBIDDEN` while `MY_DATA` is off. The web chunks each card (a role, project or letter paragraph per chunk, saying where it's from); the API embeds and stores them.
+- **Recall** (`apps/web/src/lib/my-data/recall.ts`): the email is the newest profile's in the chat, else the newest one the visitor typed. Only that email's data is used, it's added to the system prompt for that reply, and the coach is told to treat it as the visitor's own facts under the same never-invent rules. If the API is down or takes over 3 seconds, the reply goes ahead without it.
+- **Delete** everything for an email: `mutation { deleteMyData(email: "jane@example.com") }` in GraphiQL.
+
+Design: `docs/superpowers/specs/2026-10-11-chat-my-data-design.md`.
+
 ## Frontend
 
 | Route | What |
@@ -94,7 +108,7 @@ Design notes for each step are in `docs/superpowers/specs/2026-10-05-chat-*.md`.
 | `/` | The CV coach chat. `/chat` permanently redirects here |
 | `/admin/login` | Admin sign-in (`noindex`) |
 | `/admin` | Leads dashboard: search as you type (name, email, mobile or postcode), filter by service, sortable columns (newest first by default), 10/20/50/100 per page, lead detail beside the list (closed with its × to give the list its full width back). State in the URL: `/admin?q=ada&service=delivery&sort=name_asc&size=50&page=2&lead=<id>` |
-| `/api/chat`, `/api/cv-pdf` | The chat's route handlers (see [The CV coach chat](#the-cv-coach-chat)) |
+| `/api/chat`, `/api/cv-pdf`, `/api/my-data` | The chat's route handlers (see [The CV coach chat](#the-cv-coach-chat) and [My data](#my-data-rag)) |
 | anything else | Branded 404; failures show a branded "Something went wrong" page |
 
 **How the web talks to the API** ([architecture diagram and request flows](docs/architecture.md#system-architecture)). Only the admin pages use the API, and only through the Next server, via a server-only data access layer (`apps/web/src/lib/api`): `graphql()` adds the admin's token and the visitor's IP, times out after 10 seconds, and turns failures into an `ApiError` with the API's code. Admin pages and actions start with `requireAdmin()`, which asks the API (`me`) who the session belongs to; the cookie alone proves nothing. `apps/web/src/proxy.ts` renews an active admin's token when it has under 10 minutes left (a sliding session: 30 minutes idle, 8 hours at most; see [Authentication](#authentication)). The chat doesn't use the API, so it keeps working while the API is down.
@@ -215,7 +229,7 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 | Browser-side attacks on responses | API: `helmet` security headers (`nosniff`, HSTS, frame and referrer policies; CSP in production) and no `X-Powered-By`. Web: a **nonce-based Content-Security-Policy** set per request by `apps/web/src/proxy.ts` (scripts and styles only with that request's nonce, `frame-ancestors 'none'`, `object-src 'none'`, forms only to this site), plus `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-Frame-Options: DENY` and no `X-Powered-By`; HSTS and `upgrade-insecure-requests` when `SITE_URL` is HTTPS. `apps/web/e2e/security.spec.ts` checks the headers and that the policy blocks nothing the app needs. |
 | Schema discovery | Introspection and GraphiQL are off when `NODE_ENV=production` (Apollo and Nest defaults). |
 | Leaking internals | Unexpected errors are logged and returned as `Internal server error` (see `formatError`). |
-| Injection | All database access goes through Sequelize's query builder, which escapes every value (no raw SQL); inputs are validated with Zod first. Search terms escape `%` and `_`, so they match literally. |
+| Injection | Database access goes through Sequelize's query builder, which escapes every value; the pgvector queries (my data) are raw SQL with bind parameters, never string-built. Inputs are validated with Zod first. Search terms escape `%` and `_`, so they match literally. |
 | Secrets in git | None are committed: every `.env` is gitignored and only `.env.example` files are tracked. `JWT_SECRET` and `ANTHROPIC_API_KEY` are empty in the examples (`pnpm bootstrap` generates the JWT secret; the API key is yours to add), and the seed passwords are for local development only. |
 
 **Behind a proxy**, set `TRUST_PROXY` to the number of hops so the limiter sees the client's IP. Otherwise every client shares the proxy's IP and one noisy client throttles everyone.
@@ -287,7 +301,7 @@ The test found that search read the whole table: its `OR` included postcode and 
 2. Select the **local** environment and run **1 Auth / Login as admin**. It saves the access token, and every other request sends it as `Authorization: Bearer`. Tokens last 30 minutes (`JWT_EXPIRES_IN`): run **Renew token** to extend the session, or log in again when you get `UNAUTHENTICATED`.
 3. **Register** saves the new lead's id, which **Get lead** uses. **4 Access checks** shows `FORBIDDEN`, `UNAUTHENTICATED` and `BAD_USER_INPUT`; it switches to the USER token, so log in as admin again afterwards.
 
-Every request has a test, so the collection also runs from the command line: `cd apps/api/bruno && pnpm dlx @usebruno/cli run --env local -r` (add `--env-var baseUrl=http://localhost:<port>` for another port). Runs create a lead and a user with `bruno-…@example.com` emails in your dev database.
+Every request has a test, so the collection also runs from the command line: `cd apps/api/bruno && pnpm dlx @usebruno/cli run --env local -r` (add `--env-var baseUrl=http://localhost:<port>` for another port). Runs create a lead and a user with `bruno-…@example.com` emails in your dev database. **5 My data** needs the API running with `MY_DATA=on`, and cleans up after itself.
 
 ## Scripts
 
@@ -311,7 +325,8 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Running needs Node and pnpm as well as Docker.** To simplify it, I'd add a Compose profile that builds and runs the API and web too, so `docker compose up` alone starts everything.
 - **No CI configuration** in the repo yet; quality gates run in the pre-commit hook and locally.
 - **Sign out doesn't revoke the token**, only removes the cookie (see 10× scale).
-- **Conversations aren't saved.** A chat lives in its browser tab; reloading starts again. Saving the profile as a file (and attaching it later) is the way to carry it over today.
+- **Conversations aren't saved.** A chat lives in its browser tab; reloading starts again. Carry a profile over with the saved JSON file, or with [My data](#my-data-rag) locally.
+- **My data is local only** (email is the only key). For a deployed site: verify the email (one-time code) or require sign-in, and add a page to see and delete what's saved.
 - **Non-Latin scripts in PDFs.** The PDFs use Helvetica (Windows-1252), so a CV or letter in Chinese, Cyrillic or with emoji is refused with the characters named. An embedded Unicode font would fix it.
 - **Leftover registration code.** The web app's `RegistrationForm` organism and the registration operations in `apps/web/src/lib/api` aren't used since the sign-up page was removed, and can go.
 - **No admin user management UI**; admins are created with `createUser` (ADMIN only) or the dev seed.

@@ -609,6 +609,43 @@ async function logs(base: string) {
   });
 }
 
+async function myData(base: string) {
+  group('My data (MY_DATA=on, fake embedder)');
+  const SAVE = `mutation($email: String!, $kind: MyDataKind!, $title: String!, $content: String!, $chunks: [String!]!) {
+    saveMyData(email: $email, kind: $kind, title: $title, content: $content, chunks: $chunks) { id kind title } }`;
+  const owner = mail('mydata');
+  await check('saveMyData stores a profile and a cover letter without a token', async () => {
+    const profile = await gql(base, SAVE, { email: owner, kind: 'PROFILE', title: 'Smoke', content: '{"basics":{"name":"Smoke"}}', chunks: ['Led the React rebuild'] });
+    eq([profile.code, profile.data?.saveMyData.kind], [undefined, 'PROFILE']);
+    const letter = await gql(base, SAVE, { email: owner, kind: 'COVER_LETTER', title: 'Engineer · Acme', content: '{}', chunks: ['I ran the accessibility audit'] });
+    eq(letter.data?.saveMyData.title, 'Engineer · Acme');
+  });
+  await check('myData returns the profile and the list', async () => {
+    const r = await gql(base, 'query($e: String!) { myData(email: $e) { profile documents { kind } } }', { e: owner.toUpperCase() });
+    eq([JSON.parse(r.data?.myData.profile).basics.name, r.data?.myData.documents.map((d: { kind: string }) => d.kind)], ['Smoke', ['COVER_LETTER']]);
+  });
+  await check('searchMyData puts the closest chunk first', async () => {
+    const r = await gql(base, 'query($e: String!, $q: String!) { searchMyData(email: $e, query: $q) { text document { kind } } }', { e: owner, q: 'accessibility audit' });
+    eq(r.data?.searchMyData[0], { text: 'I ran the accessibility audit', document: { kind: 'COVER_LETTER' } });
+  });
+  await check('saveMyData with no chunks -> BAD_USER_INPUT (fields.chunks)', async () => {
+    const r = await gql(base, SAVE, { email: owner, kind: 'PROFILE', title: 'Smoke', content: '{}', chunks: [] });
+    eq([r.code, Boolean(r.fields?.chunks)], ['BAD_USER_INPUT', true]);
+  });
+  await check('deleteMyData removes both documents', async () => {
+    const r = await gql(base, 'mutation($e: String!) { deleteMyData(email: $e) }', { e: owner });
+    eq(r.data?.deleteMyData, 2);
+  });
+}
+
+async function myDataOff(base: string) {
+  group('My data off');
+  await check('myData -> FORBIDDEN when MY_DATA is off', async () => {
+    const r = await gql(base, 'query($e: String!) { myData(email: $e) { profile } }', { e: mail('off') });
+    eq(r.code, 'FORBIDDEN');
+  });
+}
+
 async function startupChecks(port: number) {
   group('Startup');
   await check('Production without WEB_ORIGIN refuses to start', async () => {
@@ -616,6 +653,12 @@ async function startupChecks(port: number) {
     const code = await new Promise<number | null>((r) => child.on('exit', r));
     ok(code !== 0, `exit code ${code}`);
     ok(output().includes('WEB_ORIGIN must be set in production'), output().slice(0, 300));
+  });
+  await check('Production with MY_DATA=on refuses to start', async () => {
+    const { child, output } = spawnApi(port, { NODE_ENV: 'production', WEB_ORIGIN: 'https://app.brighte.test', MY_DATA: 'on' });
+    const code = await new Promise<number | null>((r) => child.on('exit', r));
+    ok(code !== 0, `exit code ${code}`);
+    ok(output().includes('MY_DATA=on is for local use only'), output().slice(0, 300));
   });
 }
 
@@ -627,10 +670,13 @@ for (const port of ports) {
   if (!(await portFree(port))) throw new Error(`Port ${port} is in use; set SMOKE_PORT to another base port.`);
 }
 try {
-  await functional(await startServer(ports[0], { ...high, NODE_ENV: 'development', WEB_ORIGIN: 'http://localhost:3001' }));
-  await rateLimits(await startServer(ports[1], { ...realLimits, NODE_ENV: 'development', WEB_ORIGIN: 'http://localhost:3001' }));
-  const prod = await startServer(ports[2], { ...high, NODE_ENV: 'production', WEB_ORIGIN: 'https://app.brighte.test' });
+  const dev = await startServer(ports[0], { ...high, NODE_ENV: 'development', WEB_ORIGIN: 'http://localhost:3001', MY_DATA: 'on', EMBEDDINGS: 'fake' });
+  await functional(dev);
+  await myData(dev);
+  await rateLimits(await startServer(ports[1], { ...realLimits, NODE_ENV: 'development', WEB_ORIGIN: 'http://localhost:3001', MY_DATA: '' }));
+  const prod = await startServer(ports[2], { ...high, NODE_ENV: 'production', WEB_ORIGIN: 'https://app.brighte.test', MY_DATA: '' });
   await production(prod);
+  await myDataOff(prod);
   await logs(prod);
   await startupChecks(ports[3]);
 } finally {
@@ -638,6 +684,7 @@ try {
   await exec('delete from leads where email like :p', { p: `${P}-%` });
   await exec('delete from users where email like :p', { p: `${P}-%` });
   await exec('delete from service_types where code like :p', { p: `${P}-%` });
+  await exec('delete from my_data_documents where email like :p', { p: `${P}-%` });
   await db.close();
 }
 

@@ -29,3 +29,10 @@ export class TooManyRequestsError extends GraphQLError {
     super('Too many requests, try again later', { extensions: { code: 'TOO_MANY_REQUESTS', retryAfter } });
   }
 }
+
+/** The caller may not do this, for a reason other than its role (the auth guard handles roles). */
+export class ForbiddenError extends GraphQLError {
+  constructor(message: string) {
+    super(message, { extensions: { code: 'FORBIDDEN' } });
+  }
+}

@@ -18,6 +18,7 @@ describe("chatConfig", () => {
       modelPatterns: DEFAULT_MODEL_PATTERNS,
       modelsCacheSeconds: 3600,
       defaultModel: "anthropic:claude-haiku-4-5",
+      myData: false,
       persona: "career",
     });
   });
@@ -35,6 +36,15 @@ describe("chatConfig", () => {
     });
     expect(config).toMatchObject({ rateLimit: 5, rateLimitWindowSeconds: 60, maxMessageChars: 280, maxOutputTokens: 512 });
     expect(config).toMatchObject({ modelPatterns: "openai:gpt-5-mini", modelsCacheSeconds: 30, defaultModel: "openai:gpt-5-mini", persona: "general" });
+  });
+
+  it.each([
+    ["on", true],
+    [" On ", true],
+    ["off", false],
+    [undefined, false],
+  ])("turns my data on only for MY_DATA=on: %j", (value, on) => {
+    expect(chatConfig({ MY_DATA: value }).myData).toBe(on);
   });
 
   it("reads the PDF rate limit", () => {
