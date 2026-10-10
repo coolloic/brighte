@@ -95,7 +95,7 @@ function block<T>(reply: string, language: string, parse: (code: string) => T | 
   return { invalid: `asked instead: "${reply.slice(0, 200).replace(/\s+/g, " ")}…"`, outcome: "asked" };
 }
 
-type Run = { case: string; run: number; task: string; invalid?: string; outcome?: "asked" | "broken"; error?: string; score?: unknown };
+type Run = { case: string; run: number; task: string; invalid?: string; outcome?: "asked" | "broken"; error?: string; score?: unknown; reply?: string };
 
 it("CV coach eval", async () => {
   const model = await resolveModel(env.EVAL_MODEL ?? config.defaultModel);
@@ -116,31 +116,35 @@ it("CV coach eval", async () => {
     for (let run = 1; run <= RUNS; run++) {
       if (TASKS.has("profile")) {
         attempt(testCase, run, "profile", async () => {
-          const result = block(await ask(model, [withCv(testCase, "Read my CV into a profile")]), PROFILE_BLOCK, parseProfileBlock);
-          return "invalid" in result ? result : { score: scoreProfile(result.value, testCase) };
+          const reply = await ask(model, [withCv(testCase, "Read my CV into a profile")]);
+          const result = block(reply, PROFILE_BLOCK, parseProfileBlock);
+          return { reply, ...("invalid" in result ? result : { score: scoreProfile(result.value, testCase) }) };
         });
       }
       if (TASKS.has("match")) {
         attempt(testCase, run, "match", async () => {
-          const result = block(await ask(model, [withCv(testCase, `How well does my CV match this job? This is the full job ad:\n\n${testCase.jobAd}`)]), MATCH_BLOCK, parseMatchBlock);
-          return "invalid" in result ? result : { score: scoreMatch(result.value, testCase) };
+          const reply = await ask(model, [withCv(testCase, `How well does my CV match this job? This is the full job ad:\n\n${testCase.jobAd}`)]);
+          const result = block(reply, MATCH_BLOCK, parseMatchBlock);
+          return { reply, ...("invalid" in result ? result : { score: scoreMatch(result.value, testCase) }) };
         });
       }
       if (TASKS.has("tailor")) {
         attempt(testCase, run, "tailor", async () => {
-          const result = block(await ask(model, [...afterProfile(testCase), { role: "user", content: `That profile is right. Tailor my CV for this job. This is the full job ad:\n\n${testCase.jobAd}` }]), TAILORED_BLOCK, parseTailoredBlock);
-          return "invalid" in result ? result : { score: scoreTailored(result.value, testCase) };
+          const reply = await ask(model, [...afterProfile(testCase), { role: "user", content: `That profile is right. Tailor my CV for this job. This is the full job ad:\n\n${testCase.jobAd}` }]);
+          const result = block(reply, TAILORED_BLOCK, parseTailoredBlock);
+          return { reply, ...("invalid" in result ? result : { score: scoreTailored(result.value, testCase) }) };
         });
       }
       if (TASKS.has("letter")) {
         attempt(testCase, run, "letter", async () => {
           const reply = await ask(model, [...afterProfile(testCase), { role: "user", content: `That profile is right. Write a cover letter for this job. This is the full job ad:\n\n${testCase.jobAd}` }]);
           const result = block(reply, COVER_LETTER_BLOCK, parseCoverLetterBlock);
-          if ("invalid" in result) return result;
+          if ("invalid" in result) return { reply, ...result };
           const profile: Profile = expectedProfile(testCase);
           const verdict = parseVerdict(await ask(judge!, [{ role: "user", content: judgePrompt(profile, testCase.jobAd, result.value) }], "You are a careful fact checker."));
           const unsupported = verdict?.claims.filter((claim) => !claim.supported) ?? [];
           return {
+            reply,
             score: {
               shape: scoreLetterShape(result.value, profile),
               claims: verdict?.claims.length,
