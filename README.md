@@ -1,8 +1,8 @@
-# Brighte Eats
+# CV coach
 
-**Slides:** [Brighte Eats Solution](docs/slides/index.html), the solution review deck: what was built and in what order, the stack, the non-functional design, what to improve (including registration reliability) and the move to AWS, then a demo of every page and error state. It's a standalone HTML file: clone the repo and open it in a browser (GitHub shows its source). Use ← → or the buttons to move, and N for speaker notes; printing gives one slide per page.
+CV coach is a chat that helps you apply for a job without making anything up. Attach your CV and a job ad, and it reads the CV into a structured profile, shows how well it matches the job, tailors the CV to it and writes a cover letter, each checked against what your CV actually says. The CV, tailored CV and cover letter download as polished PDFs. An admin area (sign-in and a leads dashboard) stays from the project's first brief, Brighte Eats (see [Project history](#project-history)).
 
-Brighte Eats collects expressions of interest before launch (a public registration form) and shows them to Brighte staff in a leads dashboard. pnpm + Turborepo monorepo:
+pnpm + Turborepo monorepo:
 
 | Path          | Stack                                                    | Port (root `.env`) |
 | ------------- | -------------------------------------------------------- | ------------------ |
@@ -11,32 +11,35 @@ Brighte Eats collects expressions of interest before launch (a public registrati
 | Storybook     | `apps/web` component library                             | 6006 (`STORYBOOK_PORT`) |
 | Postgres 17   | `docker-compose.yml`                                      | 5435 (`POSTGRES_PORT`) |
 
-**Contents:** [How to run](#how-to-run) · [Why I chose Postgres, NestJS and Next.js](#why-i-chose-postgres-nestjs-and-nextjs) · [Data modelling trade-offs](#data-modelling-trade-offs) · [Validation strategy](#validation-strategy--client-vs-server) · [Idempotency approach](#idempotency-approach) · [Stretch goals](#stretch-goals) · [Frontend](#frontend) · [Leads API](#leads-api) · [Authentication](#authentication) · [Security](#security) · [Database migrations](#database-migrations) · [Testing](#testing) · [API collection (Bruno)](#api-collection-bruno) · [What I'd change at 10× scale](#what-id-change-at-10-scale) · [TODOs / known gaps](#todos--known-gaps) · [AI Assistance](#ai-assistance)
+**Contents:** [How to run](#how-to-run) · [The CV coach chat](#the-cv-coach-chat) · [Frontend](#frontend) · [Why I chose Postgres, NestJS and Next.js](#why-i-chose-postgres-nestjs-and-nextjs) · [Project history](#project-history) · [Data modelling trade-offs](#data-modelling-trade-offs) · [Validation strategy](#validation-strategy--client-vs-server) · [Leads API](#leads-api) · [Authentication](#authentication) · [Security](#security) · [Observability](#observability-api) · [Database migrations](#database-migrations) · [Testing](#testing) · [API collection (Bruno)](#api-collection-bruno) · [What I'd change at 10× scale](#what-id-change-at-10-scale) · [TODOs / known gaps](#todos--known-gaps) · [AI Assistance](#ai-assistance)
 
-**Diagrams:** [docs/architecture.md](docs/architecture.md): the [database ER diagram](docs/architecture.md#database-er-diagram), the [system architecture](docs/architecture.md#system-architecture) and the [main request flows](docs/architecture.md#request-flows) (Mermaid, rendered by GitHub).
+**Diagrams:** [docs/architecture.md](docs/architecture.md): the [database ER diagram](docs/architecture.md#database-er-diagram), the [system architecture](docs/architecture.md#system-architecture) and the [main request flows](docs/architecture.md#request-flows) (Mermaid, rendered by GitHub). They and the [slides](docs/slides/index.html) describe the Brighte Eats version.
 
 ## How to run
 
-Needs Node 24 (`.nvmrc`), pnpm 12 (`corepack enable`) and Docker.
+Needs Node 24 (`.nvmrc`), pnpm 12 (`corepack enable`), Docker, and an API key for at least one LLM provider (Anthropic, OpenAI or Gemini).
 
 ```bash
 pnpm install
 pnpm bootstrap    # env files, Postgres in Docker, migrations, dev accounts and sample leads
+# add your key to the root .env:  ANTHROPIC_API_KEY=sk-ant-...
 pnpm dev          # web + api in parallel
 ```
 
-`pnpm bootstrap` is safe to run again. It creates `.env` (ports) and `apps/api/.env` from their examples with a random `JWT_SECRET`, keeping any file that already exists (only an empty `JWT_SECRET` is filled in), then runs `pnpm db:up` (Postgres in Docker, waits until it's ready), `pnpm db:migrate` and `pnpm db:seed` (dev accounts `admin@brighte.dev` / `user@brighte.dev`, and 150 sample leads to page through, search and filter; see [Authentication](#authentication)). For other ports, copy `.env.example` to `.env` and edit it before the first run: `apps/api/.env` takes its database port from it.
+`pnpm bootstrap` is safe to run again. It creates `.env` (ports and chat settings) and `apps/api/.env` from their examples with a random `JWT_SECRET`, keeping any file that already exists (only an empty `JWT_SECRET` is filled in), then runs `pnpm db:up` (Postgres in Docker, waits until it's ready), `pnpm db:migrate` and `pnpm db:seed` (dev accounts `admin@brighte.dev` / `user@brighte.dev`, and 150 sample leads; see [Authentication](#authentication)). For other ports, copy `.env.example` to `.env` and edit it before the first run: `apps/api/.env` takes its database port from it.
+
+The web server reads the root `.env` when it starts: restart `pnpm dev` after changing it. Without any provider key, the home page says "The chat isn't available right now".
 
 Then open:
 
 | URL | What |
 |---|---|
-| http://localhost:3001/ | Registration form (public) |
-| http://localhost:3001/admin | Leads dashboard: sign in as `admin@brighte.dev` / `admin-dev-password` (the seed passwords in `apps/api/.env`) |
+| http://localhost:3001/ | The CV coach chat (public). `/chat` redirects here |
+| http://localhost:3001/admin | Admin: leads dashboard. Sign in as `admin@brighte.dev` / `admin-dev-password` (the seed passwords in `apps/api/.env`) |
 | http://localhost:4001/graphql | GraphiQL (development only) |
 | http://localhost:6006 | Storybook: `pnpm storybook` |
 
-Tests: `pnpm test` (unit and component), `pnpm test:e2e` (API and browser end-to-end; needs `pnpm bootstrap` first). See [Testing](#testing).
+Tests: `pnpm test` (unit and component), `pnpm test:e2e` (API and browser end-to-end; needs `pnpm bootstrap` first, but no provider key: the chat tests use a mock model). See [Testing](#testing).
 
 **Ports** live in one place, the root `.env` (see `.env.example`). Every script and tool reads it and falls back to the defaults above when a value (or the file) is missing: `pnpm dev`, `start`, `storybook`, Playwright, Lighthouse, Docker Compose, and the API's default CORS origin and the web app's API URL. A variable set in your shell still wins, e.g. `WEB_PORT=3002 pnpm dev`. Two exceptions: `DATABASE_URL` in `apps/api/.env` carries its own port, so change it together with `POSTGRES_PORT`; and an explicit `PORT` (set by hosting platforms and the smoke test) wins over `API_PORT`.
 
@@ -44,19 +47,100 @@ Tests: `pnpm test` (unit and component), `pnpm test:e2e` (API and browser end-to
 - Schema is generated to `apps/api/src/schema.gql` on API start.
 - Postgres: `postgres://brighte:brighte@localhost:5435/brighte`.
 
+## The CV coach chat
+
+**What it does.** Attach files (images, PDF, or `.txt`, `.md`, `.csv`, `.json`) or paste text, and ask. Suggested starts: *Read my CV into a profile*, *How well does my CV match this job?*, *Tailor my CV for this job*, *Write a cover letter for this job*.
+
+| You ask | You get |
+|---|---|
+| Read my CV | **Profile**: your CV as structured data (contact, roles, projects, education, skills…), copied, not reworded. Correct it in plain words ("my Globex role ended in 2020") and a new version replaces it. **Save profile** downloads it as JSON; attach that file in a later chat to carry on |
+| How well does it match | **Match report**: a score, and each requirement of the job ad as met, partial or missing, with the evidence from your CV and an honest next step |
+| Tailor my CV | **Tailored CV**: your roles, bullets and skills reordered and reworded for the job, with what was left out and each reworded bullet beside its original |
+| Write a cover letter | **Cover letter**: 3 to 5 paragraphs for the job, with your name and contact details from the profile |
+
+The profile, tailored CV and cover letter each have **Preview PDF** and **Download PDF**: one clean, single-column, ATS-friendly template with real text (e.g. `Jane-Citizen-CV-Brightpath.pdf`, `Jane-Citizen-Cover-Letter-Brightpath.pdf`).
+
+**Never inventing** is the rule the design is built around:
+
+- The model answers in fenced JSON blocks (` ```profile `, ` ```match `, ` ```tailored `, ` ```coverletter `) that follow Zod schemas (`apps/web/src/lib/chat/*-block.ts`); the system prompt includes each schema's JSON Schema. The page shows each block as a card, a placeholder while it streams, and says so when one is cut off.
+- A **tailored CV** doesn't restate facts. It refers to the profile by index ("role 0, bullets 1 and 2") and only adds new wording; `tailorCv` takes employers, titles and dates from the profile. A bullet with no source in the profile, or a skill the profile doesn't have, is flagged, and a CV with blocking flags can't be downloaded until the coach fixes it.
+- A **cover letter** holds only the letter. Your name, email and phone come from the profile, so the model can't get them wrong. Its claims must come from the profile (a prompt rule: unlike the tailored CV, prose can't be checked mechanically).
+- **PDFs are made on the server** (`POST /api/cv-pdf`, `@react-pdf/renderer`), which checks again what the page sends: both schemas, and for a tailored CV `tailorCv` on that pair.
+
+**How it works.** The page sends the conversation (the last 20 turns, with their files) to `POST /api/chat` on the Next server, which streams the provider's reply back as plain text. The conversation lives only in the browser tab: nothing is stored on the server. Models are discovered from each configured provider's models API and filtered by `CHAT_MODELS` (the cheap tier of each by default); visitors pick one under the message box.
+
+**Settings** (root `.env`, read when the web server starts; see `.env.example`):
+
+| Variable | Default | What |
+|---|---|---|
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` | none | A provider is on when its key is set |
+| `CHAT_MODELS` | the cheap tier of each provider | Which models visitors may pick: `provider:model` globs, `!` excludes |
+| `CHAT_DEFAULT_MODEL` | `anthropic:claude-haiku-4-5` | The picker's starting model |
+| `CHAT_PERSONA` | `career` (CV coach) | Who answers: `career`, `general` (no topic limits) or `brighte` (the Brighte Eats assistant) |
+| `CHAT_MAX_MESSAGE_CHARS` / `CHAT_MAX_OUTPUT_TOKENS` | the persona's: 8000 / 8192 | Longest message, and longest reply. Thinking counts toward the reply; a profile or tailored CV for a long CV needs a high cap. The provider's own maximum applies (64,000 for Claude Haiku 4.5) |
+| `CHAT_EFFORT` | `low` | How much models think, where they support it |
+| `CHAT_MAX_FILES` / `CHAT_MAX_FILE_MB` / `CHAT_MAX_REQUEST_MB` | 3 / 5 / 10 | Files per message, size of each, all files in one request. Anthropic caps a request at 32 MB (files grow by a third as base64) and an image at 5 MB |
+| `CHAT_RATE_LIMIT` / `CHAT_RATE_LIMIT_WINDOW_SECONDS` | 20 / 600 | Messages per visitor (IP) per window |
+| `CHAT_PDF_RATE_LIMIT` | 30 | PDFs per visitor per window |
+
+**Protections.** Provider keys never reach the browser. Every message costs money, so each visitor is rate limited (in memory, per web server), the request body is read only up to its limit, and the server re-checks every message and file (type sniffed from its content, not its name) against the same limits as the page. Provider errors are logged on the server and shown as plain words, never their details. PDFs: JSON only (415 otherwise), at most 256 KB, characters the PDF font lacks are named and refused rather than printed as gaps.
+
+Design notes for each step are in `docs/superpowers/specs/2026-10-05-chat-*.md`.
+
+## Frontend
+
+| Route | What |
+|---|---|
+| `/` | The CV coach chat. `/chat` permanently redirects here |
+| `/admin/login` | Admin sign-in (`noindex`) |
+| `/admin` | Leads dashboard: search as you type (name, email, mobile or postcode), filter by service, sortable columns (newest first by default), 10/20/50/100 per page, lead detail beside the list (closed with its × to give the list its full width back). State in the URL: `/admin?q=ada&service=delivery&sort=name_asc&size=50&page=2&lead=<id>` |
+| `/api/chat`, `/api/cv-pdf` | The chat's route handlers (see [The CV coach chat](#the-cv-coach-chat)) |
+| anything else | Branded 404; failures show a branded "Something went wrong" page |
+
+**How the web talks to the API** ([architecture diagram and request flows](docs/architecture.md#system-architecture)). Only the admin pages use the API, and only through the Next server, via a server-only data access layer (`apps/web/src/lib/api`): `graphql()` adds the admin's token and the visitor's IP, times out after 10 seconds, and turns failures into an `ApiError` with the API's code. Admin pages and actions start with `requireAdmin()`, which asks the API (`me`) who the session belongs to; the cookie alone proves nothing. `apps/web/src/proxy.ts` renews an active admin's token when it has under 10 minutes left (a sliding session: 30 minutes idle, 8 hours at most; see [Authentication](#authentication)). The chat doesn't use the API, so it keeps working while the API is down.
+
+**Service types are cached for 5 minutes** on each web server (`cachedFor` in `apps/web/src/lib/cached-for.ts`), so the dashboard's filter doesn't ask the API on every render. Set `SERVICE_TYPES_CACHE_SECONDS` in the root `.env` to change it (`0` turns the cache off). Failures aren't cached: the next render asks again.
+
+**When something is slow or fails**, the UI says what happened and what to do, and keeps what was typed:
+
+| Situation | What the user sees |
+|---|---|
+| A reply streaming in | It appears as it arrives; **Stop** keeps what arrived. Cards show a placeholder until their block is complete |
+| A reply fails or is cut off | "The assistant couldn't answer just now" (or "The reply was cut off") with **Try again**; the message stays |
+| A card's block is cut off (length cap) | "This profile couldn't be shown. It may have been cut off: ask me to try again." |
+| Too many messages or PDFs | How many minutes to wait |
+| No provider configured, or every models API failed | "The chat isn't available right now" with Try again |
+| Signing in (slow) | The button shows a spinner and "Signing in…", keeps keyboard focus, and ignores a second submit; screen readers hear the wait |
+| Rate limited (sign-in) | "Too many attempts" with a live countdown from the API's `retryAfter` (the API doubles the wait for repeat offenders) |
+| API down | Admin pages: the branded error page, with Try again. The chat is unaffected |
+| Admin session expired | Sign in again, then straight back to the same URL (search, filter, sort, page and lead kept) |
+| Searching (slow) | Results follow the typing after a 300 ms pause, focus stays in the box, and letters typed while a search loads are kept; the lead count is announced to screen readers |
+
+**Without JavaScript**, signing in and out and browsing the dashboard work, because forms post to their Server Actions and the dashboard is links and GET forms. The chat needs JavaScript.
+
+**SEO and security headers.** The home page has a canonical URL, Open Graph and Twitter tags, JSON-LD structured data (`WebApplication`), `/robots.txt` and `/sitemap.xml`; admin pages are `noindex`. Every page sends a nonce-based Content-Security-Policy and other security headers (see [Security](#security)); PDF previews need `frame-src 'self' blob:`. Set `SITE_URL` (root `.env.example`) to the public address in production.
+
+**Components** follow atomic design (`apps/web/src/components`: atoms, molecules, organisms, templates, enforced by ESLint), use design tokens (the green palette from the Brighte Eats version), and meet WCAG 2.1 AA with **AAA text contrast**. Every component has Storybook stories, and every story is a test with an axe check. Conventions: `apps/web/CLAUDE.md`.
+
 ## Why I chose Postgres, NestJS and Next.js
 
-**PostgreSQL.** The data is relational: leads have many service interests, service types change, and duplicates must be impossible. Postgres gives foreign keys (a lead can't point at a service that doesn't exist), a unique constraint on email that holds under concurrent requests, and transactions, so a lead and its services are saved together or not at all. It's free, runs in one Docker container, and has a clear path for the id scheme (Postgres 18 adds `uuidv7()`).
+**PostgreSQL.** The data is relational: leads (from the original Brighte Eats brief, see [Project history](#project-history)) have many service interests, service types change, and duplicates must be impossible. Postgres gives foreign keys (a lead can't point at a service that doesn't exist), a unique constraint on email that holds under concurrent requests, and transactions, so a lead and its services are saved together or not at all. It's free, runs in one Docker container, and has a clear path for the id scheme (Postgres 18 adds `uuidv7()`).
 
 **NestJS, Apollo (code-first) and Sequelize for the API.** TypeScript end to end. Code-first GraphQL keeps the schema, its types and the resolvers in one place; `schema.gql` is generated, never hand-edited, and every operation documents its auth rule and error codes (a test enforces it). Nest's guards give one place for the things every request needs: authentication (deny by default), roles, and rate limiting. Sequelize with Umzug migrations keeps schema changes as explicit, reviewable SQL steps with `synchronize` off. Prisma or Drizzle would fit as well; the migrations-first discipline matters more than the ORM.
 
-**Next.js 16 (App Router) with React 19 for the web.** Server Components and Server Actions mean **the browser never calls the API**: pages and forms talk to the Next server, which calls the API. So the API URL and the admin's token stay on the server (the session is an httpOnly cookie), and the visitor's IP is forwarded for rate limits. Forms still work without JavaScript, because a Server Action is also a plain form POST. The dashboard's state (filter, page, selected lead) lives in the URL, so it needs no client JavaScript at all. Tailwind 4 with design tokens, and Storybook, for a small atomic-design component library.
+**Next.js 16 (App Router) with React 19 for the web.** Server Components, Server Actions and route handlers mean **the browser never calls the API or an LLM provider**: pages, forms and the chat talk to the Next server, which calls them. So the API URL, the admin's token and the provider API keys stay on the server (the session is an httpOnly cookie), and the visitor's IP is used for rate limits. The admin forms still work without JavaScript, because a Server Action is also a plain form POST. The dashboard's state (filter, page, selected lead) lives in the URL, so it needs no client JavaScript at all. Tailwind 4 with design tokens, and Storybook, for a small atomic-design component library.
+
+## Project history
+
+This repo began as **Brighte Eats**, a take-home brief: a public form to register interest in an upcoming food service (delivery, pick-up, payment) and a leads dashboard for staff. That is what the API, the database, the admin area, the [slides](docs/slides/index.html) and [docs/architecture.md](docs/architecture.md) were built for, including the stretch goals picked then: the admin boundary (sign-in, `ADMIN`-only `leads`, sliding sessions), rate limiting with backoff on `register` and `login`, and an optimistic registration form.
+
+A chat assistant was added next (`/chat`), then the CV coach on top of it: match reports, profiles, tailored CVs, PDFs and cover letters. The site was then rebranded to CV coach, with the chat as the home page. The registration form was removed from the web app; the API's `register` and `serviceTypes` operations and the leads dashboard remain, with the sample leads from the seed.
 
 ## Data modelling trade-offs
 
 The ER diagram, with every column, key and index, is in [docs/architecture.md](docs/architecture.md#database-er-diagram).
 
-Brighte Eats leads can be interested in several services, and the service types "may change over time". Three tables (migration `2026.09.25T00.00.00.create-leads.ts`):
+The leads come from the original Brighte Eats brief (see [Project history](#project-history)). A lead can be interested in several services, and the service types "may change over time". Three tables (migration `2026.09.25T00.00.00.create-leads.ts`):
 
 | Table | Purpose |
 |---|---|
@@ -79,61 +163,12 @@ Brighte Eats leads can be interested in several services, and the service types 
 **Both, with the server as the source of truth.**
 
 - **One set of rules.** The registration and sign-in rules and their messages live in one workspace package, `packages/validation` (`@brighte/validation`, Zod's small `zod/mini` build), used by both apps.
-- **Server (API).** Every input is parsed with a Zod schema (the shared rules, plus the API-only ones in `apps/api/src/leads/leads.schemas.ts`) before any database work: name required and at most 70 characters, a valid email, an Australian mobile, a 4-digit postcode, at least one service. It also normalises: lowercase email, mobile stored as `04xxxxxxxx`, trimmed text, de-duplicated services. A failure returns `BAD_USER_INPUT` with `extensions.fields`, a map from each invalid field to a message. Whether a service code exists (and is still active) is only known to the database, so that check lives only on the server.
-- **Browser (web).** `validateRegistration` and `validateSignIn` (`apps/web/src/lib`) run the same shared rules, so mistakes show at once and **nothing is sent**, which also means typos never count against the API's rate limit. They're a convenience, not a security boundary: bots skip them, and without JavaScript the form relies on the server alone.
-- **Showing server errors.** The web maps each API error code to plain copy (`apps/web/src/lib/api/*-feedback.ts`); it branches on `extensions.code`, never on messages. Field messages appear under their field, without repeating the example the field's hint already shows.
-- **Trade-off:** sharing the rules puts Zod in the register and sign-in pages' JavaScript (about 8 KB gzipped with `zod/mini`) in exchange for rules that can't drift. The package is compiled to `dist/` on `pnpm install` and before any `turbo` task that needs it. After editing it while `pnpm dev` runs, rebuild it (`pnpm --filter @brighte/validation build`) or restart `pnpm dev`.
+- **Server (API).** Every input is parsed with a Zod schema (the shared rules, plus the API-only ones in `apps/api/src/leads/leads.schemas.ts`) before any database work: for `register`, name required and at most 70 characters, a valid email, an Australian mobile, a 4-digit postcode, at least one service. It also normalises: lowercase email, mobile stored as `04xxxxxxxx`, trimmed text, de-duplicated services. A failure returns `BAD_USER_INPUT` with `extensions.fields`, a map from each invalid field to a message. Whether a service code exists (and is still active) is only known to the database, so that check lives only on the server.
+- **Browser (web).** `validateSignIn` (`apps/web/src/lib/sign-in.ts`) runs the same shared rules, so mistakes show at once and **nothing is sent**, which also means typos never count against the API's rate limit. It's a convenience, not a security boundary.
+- **The chat** validates on both sides too: the page checks message length and files before sending, and `/api/chat` re-checks everything with Zod (`chatRequestSchema`). The model's JSON blocks are parsed with their schemas before they're shown or turned into PDFs.
+- **Showing server errors.** The web maps each error code to plain copy (`apps/web/src/lib/api/*-feedback.ts`, `chat-error.ts`, `cv-pdf/errors.ts`); it branches on codes, never on messages.
 
-## Idempotency approach
-
-`leads.email` is unique, and `register` relies on that constraint rather than a prior lookup, so two concurrent registrations with one email can't both succeed. The loser gets `CONFLICT` and nothing is changed. The form shows it on the email field: "This email has already registered interest. Use a different email."
-
-`register` is public, so it deliberately doesn't merge into or return the existing lead: that would hand anyone who knows an email that person's stored name and mobile. The trade-off is that a retried request that already succeeded sees `CONFLICT`: an idempotency key per submission would fix it (see [TODOs](#todos--known-gaps)). With JavaScript, double submits from the form can't happen: while a submit is in flight, the form is replaced by the confirmation.
-
-## Stretch goals
-
-The spec suggests picking one. I picked the **admin boundary for the dashboard**, since the leads are personal data: sign-in, `ADMIN`-only `leads` and `lead`, deny by default on the API, and a sliding session on the web (see [Authentication](#authentication)).
-
-**Rate limiting on `register`** came with it. Once `register` and `login` are the only public operations, they are the attack surface, so both are limited per IP with a doubling backoff, and the form shows a countdown (see [Security](#security)).
-
-**Optimistic UI** followed. Once the browser check passes, the form shows "Thanks, you're registered" at once (`useOptimistic`) while the Server Action runs. Whether a registration succeeds is only known on the server, so the confirmation stays only once Postgres has committed the lead. Anything else (duplicate email, rate limit, a retired service, a lost connection) withdraws it and brings the form back with the reason, what was typed, and focus on the problem. A form with mistakes never shows it. What's typed is also kept in `sessionStorage` until the server confirms, so a reload doesn't lose it. The gaps that remain, and their fixes, are under [TODOs](#todos--known-gaps).
-
-Not done:
-
-- **Audit trail:** listed under [10× scale](#what-id-change-at-10-scale).
-
-## Frontend
-
-| Route | What |
-|---|---|
-| `/` | Registration form. Service options come from the API (`serviceTypes`), so a new service appears without a deploy (within 5 minutes by default: see below) |
-| `/admin/login` | Admin sign-in (`noindex`) |
-| `/admin` | Leads dashboard: search as you type (name, email, mobile or postcode), filter by service, sortable columns (newest first by default), 10/20/50/100 per page, lead detail beside the list (closed with its × to give the list its full width back). State in the URL: `/admin?q=ada&service=delivery&sort=name_asc&size=50&page=2&lead=<id>` |
-| anything else | Branded 404; failures show a branded "Something went wrong" page |
-
-**How the web talks to the API** ([architecture diagram and request flows](docs/architecture.md#system-architecture)). Only through the Next server, via a server-only data access layer (`apps/web/src/lib/api`): `graphql()` adds the admin's token and the visitor's IP, times out after 10 seconds, and turns failures into an `ApiError` with the API's code. Admin pages and actions start with `requireAdmin()`, which asks the API (`me`) who the session belongs to; the cookie alone proves nothing. `apps/web/src/proxy.ts` renews an active admin's token when it has under 10 minutes left (a sliding session: 30 minutes idle, 8 hours at most; see [Authentication](#authentication)).
-
-**Service types are cached for 5 minutes** on each web server (`cachedFor` in `apps/web/src/lib/cached-for.ts`), so the home page and the dashboard don't ask the API on every render. Set `SERVICE_TYPES_CACHE_SECONDS` in the root `.env` to change it (`0` turns the cache off; read when the web server starts). A new type shows up within that time; a retired one can still be offered for as long, and `register` then rejects it with a message on the services field. Failures aren't cached: the next render asks again.
-
-**When the API is slow or fails**, the UI says what happened and what to do, and keeps what was typed:
-
-| Situation | What the user sees |
-|---|---|
-| Registering (slow) | "Thanks, you're registered" shows at once, with focus, while the request runs; if the server then disagrees, the form comes back with the reason and focus on the problem |
-| Signing in (slow) | The button shows a spinner and "Signing in…", keeps keyboard focus, and ignores a second submit; screen readers hear the wait |
-| Invalid input | Messages under each field, focus on the first (checked in the browser; the API's field messages if it disagrees) |
-| Email already registered | A message on the email field |
-| Rate limited | "Too many attempts" with a live countdown from the API's `retryAfter` (the API doubles the wait for repeat offenders) |
-| Connection lost mid-submit | The confirmation is withdrawn and the form comes back with everything typed, "Check your connection and try again", focus on that message, and **Try again** |
-| API down | Register: "We can't show the form right now" with Try again. Admin pages: the branded error page, with Try again |
-| Admin session expired | Sign in again, then straight back to the same URL (search, filter, sort, page and lead kept) |
-| Searching (slow) | Results follow the typing after a 300 ms pause, focus stays in the box, and letters typed while a search loads are kept; the lead count is announced to screen readers |
-
-**Without JavaScript**, registering, signing in and out, and browsing the dashboard all work, because forms post to their Server Actions and the dashboard is links and GET forms (a Search and an Apply button appear only then).
-
-**SEO and security headers.** The public page has a canonical URL, Open Graph and Twitter tags, JSON-LD structured data, `/robots.txt` and `/sitemap.xml` (Lighthouse SEO 100); admin pages are `noindex`. Every page sends a nonce-based Content-Security-Policy and other security headers (see [Security](#security)). Set `SITE_URL` (root `.env.example`) to the public address in production.
-
-**Components** follow atomic design (`apps/web/src/components`: atoms, molecules, organisms, templates, enforced by ESLint), use design tokens from Brighte's palette, and meet WCAG 2.1 AA with **AAA text contrast**. Every component has Storybook stories, and every story is a test with an axe check. Conventions: `apps/web/CLAUDE.md`.
+**Idempotency of `register`.** `leads.email` is unique, and `register` relies on that constraint rather than a prior lookup, so two concurrent registrations with one email can't both succeed: the loser gets `CONFLICT` and nothing changes. `register` is public, so it deliberately doesn't return the existing lead, which would hand anyone who knows an email that person's details.
 
 ## Leads API
 
@@ -170,7 +205,7 @@ Not done:
 
 ## Security
 
-Public operations (`register`, `serviceTypes`, `login`) need no token, so they are hardened at several layers. Everything below is covered by `apps/api/test/security.e2e-spec.ts`.
+Public operations (`register`, `serviceTypes`, `login`) need no token, so they are hardened at several layers. Everything below is covered by `apps/api/test/security.e2e-spec.ts`. The chat's own protections are under [The CV coach chat](#the-cv-coach-chat).
 
 | Threat | Protection |
 |---|---|
@@ -181,7 +216,7 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 | Schema discovery | Introspection and GraphiQL are off when `NODE_ENV=production` (Apollo and Nest defaults). |
 | Leaking internals | Unexpected errors are logged and returned as `Internal server error` (see `formatError`). |
 | Injection | All database access goes through Sequelize's query builder, which escapes every value (no raw SQL); inputs are validated with Zod first. Search terms escape `%` and `_`, so they match literally. |
-| Secrets in git | None are committed: every `.env` is gitignored and only `.env.example` files are tracked. `JWT_SECRET` is empty in the example (`pnpm bootstrap` generates one), and the seed passwords in it are for local development only. |
+| Secrets in git | None are committed: every `.env` is gitignored and only `.env.example` files are tracked. `JWT_SECRET` and `ANTHROPIC_API_KEY` are empty in the examples (`pnpm bootstrap` generates the JWT secret; the API key is yours to add), and the seed passwords are for local development only. |
 
 **Behind a proxy**, set `TRUST_PROXY` to the number of hops so the limiter sees the client's IP. Otherwise every client shares the proxy's IP and one noisy client throttles everyone.
 
@@ -191,7 +226,7 @@ Public operations (`register`, `serviceTypes`, `login`) need no token, so they a
 - Set `WEB_TRUST_PROXY` on the web app to the number of proxies in front of **it** (e.g. `1` behind a load balancer). The web app reads the visitor's IP from those proxies' `X-Forwarded-For` entries and forwards just that IP to the API; entries a client wrote itself are ignored. Unset (local development), nothing is forwarded.
 - `API_URL` points the web app at the API (default `http://localhost:${API_PORT}/graphql`).
 
-Without this, every visitor shares the web server's IP, and five registrations a minute would be the limit for everyone.
+Without this, every visitor shares the web server's IP, and one visitor's rate limit would be everyone's. The chat's rate limits read the visitor's IP the same way.
 
 **What this does not cover.** App-level rate limiting slows abuse; it does not stop a real DDoS, which has to be absorbed before it reaches Node (a CDN or WAF, e.g. Cloudflare or AWS WAF, plus load balancer limits). Counters are in memory, so each instance counts separately; with several instances, move them to Redis (`@nest-lab/throttler-storage-redis`). A distributed password-guessing attack spreads across IPs, so per-account lockout or a CAPTCHA on repeated failures would be the next step, and a CAPTCHA (e.g. Turnstile) on `register` if bots get past the per-IP limit. Oversized bodies (413) are still logged at ERROR with a stack, which is noisy under attack.
 
@@ -226,22 +261,13 @@ Tests are chosen to protect what would hurt most if it broke, not for coverage n
 | API unit | `pnpm --filter @brighte/api test` | Input schemas, error formatting, password hashing, rate-limit backoff, request ids and the operation log, the API docs contract |
 | API end-to-end | `pnpm --filter @brighte/api test:e2e` | Every operation against real Postgres (Supertest): register, leads, lead, auth, session renewal, access rules, security limits, N+1 query count, health checks, request ids, security and audit log events |
 | API smoke | `pnpm --filter @brighte/api test:smoke` | Builds and starts real servers (dev and production) and checks every operation, edge case and error code over HTTP, plus the production logs: all JSON, and no passwords, emails or tokens |
-| Web unit | `pnpm --filter @brighte/web test` | API client, error-to-copy mapping, validation, URL and session helpers |
+| Web unit | `pnpm --filter @brighte/web test` | The chat: block schemas, `tailorCv`, persona rules, message and file checks, rate limits, the chat and PDF route handlers, rendered PDF text and layout. Admin: API client, error copy, validation, URL and session helpers |
 | Component stories | same command | Every Storybook story renders in Chromium, runs its interaction test, and must pass axe (WCAG 2.1 AA) |
-| Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: register, sign-in, dashboard (search, sort, page size), sessions, offline, slow submits, API down, 404, SEO files, security headers and CSP, and each flow without JavaScript |
+| Web end-to-end | `pnpm test:e2e` | Playwright on mobile and desktop, with axe: the chat against a mock model (`e2e/mock-llm.mjs`: streaming, Markdown, files, each card, PDF and cover letter downloads, preview, rate limit, failures), sign-in, dashboard, sessions, offline, slow submits, API down, 404, SEO files, security headers and CSP |
 
-The e2e suite starts its own production API and web servers (dev ports + 100, so it never touches a running dev setup), plus a web server whose API is unreachable. Each test sends its own visitor IP, so tests don't share rate limits. It needs Postgres migrated and seeded, and leaves its test leads in the dev database (useful data for trying the dashboard). Lighthouse: `pnpm --filter @brighte/web lighthouse` against a running production build. The public page must score 90+ for Performance and Best Practices, 95+ for Accessibility and 100 for SEO (it scores 100 in all four); admin pages are held to the same except SEO, since they are `noindex` on purpose.
+The e2e suite starts its own production API and web servers (dev ports + 100, so it never touches a running dev setup), a web server whose API is unreachable, and the mock model, so no real provider is ever called. Each test sends its own visitor IP, so tests don't share rate limits. It needs Postgres migrated and seeded. Lighthouse: `pnpm --filter @brighte/web lighthouse` against a running production build: 90+ for Performance and Best Practices, 95+ for Accessibility and 100 for SEO on the home page.
 
-The spec's suggested tests, and where they live:
-
-| Suggested test | Where |
-|---|---|
-| A required field becoming optional | `apps/api/src/leads/leads.schemas.spec.ts` ("keeps every argument required") |
-| A new service type added without the validation knowing | `apps/api/test/leads-api.e2e-spec.ts` ("accepts a service type added as data, with no code change, and refuses it once retired") |
-| `register` returning a lead on the happy path | `apps/api/test/leads-api.e2e-spec.ts`, and the register flow in `apps/web/e2e/register.spec.ts` |
-| The form showing an error when the API fails | `apps/web/e2e/register.spec.ts` (field errors, duplicate email, rate limit), `api-down.spec.ts`, `offline.spec.ts` |
-
-**Load test** (production builds, one process each, on a MacBook Pro M4 Pro; 164k leads; a new visitor IP per request so the real rate limiter stays in the path; 15 s per run; p50 / p99 in ms):
+**Load test** (Brighte Eats version; production builds, one process each, on a MacBook Pro M4 Pro; 164k leads; a new visitor IP per request so the real rate limiter stays in the path; 15 s per run; p50 / p99 in ms):
 
 | Scenario | Requests/s | 10 concurrent | 200 concurrent |
 |---|---|---|---|
@@ -249,9 +275,9 @@ The spec's suggested tests, and where they live:
 | API `serviceTypes` (read) | 8,400 | 1 / 2 | 25 / 37 |
 | API `leads`, admin, 20 per page | 830 | 26 / 47 | 264 / 365 |
 | API `leads` search, admin: before → after the postcode and mobile indexes | 42 → 1,265 | 242 / 368 → 7 / 12 | 4,749 / 5,923 → 159 / 227 |
-| Web register page (server-rendered) | 1,200 | 9 / 40 | 157 / 276 |
+| Web register page (server-rendered, since removed) | 1,200 | 9 / 40 | 157 / 276 |
 
-At 1,000 concurrent connections `register` held 3,200/s (p99 369 ms, no errors), while one web process started timing out (4-7%), the point to add a second. The test found that search read the whole table: its `OR` included postcode and mobile, which had no index, so Postgres couldn't use the trigram indexes on name and email. The `add-leads-postcode-mobile-indexes` migration adds them, and the same test against a database built by the migrations measured the "after" figures. Before the fix, at 200 concurrent searches, the bounded pool gave up on a few requests after its 5-second wait instead of queueing them without limit. The slides have the full results and an AWS scaling estimate.
+The test found that search read the whole table: its `OR` included postcode and mobile, which had no index, so Postgres couldn't use the trigram indexes on name and email. The `add-leads-postcode-mobile-indexes` migration adds them. The slides have the full results and an AWS scaling estimate.
 
 ## API collection (Bruno)
 
@@ -277,6 +303,7 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Observability.** The API already writes structured logs with request ids (see [Observability](#observability-api)). Next: the same on the web server, sending its request id to the API; tracing across web → API → database (OpenTelemetry); metrics; and alerts on error rates and `rate_limit.blocked` spikes.
 - **Search.** Trigram indexes serve substring search well into the millions of rows; beyond that, or for ranking and typo tolerance, move to Postgres full-text search or a search service.
 - **Dashboard features.** CSV export, and an audit trail of service-interest changes.
+- **Chat.** Rate limits and the model list are kept in memory per web server; with several, move the limits to Redis. Long conversations re-send their files each turn: summarise or store them server-side (e.g. the provider's Files API) to cut cost and latency.
 - **Delivery.** CI running the full test suite on every pull request, against a dedicated test database, and deploying the API on a private network behind the web app.
 
 ## TODOs / known gaps
@@ -284,11 +311,11 @@ Every request has a test, so the collection also runs from the command line: `cd
 - **Running needs Node and pnpm as well as Docker.** To simplify it, I'd add a Compose profile that builds and runs the API and web too, so `docker compose up` alone starts everything.
 - **No CI configuration** in the repo yet; quality gates run in the pre-commit hook and locally.
 - **Sign out doesn't revoke the token**, only removes the cookie (see 10× scale).
+- **Conversations aren't saved.** A chat lives in its browser tab; reloading starts again. Saving the profile as a file (and attaching it later) is the way to carry it over today.
+- **Non-Latin scripts in PDFs.** The PDFs use Helvetica (Windows-1252), so a CV or letter in Chinese, Cyrillic or with emoji is refused with the characters named. An embedded Unicode font would fix it.
+- **Leftover registration code.** The web app's `RegistrationForm` organism and the registration operations in `apps/web/src/lib/api` aren't used since the sign-up page was removed, and can go.
 - **No admin user management UI**; admins are created with `createUser` (ADMIN only) or the dev seed.
-- **Registration reliability.** "Thanks" shows at once and stays only once Postgres has committed the lead, so nothing the server accepted is lost. Three gaps remain, each with its reason and planned fix in [docs/architecture.md](docs/architecture.md#reliability-known-gaps-todo):
-  1. A registration that was saved but whose answer was lost (timeout, dropped connection) is reported as failed, and Try again then says the email is already registered. Fix: an idempotency key per submission, a hash of its normalised values computed on the Next server with a secret, then automatic retries.
-  2. A tab closed in the second after "Thanks" never sends the registration. Fix: keep the values in `localStorage` until confirmed and resend them on the next visit (the same values give the same key).
-  3. While the API or Postgres is down, visitors must come back and try again. This matters most. Fix: the Next server sends it to an SQS FIFO queue when the API fails (the content key as deduplication id), and an API worker saves it later.
+
 - **Security gaps**, from a review against the OWASP Top 10, by priority:
   - High: revocable sessions, with the role rechecked on each request (a removed admin keeps access until the token expires, up to 30 minutes); rate limits and backoff in Redis before running more than one instance; per-account lockout and MFA for admins (per-IP limits don't stop guessing from many IPs).
   - Medium: per-user quotas and alerts on bulk `leads` reads (anti-scraping); CSP reports and browser error reporting; Dependabot and `pnpm audit` in CI (today: one moderate advisory in a `uuid` version pulled in by Sequelize, in functions the app doesn't call); scrypt cost raised to OWASP's minimum (N=2^17); refuse to start in production without `WEB_TRUST_PROXY`, or every visitor shares one rate-limit bucket.
@@ -302,6 +329,6 @@ Every request has a test, so the collection also runs from the command line: `cd
 
 I built this with Claude Code (Anthropic) as a pair: I set the plan and the constraints, reviewed every pull request, and asked for changes; the AI wrote most of the code, tests and documentation. The history shows it as small pull requests, each reviewed and merged by me.
 
-- **Where AI helped:** API features (error handling, the leads data model and operations, security hardening, session renewal); the design tokens and components with their Storybook stories; the pages, Server Actions and session handling; end-to-end, component and smoke tests; this README.
+- **Where AI helped:** the CV coach (the chat, profile reading, match reports, tailoring, cover letters and their PDFs); API features (error handling, the leads data model and operations, security hardening, session renewal); the design tokens and components with their Storybook stories; the pages, Server Actions and session handling; end-to-end, component and smoke tests; this README.
 - **Where I verified or changed its output:** I checked each feature in the browser and asked for changes, for example making all text meet AAA contrast, showing hints above errors, a client-side countdown with doubling backoff for rate limits, an account menu in the header, and keeping typed values when offline. Testing caught several of its mistakes: a form reset that broke the no-JavaScript path (found by e2e), an API that rejected `serviceType: null` (found while checking unfiltered dashboard URLs), a duplicated page shell, a skip link with no padding, and a flaky e2e race with session renewal.
 - **Limitations:** Next.js 16 is newer than the model's training, so it had to read the bundled Next docs before using APIs such as `proxy.ts`, `retry()` and page metadata, and still made mistakes there (a doubled page title). Simulated events in component tests can't check CSS hover or native `<details>` toggling, so those moved to Playwright. It sometimes widened the scope of a change, which I kept in check in review.
