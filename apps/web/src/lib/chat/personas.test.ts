@@ -24,6 +24,13 @@ describe("personas", () => {
     expect(system).toMatch(/never invent/i);
   });
 
+  it("counts listed skills as shown but not as used in a role, and writes finished roles in the past", () => {
+    const { system } = getPersona("career");
+    expect(system).toMatch(/skills section is shown: it is never missing and never a gap/);
+    expect(system).toMatch(/never credit it to a role or project the CV doesn't name it under/);
+    expect(system).toMatch(/A role with an end date is finished: write about it in the past tense/);
+  });
+
   it("teaches the career persona the pdf export tool and the words that call it", () => {
     const { system } = getPersona("career");
     expect(system).toContain("```pdf");

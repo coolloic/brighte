@@ -23,7 +23,7 @@ import { getClient } from "@/lib/llm/server";
 import { profileChunks } from "@/lib/my-data/server";
 import { CASES, type EvalCase } from "./cases";
 import { CALIBRATION, judgePrompt, parseVerdict } from "./judge";
-import { expectedProfile, mean, scoreLetterShape, scoreMatch, scoreProfile, scoreRecall, scoreTailored } from "./score";
+import { expectedProfile, mean, scoreLetterFacts, scoreLetterShape, scoreMatch, scoreProfile, scoreRecall, scoreTailored } from "./score";
 
 // The CV coach eval: each case through the real model, as the chat sends it (the career persona, the
 // app's output cap and effort), scored against known answers. Costs money: run it on purpose, with
@@ -184,6 +184,7 @@ it("CV coach eval", async () => {
             reply,
             score: {
               shape: scoreLetterShape(result.value, profile),
+              facts: scoreLetterFacts(result.value, profile),
               claims: verdict?.claims.length,
               unsupported: verdict ? unsupported.map((claim) => `${claim.claim} (${claim.reason})`) : undefined,
               judgeFailed: !verdict,
@@ -325,12 +326,13 @@ function summarise(runs: Run[], calibration: Calibration[], recall: { case: stri
 
   if (of("letter").length) {
     const ok = failures("letter");
-    type LetterScore = { shape: ReturnType<typeof scoreLetterShape>; claims?: number; unsupported?: string[]; judgeFailed: boolean };
+    type LetterScore = { shape: ReturnType<typeof scoreLetterShape>; facts: ReturnType<typeof scoreLetterFacts>; claims?: number; unsupported?: string[]; judgeFailed: boolean };
     const scores = scored<LetterScore>("letter");
     for (const { run, score } of scores) {
       for (const claim of score.unsupported ?? []) problems.push(`[letter] ${run.case} #${run.run}: UNSUPPORTED: ${claim}`);
       if (score.judgeFailed) problems.push(`[letter] ${run.case} #${run.run}: the judge's answer didn't parse`);
       if (!score.shape.inRange) problems.push(`[letter] ${run.case} #${run.run}: ${score.shape.paragraphs} paragraphs, ${score.shape.words} words (asked: 3-5, 250-400)`);
+      for (const sentence of score.facts.currentClaims) problems.push(`[letter] ${run.case} #${run.run}: CURRENT, but no role is: "${sentence}"`);
       if (score.shape.contactInBody.length) problems.push(`[letter] ${run.case} #${run.run}: contact details in the body: ${score.shape.contactInBody.join(", ")}`);
     }
     const judged = scores.filter(({ score }) => !score.judgeFailed);
@@ -341,6 +343,8 @@ function summarise(runs: Run[], calibration: Calibration[], recall: { case: stri
       unsupportedClaims: judged.reduce((total, { score }) => total + (score.unsupported?.length ?? 0), 0),
       claimsChecked: judged.reduce((total, { score }) => total + (score.claims ?? 0), 0),
       inShape: scores.filter(({ score }) => score.shape.inRange).length / Math.max(scores.length, 1),
+      overLength: scores.filter(({ score }) => score.shape.words > 400).length / Math.max(scores.length, 1),
+      currentRoleProblems: scores.filter(({ score }) => score.facts.currentClaims.length > 0).length,
     };
   }
 
@@ -373,7 +377,7 @@ function summarise(runs: Run[], calibration: Calibration[], recall: { case: stri
   if (s.profile) lines.push(`Profile       wrote it ${pct(s.profile.valid)} (asked instead ${pct(s.profile.askedInstead)}, broken ${pct(s.profile.broken)}) · runs without inventions ${pct(s.profile.runsWithoutInventions)} · roles ${pct(s.profile.roleRecall)} · dates ${pct(s.profile.dateAccuracy)} · bullets ${pct(s.profile.bulletRecall)} · skills ${pct(s.profile.skillRecall)} · email ${pct(s.profile.emailRight)}`);
   if (s.match) lines.push(`Match report  wrote it ${pct(s.match.valid)} (asked instead ${pct(s.match.askedInstead)}, broken ${pct(s.match.broken)}) · coverage ${pct(s.match.coverage)} · status right ${pct(s.match.statusAccuracy)} · false credits ${s.match.falseCredits}`);
   if (s.tailor) lines.push(`Tailored CV   wrote it ${pct(s.tailor.valid)} (asked instead ${pct(s.tailor.askedInstead)}, broken ${pct(s.tailor.broken)}) · downloadable (no blocking flags) ${pct(s.tailor.downloadable)} · warnings per CV ${s.tailor.warningsPerCv?.toFixed(1)}`);
-  if (s.letter) lines.push(`Cover letter  wrote it ${pct(s.letter.valid)} (asked instead ${pct(s.letter.askedInstead)}, broken ${pct(s.letter.broken)}) · without unsupported claims ${pct(s.letter.lettersWithoutUnsupportedClaims)} (${s.letter.unsupportedClaims} of ${s.letter.claimsChecked} claims) · in shape ${pct(s.letter.inShape)}`);
+  if (s.letter) lines.push(`Cover letter  wrote it ${pct(s.letter.valid)} (asked instead ${pct(s.letter.askedInstead)}, broken ${pct(s.letter.broken)}) · without unsupported claims ${pct(s.letter.lettersWithoutUnsupportedClaims)} (${s.letter.unsupportedClaims} of ${s.letter.claimsChecked} claims) · in shape ${pct(s.letter.inShape)} (over 400 words ${pct(s.letter.overLength)}) · finished role written as current ${s.letter.currentRoleProblems}`);
   if (s.pdf) lines.push(`PDF export    right ${pct(s.pdf.right)} · exported the right document ${pct(s.pdf.exportsRight)} · exported when it shouldn't ${s.pdf.falseExports} · wrote the document again ${s.pdf.rewrote}`);
   if (s.judgeCalibration) lines.push(`Judge         calibration ${s.judgeCalibration.correct}/${s.judgeCalibration.of} letters scored right${calibration.some((sample) => sample.found !== sample.expected) ? `: ${calibration.filter((sample) => sample.found !== sample.expected).map((sample) => `"${sample.name}" found ${sample.found ?? "nothing"}`).join("; ")}` : ""}`);
   if (s.recall) lines.push(`Recall        hit@6 ${pct(s.recall.hitAt6)} · MRR ${s.recall.mrr?.toFixed(2)}`);

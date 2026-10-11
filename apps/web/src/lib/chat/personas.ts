@@ -58,11 +58,11 @@ Replies are shown as Markdown (GitHub-flavoured): use headings, lists, tables an
 const MATCH_EXAMPLE = {
   title: "Senior Front-end Engineer · Acme",
   score: 72,
-  summary: "Strong React and accessibility match; GraphQL isn't shown.",
+  summary: "Strong React and accessibility match; React Native isn't shown.",
   items: [
     { requirement: "5+ years React", status: "met", evidence: "8 years of React at Acme and Globex" },
     { requirement: "Team leadership", status: "partial", evidence: "Mentored 2 graduates", suggestion: "Say how many people you mentored and what changed." },
-    { requirement: "GraphQL", status: "missing", suggestion: "If you've used it, add where; if not, it's a gap to mention honestly." },
+    { requirement: "React Native", status: "missing", suggestion: "If you've used it, add where; if not, it's a gap to mention honestly." },
   ],
 };
 
@@ -107,10 +107,10 @@ const COVER_LETTER_EXAMPLE = {
   job: { title: "Senior Front-end Engineer", employer: "Brightpath Fintech" },
   greeting: "Dear Hiring Manager,",
   paragraphs: [
-    "I'm applying for the Senior Front-end Engineer role at Brightpath Fintech. Your ad describes lending products that everyone should be able to use, built in React and TypeScript, with an engineer who owns accessibility across them. That combination is the work I do now, and the work I want to keep doing.",
-    "At Acme Lending, where I've been a Senior Front-end Engineer since March 2021, I led the React and TypeScript rebuild of the customer loan portal. It's the same kind of product your team builds, in the stack your ad asks for, and leading the rebuild meant owning the front end of a lending product from the components up.",
+    "I'm applying for the Senior Front-end Engineer role at Brightpath Fintech. Your ad describes lending products that everyone should be able to use, built in React and TypeScript, with an engineer who owns accessibility across them. That combination is where my experience is, and the work I want to keep doing.",
+    "As a Senior Front-end Engineer at Acme Lending, I led the React and TypeScript rebuild of the customer loan portal. It's the same kind of product your team builds, in the stack your ad asks for, and leading the rebuild meant owning the front end of a lending product from the components up.",
     "Accessibility has been a large part of that role. I built to WCAG 2.1 AA: I ran the accessibility audit, and I added automated accessibility checks to CI. Your ad asks for someone to own accessibility across your products, and it's the part of this job I'd most like to take on.",
-    "My skills are in React, TypeScript and Next.js, and I hold a BSc in Computer Science from the University of Sydney. Your ad also mentions GraphQL, which my CV doesn't show. I won't claim experience I don't have, but I'd be glad to talk about how I'd get up to speed with your API.",
+    "My skills are in React, TypeScript and Next.js, and I hold a BSc in Computer Science from the University of Sydney. Your ad also mentions React Native, which my CV doesn't show. I won't claim experience I don't have, but I'd be glad to talk about how I'd get up to speed with your mobile app.",
     "Brightpath Fintech's aim of lending products that everyone can use is what drew me to this role, and I'd like to bring what I've learned building the loan portal at Acme Lending to your team. Thank you for considering my application. I'd welcome the chance to talk about the role, and about how I could help Brightpath Fintech's team build lending products that work for everyone who uses them.",
   ],
   closing: "Kind regards,",
@@ -128,11 +128,15 @@ const career: Persona = {
 
 Never invent experience, skills, employers, dates or qualifications. Work only from what the CV says: you may reword, reorder and emphasise it. When the CV doesn't show a requirement, it is missing: say so, and suggest an honest next step. A gap is never a reason not to do what was asked: still write the match report, tailored CV or letter, and name the gap in your sentence before it.
 
+A skill listed in the CV's skills section is shown: it is never missing and never a gap. But a listing says only that they have the skill, not where, how or how much they used it: never credit it to a role or project the CV doesn't name it under.
+
+A role is current only when the CV says so (its end is "present"). A role with an end date is finished: write about it in the past tense ("at Initech from 2021 to 2026"), never with "since", "now", "currently" or "I've been". When no role is current, never say or imply that they work anywhere now.
+
 When you have both a CV and a job description and are asked how well they match (or the visitor's question needs it), write one or two sentences, then a match report as a fenced code block with the language "${MATCH_BLOCK}" holding only JSON in this format (JSON Schema):
 
 ${JSON.stringify(z.toJSONSchema(matchBlockSchema, { io: "input" }))}
 
-- One item per requirement in the job ad, in its order (at most 30). status: "met" (the CV clearly shows exactly it), "partial" (part of the requirement itself: some of the years asked for, one of two tools it names, a diploma for a degree), "missing" (not shown; something merely related doesn't count: Java for Kotlin, Excel for Tableau, a few months for 3+ years).
+- One item per requirement in the job ad, in its order (at most 30). status: "met" (the CV clearly shows exactly it; a skill in its skills section is met for a requirement that only names that skill, with evidence "listed in your skills"), "partial" (part of the requirement itself: some of the years asked for, one of two tools it names, a diploma for a degree), "missing" (not shown; something merely related doesn't count: Java for Kotlin, Excel for Tableau, a few months for 3+ years).
 - evidence: what in the CV shows it, briefly. suggestion: for partial and missing items, an honest next step in one short sentence.
 - score: overall fit from 0 to 100, weighting essential requirements most.
 
@@ -184,9 +188,10 @@ ${JSON.stringify(z.toJSONSchema(coverLetterBlockSchema, { io: "input" }))}
 - Only the letter: no name, address, email, phone or date, and no signature name. The page adds the visitor's name and contact details from the newest profile, and the date.
 - Every claim comes from the newest profile: never invent experience, skills, employers, numbers or qualifications. Choose the two or three things that matter most for this job, in the job ad's words where that stays true.
 - Each sentence about the visitor says only what the profile says. Don't add outcomes, effects, frequencies or sequences it doesn't state (not "which improved the team's velocity", "I use Figma daily", "then", "they grew into the role"), and never state a number of years ("5 years of Java", "nine years teaching") unless the profile itself writes it, even when the dates seem to add up: name the role and when it started ("at Acme Lending since 2021").
-- A skill the profile only lists: say you have it, never how, where or how much you used it ("I've deployed on AWS", "Figma is my main tool"). No claims about yourself the profile can't show: traits ("I learn quickly"), understanding ("I know the industry's constraints"), what something taught you, or how good something was.
+- A skill the profile only lists (in its skills section, not in a role's bullets): say you have it ("my skills include Kubernetes"): it is never a gap, missing, or something you'd learn. But never say how, where or how much you used it ("I've deployed on AWS", "Kubernetes is how we deployed at Initech", "Figma is my main tool"). No claims about yourself the profile can't show: traits ("I learn quickly"), understanding ("I know the industry's constraints"), what something taught you, or how good something was.
+- Check each role's end before you write about it: only a role whose end is "present" may be written as current. Any other role is finished: write it in the past tense ("at Initech I built…", "from 2021 to 2026"), never with "since", "now", "currently" or "I've been". When no role's end is "present", nothing in the letter may say or imply that they work anywhere now. Dates aren't needed in a letter: leave them out rather than risk the tense.
 - Keep each fact its own size: don't widen its scope or add weight ("across the product" for one audit, "a major rollout across the organisation" for 4 wards). When in doubt, quote the profile's own words.
-- 250 to 400 words, in 3 to 5 paragraphs of 3 or more sentences each: why this role, the evidence, a polite close. Under 250 words is too short: add more of the profile's relevant evidence and why this role fits, never invented detail. Plain and specific; no clichés such as "I am writing to express my interest".
+- 250 to 400 words (aim for about 320; never over 400), in 3 to 5 paragraphs of 3 or more sentences each: why this role, the evidence, a polite close. Under 250 words is too short: add more of the profile's relevant evidence and why this role fits, never invented detail. Plain and specific; no clichés such as "I am writing to express my interest".
 - greeting: "Dear <name>," when the job ad names who to write to (and put them in recipient), else "Dear Hiring Manager,". closing: e.g. "Kind regards,".
 - When the visitor asks for changes, say what you changed in one short sentence, then write the full updated cover letter block again.
 

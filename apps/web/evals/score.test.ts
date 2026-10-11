@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CASES } from "./cases";
-import { expectedProfile, normalise, scoreLetterShape, scoreMatch, scoreProfile, scoreRecall, scoreTailored } from "./score";
+import { expectedProfile, normalise, scoreLetterFacts, scoreLetterShape, scoreMatch, scoreProfile, scoreRecall, scoreTailored } from "./score";
 
 const jane = CASES.find((testCase) => testCase.id === "frontend-senior")!;
 
@@ -81,6 +81,21 @@ describe("scoreLetterShape", () => {
       expectedProfile(jane),
     );
     expect(shape).toMatchObject({ paragraphs: 3, words: 304, inRange: true, contactInBody: ["jane.citizen@example.com"] });
+  });
+});
+
+describe("scoreLetterFacts", () => {
+  const tom = expectedProfile(CASES.find((testCase) => testCase.id === "listed-skills-ended-role")!);
+  const letter = (...paragraphs: string[]) => ({ job: { title: "Engineer" }, greeting: "Dear Hiring Manager,", paragraphs, closing: "Kind regards," });
+
+  it("finds a finished role written as current", () => {
+    const facts = scoreLetterFacts(letter("At Initech, where I've been a Full-stack Engineer since March 2021, I built the billing portal.", "That's the work I do now."), tom);
+    expect(facts.currentClaims).toEqual(["At Initech, where I've been a Full-stack Engineer since March 2021, I built the billing portal.", "That's the work I do now."]);
+  });
+
+  it("passes the past tense, and a current role written as current", () => {
+    expect(scoreLetterFacts(letter("From March 2021 to June 2026 at Initech I built the billing portal."), tom).currentClaims).toEqual([]);
+    expect(scoreLetterFacts(letter("I've been at Acme Lending since 2021."), expectedProfile(jane)).currentClaims).toEqual([]);
   });
 });
 

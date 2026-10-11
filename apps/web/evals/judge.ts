@@ -15,6 +15,8 @@ export function judgePrompt(profile: Profile, jobAd: string, letter: CoverLetter
 
 List every factual claim the letter makes about the candidate: experience, roles, employers, skills, tools, achievements, numbers, dates, qualifications, certificates, languages. Leave out opinions, enthusiasm, and statements about the employer or the job.
 
+Also list what the letter says the candidate lacks or is new to, and any role it writes as current ("I've been… since", "now", "currently"): a gap the profile actually covers (e.g. a skill in its skills section) is unsupported, and so is a role written as current when the profile gives it an end date.
+
 For each claim, "supported" is true only when the profile states it or it follows directly (e.g. "8 years of React" from roles that add up to that). It is false when the profile doesn't say it, or says something different (a number changed, a skill it doesn't list, a responsibility made bigger). Give a short reason.
 
 Answer with only a fenced code block with the language "json", holding {"claims": [{"claim": "...", "supported": true, "reason": "..."}]}.

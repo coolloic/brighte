@@ -577,4 +577,63 @@ Rostering, Inventory control, SAP`,
     ],
     recall: [{ query: "How did I reduce errors?", expect: "picking errors by 23%" }],
   },
+  {
+    id: "listed-skills-ended-role",
+    trap: "GraphQL and Kubernetes appear only in the skills section (still met, never a gap, and not credited to a role), and the latest role has ended: nothing is current.",
+    cv: `Tom Nguyen
+Full-stack Engineer
+Melbourne, VIC · tom.nguyen@example.com
+
+Experience
+Full-stack Engineer, Initech
+Mar 2021 – Jun 2026
+- Built the customer billing portal in React and TypeScript.
+- Wrote Node.js services for invoice generation.
+
+Software Developer, Hooli
+2017 – 2021
+- Maintained the internal reporting tool in Java.
+
+Skills
+Front end: React, TypeScript
+Back end: Node.js, GraphQL, PostgreSQL
+Infrastructure: Docker, Kubernetes
+
+Education
+Bachelor of Computer Science — Monash University, 2016`,
+    jobAd: `Senior Full-stack Engineer, Vandelay Industries
+React and TypeScript required. You'll build GraphQL APIs on PostgreSQL. Kubernetes experience required. Go is a plus.`,
+    expected: {
+      name: "Tom Nguyen",
+      email: "tom.nguyen@example.com",
+      roles: [
+        {
+          employer: "Initech",
+          position: "Full-stack Engineer",
+          start: "2021-03",
+          end: "2026-06",
+          bullets: ["Built the customer billing portal in React and TypeScript.", "Wrote Node.js services for invoice generation."],
+        },
+        { employer: "Hooli", position: "Software Developer", start: "2017", end: "2021", bullets: ["Maintained the internal reporting tool in Java."] },
+      ],
+      skills: ["React", "TypeScript", "Node.js", "GraphQL", "PostgreSQL", "Docker", "Kubernetes"],
+      education: [{ institution: "Monash University", end: "2016" }],
+      rest: {
+        basics: { headline: "Full-stack Engineer", location: { city: "Melbourne", region: "VIC" } },
+        skills: [
+          { group: "Front end", keywords: ["React", "TypeScript"] },
+          { group: "Back end", keywords: ["Node.js", "GraphQL", "PostgreSQL"] },
+          { group: "Infrastructure", keywords: ["Docker", "Kubernetes"] },
+        ],
+        education: [{ institution: "Monash University", qualification: "Bachelor of Computer Science", end: "2016" }],
+      },
+    },
+    match: [
+      { requirement: /react|typescript/i, status: "met" },
+      { requirement: /graphql/i, status: "met" },
+      { requirement: /kubernetes/i, status: "met" },
+      { requirement: /\bgo\b/i, status: "missing" },
+    ],
+    recall: [{ query: "What did I build at Initech?", expect: "customer billing portal" }],
+  },
 ];

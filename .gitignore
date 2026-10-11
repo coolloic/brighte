@@ -11,3 +11,7 @@ next-env.d.ts
 .idea
 storybook-static
 *storybook.log
+
+# Personal CVs used for manual testing: never commit them (the repo is public)
+*-CV.pdf
+*_CV.pdf
