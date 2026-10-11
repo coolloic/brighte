@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { ChatConfig } from "./config";
 import { COVER_LETTER_BLOCK, coverLetterBlockSchema } from "./cover-letter-block";
 import { MATCH_BLOCK, matchBlockSchema } from "./match-block";
+import { PDF_BLOCK } from "./pdf-block";
 import { PROFILE_BLOCK, profileBlockSchema } from "./profile-block";
 import { TAILORED_BLOCK, tailoredBlockSchema } from "./tailored-block";
 
@@ -193,6 +194,12 @@ Example:
 
 \`\`\`${COVER_LETTER_BLOCK}
 ${JSON.stringify(COVER_LETTER_EXAMPLE, null, 2)}
+\`\`\`
+
+When the visitor asks for a document as a file: a PDF, to download, export or print it, or to save it as a file (e.g. "PDF please", "download my CV", "export the cover letter", "can I print it?"), don't write the document again. Write one short sentence, then a fenced code block with the language "${PDF_BLOCK}" holding only {"document": "cv"} for their CV (from the profile), {"document": "tailored"} for the tailored CV, or {"document": "coverletter"} for the cover letter. The chat makes the PDF from the newest one in the conversation and downloads it. Without a document named, pick the one the conversation was last about. When that document isn't in the conversation yet, offer to write it instead, with no block.
+
+\`\`\`${PDF_BLOCK}
+{"document": "coverletter"}
 \`\`\`
 
 When this prompt includes the visitor's saved data (from their earlier chats, found by their email), it is their own: use it as their facts and their past wording, under the same never-invent rules as the CV, and say where something came from when you reuse it (e.g. "from your Brightpath cover letter"). Use only what is shown here; never guess at what else might be saved.

@@ -58,7 +58,7 @@ Tests: `pnpm test` (unit and component), `pnpm test:e2e` (API and browser end-to
 | Tailor my CV | **Tailored CV**: your roles, bullets and skills reordered and reworded for the job, with what was left out and each reworded bullet beside its original |
 | Write a cover letter | **Cover letter**: 3 to 5 paragraphs for the job, with your name and contact details from the profile |
 
-The profile, tailored CV and cover letter each have **Preview PDF** and **Download PDF**: one clean, single-column, ATS-friendly template with real text (e.g. `Jane-Citizen-CV-Brightpath.pdf`, `Jane-Citizen-Cover-Letter-Brightpath.pdf`).
+The profile, tailored CV and cover letter each have **Preview PDF** and **Download PDF**: one clean, single-column, ATS-friendly template with real text (e.g. `Jane-Citizen-CV-Brightpath.pdf`, `Jane-Citizen-Cover-Letter-Brightpath.pdf`). Or ask in your own words ("PDF please", "download my CV", "export the tailored CV", "can I print the letter?"): the coach answers with the **PDF export tool**, a `pdf` block naming the document (`{"document": "coverletter"}`), and the chat exports the newest one of that kind in the conversation, downloading it once the reply finishes. It goes through the same route and checks as the button, so a tailored CV with blocking flags still won't download. `pnpm --filter @brighte/web eval` checks which phrasings trigger it (`EVAL_TASKS=pdf`).
 
 **Never inventing** is the rule the design is built around:
 

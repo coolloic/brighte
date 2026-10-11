@@ -24,6 +24,14 @@ describe("personas", () => {
     expect(system).toMatch(/never invent/i);
   });
 
+  it("teaches the career persona the pdf export tool and the words that call it", () => {
+    const { system } = getPersona("career");
+    expect(system).toContain("```pdf");
+    expect(system).toContain('{"document": "coverletter"}');
+    expect(system).toMatch(/download my CV/);
+    expect(system).toMatch(/don't write the document again/);
+  });
+
   it("teaches the career persona the profile block and the extraction rules", () => {
     const { system, suggestions } = getPersona("career");
     expect(system).toContain("```profile");

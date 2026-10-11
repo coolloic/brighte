@@ -5,10 +5,22 @@ import { Button } from "@/components/atoms/Button";
 import { Heading } from "@/components/atoms/Heading";
 import { Icon } from "@/components/atoms/Icon";
 import { Alert } from "@/components/molecules/Alert";
-import { ChatBubble, type ChatBubbleProps } from "@/components/molecules/ChatBubble";
+import { ChatBubble, type ChatBubbleProps, type ChatDocuments } from "@/components/molecules/ChatBubble";
 import { ChatComposer, type ChatComposerProps } from "@/components/molecules/ChatComposer";
 import { ModelPicker } from "@/components/molecules/ModelPicker";
-import { blockContents, COVER_LETTER_BLOCK, hasBlock, parseProfileBlock, PROFILE_BLOCK, TAILORED_BLOCK, type Profile } from "@/lib/chat";
+import {
+  blockContents,
+  COVER_LETTER_BLOCK,
+  hasBlock,
+  parseCoverLetterBlock,
+  parseProfileBlock,
+  parseTailoredBlock,
+  PROFILE_BLOCK,
+  TAILORED_BLOCK,
+  type CoverLetterBlock,
+  type Profile,
+  type TailoredBlock,
+} from "@/lib/chat";
 import type { CvActions } from "@/lib/cv-pdf";
 import type { ModelOption } from "@/lib/llm";
 
@@ -35,6 +47,9 @@ export type ChatWindowProps = {
   /** CV file actions (preview, download, save) for the profile, tailored CV and cover letter cards. */
   cvActions?: CvActions;
 };
+
+/** The documents found so far in the conversation, with the id of the profile a tailored CV was written from. */
+type Found = { tailored?: { block: TailoredBlock; profile?: Profile; profileId?: string }; coverLetter?: { block: CoverLetterBlock; profile?: Profile } };
 
 /** How close to the bottom (px) still counts as reading the latest message, so new text scrolls into view. */
 const FOLLOW_THRESHOLD = 160;
@@ -72,14 +87,29 @@ export function ChatWindow({
   // A tailored CV's indexes point into the profile it was written from: the newest valid profile at or
   // before its message (a broken one doesn't count). A newer valid profile after it means entries may
   // have moved, so that tailored CV is flagged rather than re-indexed against the new one.
+  // The pdf export tool exports the newest valid tailored CV and cover letter at or before its
+  // message, each with the profile it was written from.
   const profiles = new Map<string, { profile?: Profile; id?: string }>();
+  const found = new Map<string, Found>();
   let current: { profile?: Profile; id?: string } = {};
+  let documents: Found = {};
   for (const message of messages) {
-    const profile = message.from === "assistant" ? blockContents(message.text, PROFILE_BLOCK).map(parseProfileBlock).findLast(Boolean) : undefined;
+    const newestIn = <T,>(language: string, parse: (code: string) => T | undefined) =>
+      message.from === "assistant" ? blockContents(message.text, language).map(parse).findLast((value) => value !== undefined) : undefined;
+    const profile = newestIn(PROFILE_BLOCK, parseProfileBlock);
     if (profile) current = { profile, id: message.id };
     profiles.set(message.id, current);
+    const tailored = newestIn(TAILORED_BLOCK, parseTailoredBlock);
+    const coverLetter = newestIn(COVER_LETTER_BLOCK, parseCoverLetterBlock);
+    if (tailored) documents = { ...documents, tailored: { block: tailored, profile: current.profile, profileId: current.id } };
+    if (coverLetter) documents = { ...documents, coverLetter: { block: coverLetter, profile: current.profile } };
+    found.set(message.id, documents);
   }
   const newestProfileId = current.id;
+  const documentsAt = (message: ChatMessage): ChatDocuments | undefined => {
+    const { tailored, coverLetter } = found.get(message.id) ?? {};
+    return { coverLetter, tailored: tailored && { block: tailored.block, profile: tailored.profile, profileChanged: tailored.profileId !== newestProfileId } };
+  };
   const collapsed = (message: ChatMessage) =>
     message.from !== "assistant"
       ? []
@@ -136,6 +166,7 @@ export function ChatWindow({
             collapse={collapsed(message)}
             referenceProfile={profiles.get(message.id)?.profile}
             profileChanged={profiles.get(message.id)?.id !== newestProfileId}
+            documents={documentsAt(message)}
             cvActions={cvActions}
           >
             {message.text}

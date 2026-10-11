@@ -1,7 +1,7 @@
 "use client";
 
 import { cva } from "class-variance-authority";
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { FileChip, type FileChipProps } from "@/components/atoms/FileChip";
 import { Icon } from "@/components/atoms/Icon";
 import { Markdown, type MarkdownBlocks } from "@/components/atoms/Markdown";
@@ -16,18 +16,29 @@ import {
   MATCH_BLOCK,
   parseCoverLetterBlock,
   parseMatchBlock,
+  parsePdfBlock,
   parseProfileBlock,
   parseTailoredBlock,
+  PDF_BLOCK,
+  PDF_DOCUMENT_NAMES,
   PROFILE_BLOCK,
   TAILORED_BLOCK,
   tailorCv,
   type CoverLetterBlock,
   type MatchBlock,
+  type PdfBlock,
+  type PdfDocument,
   type Profile,
   type TailoredBlock,
 } from "@/lib/chat";
 import { cn } from "@/lib/cn";
-import type { CvActions } from "@/lib/cv-pdf";
+import type { CvActions, CvSource } from "@/lib/cv-pdf";
+
+/** The newest valid tailored CV and cover letter at or before a message, with the profile each was written from: what the pdf export tool exports. */
+export type ChatDocuments = {
+  tailored?: { block: TailoredBlock; profile?: Profile; profileChanged: boolean };
+  coverLetter?: { block: CoverLetterBlock; profile?: Profile };
+};
 
 const bubbleVariants = cva("max-w-[85%] rounded-card px-4 py-2.5 break-words shadow-bubble sm:max-w-[75%]", {
   variants: {
@@ -57,13 +68,15 @@ export type ChatBubbleProps = {
   referenceProfile?: Profile;
   /** A newer profile came after the reference one: tailored CVs here ask to be redone. */
   profileChanged?: boolean;
+  /** The tailored CV and cover letter a pdf block here exports. */
+  documents?: ChatDocuments;
   /** The chat page's CV file actions: preview, download, save. */
   cvActions?: CvActions;
   className?: string;
 };
 
 /** What a bubble's blocks need to know: set per bubble, read by the module-level block renderers. */
-type BlockContextValue = { streaming: boolean; collapse: readonly string[]; referenceProfile?: Profile; profileChanged?: boolean; cvActions?: CvActions };
+type BlockContextValue = { streaming: boolean; collapse: readonly string[]; referenceProfile?: Profile; profileChanged?: boolean; documents?: ChatDocuments; cvActions?: CvActions };
 const BlockContext = createContext<BlockContextValue>({ streaming: false, collapse: [] });
 
 /** How a component block shows: its parser, its view, and what to say while it streams, when it fails, and when collapsed. */
@@ -170,6 +183,63 @@ const COVER_LETTER: BlockSpec<CoverLetterBlock> = {
   earlier: "Earlier version of your cover letter",
 };
 
+/** What a pdf block exports, from the conversation: its source and card title, or why there's nothing to export. */
+function pdfExport(document: PdfDocument, { referenceProfile, documents }: BlockContextValue): { source: CvSource; title: string; disabledReason?: string } | { missing: string } {
+  if (document === "cv") {
+    if (!referenceProfile) return { missing: "There's no CV in this chat yet: attach it and ask me to read it first." };
+    return { source: { profile: referenceProfile }, title: `CV · ${referenceProfile.basics.name}` };
+  }
+  const found = document === "tailored" ? documents?.tailored : documents?.coverLetter;
+  if (!found) return { missing: `There's no ${PDF_DOCUMENT_NAMES[document]} in this chat yet: ask me to write one first.` };
+  if (!found.profile) return { missing: `This ${PDF_DOCUMENT_NAMES[document]} needs your profile: ask me to read your CV first.` };
+  const job = found.block.job;
+  const title = `${document === "tailored" ? "Tailored CV" : "Cover letter"} · ${job.title}${job.employer ? ` at ${job.employer}` : ""}`;
+  if (document === "coverletter") return { source: { profile: found.profile, coverLetter: documents!.coverLetter!.block }, title };
+  const tailored = documents!.tailored!;
+  const blocking = tailorCv(found.profile, tailored.block, { profileChanged: tailored.profileChanged }).flags.filter((flag) => flag.level === "blocking").length;
+  return {
+    source: { profile: found.profile, tailored: tailored.block },
+    title,
+    disabledReason: blocking === 0 ? undefined : `Fix ${blocking === 1 ? "1 thing" : `${blocking} things`} on the tailored CV card before downloading`,
+  };
+}
+
+/**
+ * The export tool's card. It downloads by itself once the reply that asked for it has finished,
+ * never when an earlier reply is shown again; its buttons stay for another copy.
+ */
+function PdfExport({ block, context }: { block: PdfBlock; context: BlockContextValue }) {
+  // Mounted while its reply streamed in: a live request, not one from earlier in the chat.
+  const [live] = useState(context.streaming);
+  const target = pdfExport(block.document, context);
+  if ("missing" in target) return <p className="my-2 rounded-control border border-border bg-surface px-3 py-2 text-sm">{target.missing}</p>;
+  const { cvActions } = context;
+  return (
+    <div className="my-2 rounded-card border border-border bg-surface p-4">
+      <p className="flex items-center gap-2 font-semibold">
+        <Icon name="file" className="size-5 shrink-0 text-fg-brand" />
+        {target.title}
+      </p>
+      {cvActions && (
+        <CvButtons
+          onDownload={() => cvActions.downloadPdf(target.source)}
+          onPreview={() => cvActions.previewPdf(target.source)}
+          disabledReason={target.disabledReason}
+          autoDownload={live && !context.streaming}
+        />
+      )}
+    </div>
+  );
+}
+
+const PDF: BlockSpec<PdfBlock> = {
+  language: PDF_BLOCK,
+  parse: parsePdfBlock,
+  render: (block, context) => <PdfExport block={block} context={context} />,
+  preparing: "Preparing your PDF…",
+  failed: "This PDF couldn't be made from my reply: use Download PDF on the card instead.",
+};
+
 /**
  * A reply's component block. Its JSON is judged by whether it parses: an open fence runs to the end
  * of the text, so a half-received block looks like a whole one. An earlier version shows collapsed.
@@ -211,6 +281,7 @@ const BLOCKS: MarkdownBlocks = {
   [PROFILE_BLOCK]: (code) => <BlockView code={code} spec={PROFILE} />,
   [TAILORED_BLOCK]: (code) => <BlockView code={code} spec={TAILORED} />,
   [COVER_LETTER_BLOCK]: (code) => <BlockView code={code} spec={COVER_LETTER} />,
+  [PDF_BLOCK]: (code) => <BlockView code={code} spec={PDF} />,
 };
 
 const NO_COLLAPSE: string[] = [];
@@ -219,7 +290,7 @@ const NO_COLLAPSE: string[] = [];
  * One chat message. The visitor's is plain text with its line breaks; the assistant's is Markdown
  * (lists, tables, code), with no raw HTML.
  */
-export function ChatBubble({ from, author, children, attachments = [], streaming = false, collapse = NO_COLLAPSE, referenceProfile, profileChanged = false, cvActions, className }: ChatBubbleProps) {
+export function ChatBubble({ from, author, children, attachments = [], streaming = false, collapse = NO_COLLAPSE, referenceProfile, profileChanged = false, documents, cvActions, className }: ChatBubbleProps) {
   const typing = from === "assistant" && !children;
   return (
     <div className={cn("flex items-end gap-2", from === "user" && "justify-end", className)}>
@@ -249,7 +320,7 @@ export function ChatBubble({ from, author, children, attachments = [], streaming
             ))}
           </span>
         ) : from === "assistant" ? (
-          <BlockContext value={{ streaming, collapse, referenceProfile, profileChanged, cvActions }}>
+          <BlockContext value={{ streaming, collapse, referenceProfile, profileChanged, documents, cvActions }}>
             <Markdown blocks={BLOCKS}>{children ?? ""}</Markdown>
           </BlockContext>
         ) : (

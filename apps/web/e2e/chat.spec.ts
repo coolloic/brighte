@@ -227,6 +227,29 @@ test.describe("chat page", () => {
       expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     });
 
+    test("exports a PDF when asked in words: the newest cover letter, downloaded by itself", async ({ page }) => {
+      await sendMessage(page, "Read my CV into a profile [profile]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      await sendMessage(page, "Write a cover letter for this job [coverletter]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+
+      const download = page.waitForEvent("download");
+      await sendMessage(page, "PDF please [pdf-letter]");
+      const pdf = await download;
+      expect(pdf.suggestedFilename()).toBe("Jane-Citizen-Cover-Letter-Brightpath.pdf");
+      expect((await readFile((await pdf.path())!)).subarray(0, 5).toString("latin1")).toBe("%PDF-");
+      const card = log(page).locator("div").filter({ hasText: /^Cover letter · Senior Front-end Engineer at Brightpath/ });
+      await expect(card.getByRole("button", { name: "Download PDF" })).toBeEnabled();
+
+      await expectNoA11yViolations(page);
+    });
+
+    test("asked for a PDF of a document the chat doesn't have, says so", async ({ page }) => {
+      await sendMessage(page, "Download my cover letter [pdf-letter]");
+      await expect(log(page)).toHaveAttribute("aria-busy", "false");
+      await expect(log(page)).toContainText("There's no cover letter in this chat yet: ask me to write one first.");
+    });
+
     test("saves the profile to my data, and a new chat recalls it from the email alone", async ({ page }) => {
       await sendMessage(page, "Read my CV into a profile [profile]");
       await expect(log(page)).toHaveAttribute("aria-busy", "false");

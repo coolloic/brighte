@@ -9,9 +9,12 @@ import {
   parseCoverLetterBlock,
   parseMatchBlock,
   parseProfileBlock,
+  parsePdfBlock,
   parseTailoredBlock,
+  PDF_BLOCK,
   PROFILE_BLOCK,
   TAILORED_BLOCK,
+  type PdfDocument,
   type Profile,
 } from "@/lib/chat";
 import { chatConfig, configuredPersona } from "@/lib/chat/server";
@@ -31,7 +34,7 @@ const config = chatConfig();
 const persona = configuredPersona({ ...config, persona: "career" });
 const RUNS = Number(env.EVAL_RUNS ?? 3);
 const CONCURRENCY = Number(env.EVAL_CONCURRENCY ?? 4);
-const TASKS = new Set((env.EVAL_TASKS ?? "profile,match,tailor,letter,judge,recall").split(",").map((task) => task.trim()));
+const TASKS = new Set((env.EVAL_TASKS ?? "profile,match,tailor,letter,judge,recall,pdf").split(",").map((task) => task.trim()));
 const cases = env.EVAL_CASES ? CASES.filter((testCase) => env.EVAL_CASES!.split(",").includes(testCase.id)) : CASES;
 
 type Model = { client: LlmClient; id: string; key: string };
@@ -95,6 +98,40 @@ function block<T>(reply: string, language: string, parse: (code: string) => T | 
   return { invalid: `asked instead: "${reply.slice(0, 200).replace(/\s+/g, " ")}…"`, outcome: "asked" };
 }
 
+/**
+ * The pdf export tool: what the visitor types, and which document it should export (none: it must
+ * not trigger). Asked after a conversation that already has a profile, a tailored CV and, last, a
+ * cover letter, so "it" means the letter.
+ */
+const PDF_REQUESTS: { message: string; expect?: PdfDocument; withoutLetter?: boolean }[] = [
+  { message: "PDF please", expect: "coverletter" },
+  { message: "Great, download it", expect: "coverletter" },
+  { message: "Can I get my CV as a PDF?", expect: "cv" },
+  { message: "export the tailored CV", expect: "tailored" },
+  { message: "I'd like to print my cover letter", expect: "coverletter" },
+  { message: "save the tailored one as a file", expect: "tailored" },
+  { message: "What would you change in the second paragraph of the letter?" },
+  { message: "Download my cover letter", withoutLetter: true },
+];
+
+/** The conversation the pdf requests follow: profile, tailored CV, then (unless left out) a cover letter. */
+function withDocuments(testCase: EvalCase, letter: boolean): ChatTurn[] {
+  const job = { title: "the advertised role" };
+  const tailored = { job, work: (expectedProfile(testCase).work ?? []).slice(0, 1).map((_, role) => ({ role })) };
+  const coverLetter = { job, greeting: "Dear Hiring Manager,", paragraphs: ["I'm applying for the advertised role."], closing: "Kind regards," };
+  return [
+    ...afterProfile(testCase),
+    { role: "user", content: `That profile is right. Tailor my CV for this job:\n\n${testCase.jobAd}` },
+    { role: "assistant", content: `Here's your tailored CV.\n\n\`\`\`${TAILORED_BLOCK}\n${JSON.stringify(tailored)}\n\`\`\`` },
+    ...(letter
+      ? ([
+          { role: "user", content: "Now write a cover letter for it." },
+          { role: "assistant", content: `Here's your letter.\n\n\`\`\`${COVER_LETTER_BLOCK}\n${JSON.stringify(coverLetter)}\n\`\`\`` },
+        ] satisfies ChatTurn[])
+      : []),
+  ];
+}
+
 type Run = { case: string; run: number; task: string; invalid?: string; outcome?: "asked" | "broken"; error?: string; score?: unknown; reply?: string };
 
 it("CV coach eval", async () => {
@@ -156,6 +193,18 @@ it("CV coach eval", async () => {
       }
     }
   }
+  if (TASKS.has("pdf")) {
+    // Only the first case: what's tested is the wording, not the CV.
+    for (let run = 1; run <= RUNS; run++) {
+      for (const request of PDF_REQUESTS) {
+        attempt(cases[0], run, "pdf", async () => {
+          const reply = await ask(model, [...withDocuments(cases[0], !request.withoutLetter), { role: "user", content: request.message }]);
+          const got = blockContents(reply, PDF_BLOCK).map(parsePdfBlock).findLast(Boolean)?.document;
+          return { reply, score: { message: request.message, expected: request.expect, got, right: got === request.expect, rewrote: Boolean(request.expect) && hasDocument(reply) } };
+        });
+      }
+    }
+  }
   const runs = await pool(jobs, CONCURRENCY);
 
   // The judge's calibration: letters with a known number of unsupported claims.
@@ -201,6 +250,9 @@ it("CV coach eval", async () => {
 });
 
 type Calibration = { name: string; expected: number; found?: number; flagged?: string[] };
+
+/** The reply wrote a document again, which an export request shouldn't (an edit request should). */
+const hasDocument = (reply: string) => [PROFILE_BLOCK, TAILORED_BLOCK, COVER_LETTER_BLOCK].some((language) => blockContents(reply, language).length > 0);
 
 const pct = (value?: number) => (value === undefined ? "–" : `${Math.round(value * 100)}%`);
 
@@ -292,6 +344,22 @@ function summarise(runs: Run[], calibration: Calibration[], recall: { case: stri
     };
   }
 
+  if (of("pdf").length) {
+    type PdfScore = { message: string; expected?: PdfDocument; got?: PdfDocument; right: boolean; rewrote: boolean };
+    failures("pdf");
+    const scores = scored<PdfScore>("pdf");
+    for (const { run, score } of scores) {
+      if (!score.right) problems.push(`[pdf] #${run.run} "${score.message}": expected ${score.expected ?? "no export"}, got ${score.got ?? "no export"}`);
+      if (score.rewrote) problems.push(`[pdf] #${run.run} "${score.message}": wrote the document again`);
+    }
+    summary.pdf = {
+      right: scores.filter(({ score }) => score.right).length / Math.max(scores.length, 1),
+      exportsRight: mean(scores.filter(({ score }) => score.expected).map(({ score }) => (score.right ? 1 : 0))),
+      falseExports: scores.filter(({ score }) => !score.expected && score.got).length,
+      rewrote: scores.filter(({ score }) => score.rewrote).length,
+    };
+  }
+
   if (calibration.length) {
     summary.judgeCalibration = { correct: calibration.filter((sample) => sample.found === sample.expected).length, of: calibration.length };
   }
@@ -306,6 +374,7 @@ function summarise(runs: Run[], calibration: Calibration[], recall: { case: stri
   if (s.match) lines.push(`Match report  wrote it ${pct(s.match.valid)} (asked instead ${pct(s.match.askedInstead)}, broken ${pct(s.match.broken)}) · coverage ${pct(s.match.coverage)} · status right ${pct(s.match.statusAccuracy)} · false credits ${s.match.falseCredits}`);
   if (s.tailor) lines.push(`Tailored CV   wrote it ${pct(s.tailor.valid)} (asked instead ${pct(s.tailor.askedInstead)}, broken ${pct(s.tailor.broken)}) · downloadable (no blocking flags) ${pct(s.tailor.downloadable)} · warnings per CV ${s.tailor.warningsPerCv?.toFixed(1)}`);
   if (s.letter) lines.push(`Cover letter  wrote it ${pct(s.letter.valid)} (asked instead ${pct(s.letter.askedInstead)}, broken ${pct(s.letter.broken)}) · without unsupported claims ${pct(s.letter.lettersWithoutUnsupportedClaims)} (${s.letter.unsupportedClaims} of ${s.letter.claimsChecked} claims) · in shape ${pct(s.letter.inShape)}`);
+  if (s.pdf) lines.push(`PDF export    right ${pct(s.pdf.right)} · exported the right document ${pct(s.pdf.exportsRight)} · exported when it shouldn't ${s.pdf.falseExports} · wrote the document again ${s.pdf.rewrote}`);
   if (s.judgeCalibration) lines.push(`Judge         calibration ${s.judgeCalibration.correct}/${s.judgeCalibration.of} letters scored right${calibration.some((sample) => sample.found !== sample.expected) ? `: ${calibration.filter((sample) => sample.found !== sample.expected).map((sample) => `"${sample.name}" found ${sample.found ?? "nothing"}`).join("; ")}` : ""}`);
   if (s.recall) lines.push(`Recall        hit@6 ${pct(s.recall.hitAt6)} · MRR ${s.recall.mrr?.toFixed(2)}`);
   if (recallSkipped) lines.push(recallSkipped);
