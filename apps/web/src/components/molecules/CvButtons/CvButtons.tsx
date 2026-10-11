@@ -14,6 +14,8 @@ export type CvButtonsProps = {
   onSaveToMyData?: () => Promise<{ saved: string } | { error: string }>;
   /** Why the PDF buttons are off, e.g. blocking flags on a tailored CV. */
   disabledReason?: string;
+  /** Download once as soon as this is true (the chat's pdf export tool), unless the buttons are off. */
+  autoDownload?: boolean;
   className?: string;
 };
 
@@ -22,7 +24,7 @@ export type CvButtonsProps = {
  * save the card to "My data". One request at a time; what's happening, or what went wrong, is
  * announced politely.
  */
-export function CvButtons({ onDownload, onPreview, onSave, onSaveToMyData, disabledReason, className }: CvButtonsProps) {
+export function CvButtons({ onDownload, onPreview, onSave, onSaveToMyData, disabledReason, autoDownload = false, className }: CvButtonsProps) {
   const [busy, setBusy] = useState<"pdf" | "my-data">();
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState<string>();
@@ -62,6 +64,14 @@ export function CvButtons({ onDownload, onPreview, onSave, onSaveToMyData, disab
     }, "my-data");
 
   const download = () => run(onDownload);
+
+  // Asked for in the chat: download once, as if Download PDF had been pressed.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoDownload || disabledReason || autoStarted.current) return;
+    autoStarted.current = true;
+    void download();
+  });
   const showPreview = () =>
     run(async () => {
       const result = await onPreview();

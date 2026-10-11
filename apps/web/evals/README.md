@@ -17,7 +17,7 @@ Needs a provider key in the root `.env`. The **recall** part also needs the API 
 | `EVAL_JUDGE_MODEL` | `anthropic:claude-sonnet-5-5` | The cover letter judge. Use a stronger model than the one under test |
 | `EVAL_RUNS` | `3` | Runs per case: outputs vary from run to run, so rates matter, not single results |
 | `EVAL_CASES` | all | Case ids, comma-separated, e.g. `frontend-senior,no-email` |
-| `EVAL_TASKS` | `profile,match,tailor,letter,judge,recall` | Which parts to run |
+| `EVAL_TASKS` | `profile,match,tailor,letter,judge,recall,pdf` | Which parts to run |
 | `EVAL_CONCURRENCY` | `4` | Model calls at once |
 
 The report prints the headline numbers and every problem found; the full results (every run, with
@@ -31,6 +31,7 @@ its scores) go to `evals/results/<time>-<model>.json` (gitignored).
 | **Match report** | Each labelled requirement (`match` in a case) must have an item with the expected status | False credits: a requirement the CV doesn't meet, reported as met (target 0) |
 | **Tailored CV** | `tailorCv`, the app's own check, against the expected profile | Downloadable: no blocking flags (target 100%) |
 | **Cover letter** | A judge model lists each factual claim and whether the profile supports it; plus length (250–400 words, 3–5 paragraphs) and no contact details in the body | Letters without unsupported claims (target 100%) |
+| **PDF export** | Phrasings ("PDF please", "download it", "export the tailored CV"…) after a chat with a profile, tailored CV and cover letter, plus two that must not export (an edit request, and a letter that doesn't exist yet): `PDF_REQUESTS` in `cv-coach.eval.ts` | Right document every time, no false exports |
 | **Recall** (my data) | The expected profile saved under a throwaway email (deleted after), each `recall` question searched | Hit@6 and MRR |
 
 Each output is scored on its own: the tailor and letter steps start from the case's expected

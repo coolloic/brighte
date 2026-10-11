@@ -320,3 +320,69 @@ export const AttachmentsOnly: Story = {
     await expect(canvas.queryByText("typing")).not.toBeInTheDocument();
   },
 };
+
+const PDF_REPLY = (document: string) => `Here's the PDF.\n\n\`\`\`pdf\n${JSON.stringify({ document })}\n\`\`\``;
+
+/**
+ * The export tool, asked for in the chat ("PDF please"): a card for the newest cover letter, which
+ * downloads once by itself when the reply that asked for it finishes.
+ */
+export const PdfExportDownloads: Story = {
+  args: { from: "assistant", author: "CV coach", children: PDF_REPLY("coverletter"), referenceProfile: REFERENCE_PROFILE, cvActions: CV_ACTIONS() },
+  render: function Render(args) {
+    const [streaming, setStreaming] = useState(true);
+    return (
+      <div className="mx-auto w-full max-w-xl space-y-2">
+        <ChatBubble {...args} documents={{ coverLetter: { block: JSON.parse(COVER_LETTER_JSON), profile: REFERENCE_PROFILE } }} streaming={streaming} />
+        <button type="button" onClick={() => setStreaming(false)}>
+          Finish the reply
+        </button>
+      </div>
+    );
+  },
+  play: async ({ args, canvas }) => {
+    await expect(canvas.getByText("Cover letter · Senior Front-end Engineer at Brightpath")).toBeInTheDocument();
+    await expect(args.cvActions!.downloadPdf).not.toHaveBeenCalled();
+    await userEvent.click(canvas.getByRole("button", { name: "Finish the reply" }));
+    await expect(args.cvActions!.downloadPdf).toHaveBeenCalledTimes(1);
+    await expect(args.cvActions!.downloadPdf).toHaveBeenCalledWith({ profile: REFERENCE_PROFILE, coverLetter: JSON.parse(COVER_LETTER_JSON) });
+    // Its buttons stay, for another copy.
+    await expect(canvas.getByRole("button", { name: "Download PDF" })).toBeEnabled();
+  },
+};
+
+/** An earlier reply shown again: no download by itself, only the buttons. */
+export const PdfExportEarlier: Story = {
+  args: { from: "assistant", author: "CV coach", children: PDF_REPLY("cv"), referenceProfile: REFERENCE_PROFILE, cvActions: CV_ACTIONS() },
+  play: async ({ args, canvas }) => {
+    await expect(canvas.getByText("CV · Jane Citizen")).toBeInTheDocument();
+    await expect(args.cvActions!.downloadPdf).not.toHaveBeenCalled();
+    await userEvent.click(canvas.getByRole("button", { name: "Download PDF" }));
+    await expect(args.cvActions!.downloadPdf).toHaveBeenCalledWith({ profile: REFERENCE_PROFILE });
+  },
+};
+
+/** A tailored CV with a blocking flag: the export tool doesn't get round the check. */
+export const PdfExportBlocked: Story = {
+  args: {
+    from: "assistant",
+    author: "CV coach",
+    children: PDF_REPLY("tailored"),
+    referenceProfile: REFERENCE_PROFILE,
+    cvActions: CV_ACTIONS(),
+    documents: { tailored: { block: { job: { title: "Engineer" }, work: [{ role: 0, highlights: [{ text: "Led a team of 10." }] }] }, profile: REFERENCE_PROFILE, profileChanged: false } },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("button", { name: "Download PDF" })).toBeDisabled();
+    await expect(canvas.getByText("Fix 1 thing on the tailored CV card before downloading")).toBeInTheDocument();
+  },
+};
+
+/** Asked for a document the chat doesn't have yet. */
+export const PdfExportMissing: Story = {
+  args: { from: "assistant", author: "CV coach", children: PDF_REPLY("coverletter"), referenceProfile: REFERENCE_PROFILE, cvActions: CV_ACTIONS() },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText("There's no cover letter in this chat yet: ask me to write one first.")).toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: "Download PDF" })).not.toBeInTheDocument();
+  },
+};

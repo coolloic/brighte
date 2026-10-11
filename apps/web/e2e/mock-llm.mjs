@@ -8,7 +8,8 @@
 // "[profile-broken]" with one that never completes. "[tailored]" replies with a tailored CV block
 // (one bullet without a source, one skill not in the profile), "[tailored-broken]" with one that never
 // completes. "[tailored-clean]" replies with one that has nothing blocking (its PDF can be made).
-// "[coverletter]" replies with a cover letter block split across chunks. "[recall]" says what saved
+// "[coverletter]" replies with a cover letter block split across chunks. "[pdf-letter]" and "[pdf-cv]"
+// reply with the pdf export tool's block for the cover letter or the CV. "[recall]" says what saved
 // data ("My data") the system prompt carried: whether it had the saved profile, and how many chunks. When files were sent, the
 // reply says which (in this message, and how many in the whole context), and whether prompt
 // caching was asked for: "[files: photo.png, notes.txt; in context: 2; cached]".
@@ -94,6 +95,7 @@ const COVER_LETTER_JSON = JSON.stringify({
 const letterHalf = Math.floor(COVER_LETTER_JSON.length / 2);
 const COVER_LETTER_REPLY = ["It leads with your React rebuild.\n\n```coverletter\n", COVER_LETTER_JSON.slice(0, letterHalf), COVER_LETTER_JSON.slice(letterHalf), "\n```"];
 const MARKDOWN_REPLY = ["## Services\n\n- **Deli", "very** to your door\n- Pick-up\n\n| Service | When |\n|---|---|\n| Delivery | At launch |\n"];
+const PDF_REPLY = (document) => ["Here's the PDF.\n\n```pdf\n", JSON.stringify({ document }), "\n```"];
 // Checked in order: a marker that contains another comes first.
 const MARKER_REPLIES = [
   ["[match-broken]", MATCH_BROKEN_REPLY],
@@ -104,6 +106,8 @@ const MARKER_REPLIES = [
   ["[tailored-clean]", TAILORED_CLEAN_REPLY],
   ["[tailored]", TAILORED_REPLY],
   ["[coverletter]", COVER_LETTER_REPLY],
+  ["[pdf-letter]", PDF_REPLY("coverletter")],
+  ["[pdf-cv]", PDF_REPLY("cv")],
   ["[markdown]", MARKDOWN_REPLY],
 ];
 
