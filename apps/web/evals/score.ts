@@ -177,6 +177,24 @@ export function scoreLetterShape(letter: CoverLetterBlock, profile: Profile): Le
   };
 }
 
+export type LetterFacts = {
+  /** Sentences that write a role as current when the profile has none ("I've been… since 2022", "currently"). */
+  currentClaims: string[];
+};
+
+const CURRENT = /\b(currently|at present|right now|I'm now|I am now|I now|do now)\b|\b(I've|I have) been (a|an|working|leading|building)\b|\bsince( [A-Z][a-z]+)? (19|20)\d\d\b/i;
+
+/**
+ * A mistake found with a real CV, checked by pattern: a finished role written as current. (A listed
+ * skill called a gap was checked too, but a pattern can't tell it from a real gap named beside
+ * listed skills ("my background is Java rather than Kotlin"), so the judge checks that.)
+ */
+export function scoreLetterFacts(letter: CoverLetterBlock, profile: Profile): LetterFacts {
+  const sentences = letter.paragraphs.join(" ").split(/(?<=[.!?])\s+/);
+  const current = (profile.work ?? []).some((role) => role.end === "present");
+  return { currentClaims: current ? [] : sentences.filter((sentence) => CURRENT.test(sentence)) };
+}
+
 export type RecallScore = { hit: boolean; rank?: number };
 
 /** Whether a chunk containing `expect` is among the matches, and its 1-based rank. */

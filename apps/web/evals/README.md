@@ -30,7 +30,7 @@ its scores) go to `evals/results/<time>-<model>.json` (gitignored).
 | **Profile** | Every string must be in the CV word for word (the rule is to copy), roles found by employer and title, dates exactly right, bullets and skills against the expected answer | Runs without inventions (target 100%) |
 | **Match report** | Each labelled requirement (`match` in a case) must have an item with the expected status | False credits: a requirement the CV doesn't meet, reported as met (target 0) |
 | **Tailored CV** | `tailorCv`, the app's own check, against the expected profile | Downloadable: no blocking flags (target 100%) |
-| **Cover letter** | A judge model lists each factual claim and whether the profile supports it; plus length (250–400 words, 3–5 paragraphs) and no contact details in the body | Letters without unsupported claims (target 100%) |
+| **Cover letter** | A judge model lists each factual claim and whether the profile supports it (including gaps the profile covers, and finished roles written as current); plus length (250–400 words, 3–5 paragraphs), no contact details in the body, and a pattern check for a finished role written as current ("since 2021", "now") when no role is | Letters without unsupported claims (target 100%) |
 | **PDF export** | Phrasings ("PDF please", "download it", "export the tailored CV"…) after a chat with a profile, tailored CV and cover letter, plus two that must not export (an edit request, and a letter that doesn't exist yet): `PDF_REQUESTS` in `cv-coach.eval.ts` | Right document every time, no false exports |
 | **Recall** (my data) | The expected profile saved under a throwaway email (deleted after), each `recall` question searched | Hit@6 and MRR |
 
