@@ -44,3 +44,6 @@ next-env.d.ts
 /playwright-report
 /test-results
 /.lighthouseci
+
+# eval results (evals/README.md): local, per run
+/evals/results/
